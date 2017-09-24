@@ -203,8 +203,8 @@ class GridMeasuredBeam(_PolarizedBeam):
             if type(frequencies) in real_numerical_types:
                 frequencies = [1. * frequencies]
             numfreqs = len(frequencies)
-            numthetas = (180 / theta_res) + 1
-            numphis = 360 / phi_res
+            numthetas = (180 // theta_res) + 1
+            numphis = 360 // phi_res
             try:
                 internal_ifreqs = np.array(\
                     [np.where(self.frequencies == freq)[0][0]\

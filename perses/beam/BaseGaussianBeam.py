@@ -1,15 +1,6 @@
 from types import FunctionType
 import numpy as np
 
-def is_valid_fwhm(fwhm):
-    """
-    Checks to make sure the given fwhm is a function with 1 argument (it
-    should be the frequency at which to evaluate the fwhm).
-    
-    fwhm: the object to test
-    """
-    return (type(fwhm) is FunctionType) and (fwhm.func_code.co_argcount == 1)
-
 class _GaussianBeam(object):
     def initialize_fwhm(self, x_fwhm, y_fwhm=None):
         """
@@ -35,7 +26,7 @@ class _GaussianBeam(object):
     
     @x_fwhm.setter
     def x_fwhm(self, value):
-        if is_valid_fwhm(value):
+        if type(value) is FunctionType:
             self._x_fwhm = value
         else:
             raise TypeError("x_fwhm must be a single argument function.")
@@ -48,7 +39,7 @@ class _GaussianBeam(object):
 
     @y_fwhm.setter
     def y_fwhm(self, value):
-        if (value is None) or is_valid_fwhm(value):
+        if (value is None) or (type(fwhm) is FunctionType):
             self._y_fwhm = value
         else:
             raise AttributeError("If y_fwhm is given, it must be a single " +\

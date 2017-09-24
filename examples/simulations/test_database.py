@@ -35,14 +35,14 @@ clobber = True
 nside = 32
 npix = hp.pixelfunc.nside2npix(nside)
 fstep = 1
-frequencies = np.linspace(50, 120, (70 / fstep) + 1)
+frequencies = np.linspace(50, 120, (70 // fstep) + 1)
 #pointings = [earths_celestial_north_pole]
 pointings = [(90, 0)]
 psis = [0.]
 angle_res = 1
 num_rotations = 1
 total_rotation = 360 * num_rotations
-num_angles = total_rotation / angle_res
+num_angles = total_rotation // angle_res
 rotation_angles = np.linspace(0, total_rotation, num_angles, endpoint=False)
 include_moon = False
 include_smearing = False

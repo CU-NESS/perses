@@ -146,9 +146,9 @@ class GridMeasuredBeam(_TotalPowerBeam):
         psi_close = np.isclose(psi, 0., atol=p_tol, rtol=0)
         try:
             theta_res_close = np.allclose(self.thetas[1:] - self.thetas[:-1],\
-                np.repeat(theta_res, 180 / theta_res), rtol=0, atol=1e-6)
+                np.repeat(theta_res, 180 // theta_res), rtol=0, atol=1e-6)
             phi_res_close = np.allclose(self.phis[1:]-self.phis[:-1],\
-                np.repeat(phi_res, (360 / phi_res) - 1), rtol=0, atol=1e-6)
+                np.repeat(phi_res, (360 // phi_res) - 1), rtol=0, atol=1e-6)
         except:
             return False
         res_close = (theta_res_close and phi_res_close)
@@ -174,8 +174,8 @@ class GridMeasuredBeam(_TotalPowerBeam):
             if type(frequencies) in real_numerical_types:
                 frequencies = [1. * frequencies]
             numfreqs = len(frequencies)
-            numthetas = (180 / theta_res) + 1
-            numphis = 360 / phi_res
+            numthetas = (180 // theta_res) + 1
+            numphis = 360 // phi_res
             grids = np.ndarray((numfreqs, numthetas, numphis))
             for ifreq in range(len(frequencies)):
                 freq = frequencies[ifreq]

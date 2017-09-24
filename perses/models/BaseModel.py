@@ -130,7 +130,7 @@ class BaseModel(object):
     def fourier_series(self, prefix, pars, reg=0):
         coeff = self.get_coeff(prefix, pars, reg)
         
-        n = np.arange(0, (len(coeff) - 1) / 2)
+        n = np.arange(0, (len(coeff) - 1) // 2)
 
         t1 = np.array([coeff[2*i+1] * np.cos((i+1) * self.nu_n) \
             for i in n])

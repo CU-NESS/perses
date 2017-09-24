@@ -59,7 +59,7 @@ def smear_maps_through_LST(sky_maps, observatory, lst_start, lst_end,\
     #Smear Map:
     if approximate:
         celestial_pole_centered_maps = spin_maps(celestial_pole_centered_maps,\
-            -delta_lst_angle/2, pixel_axis=-1)
+            -delta_lst_angle/2., pixel_axis=-1)
         smeared_celestial_pole_centered_maps = smear_maps_approximate(\
             celestial_pole_centered_maps, delta_lst_angle)
     else:

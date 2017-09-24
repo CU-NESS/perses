@@ -580,7 +580,7 @@ class ModelSet(aresModelSet):
                 residuals[ielement] = residual_from_ielement(ielement, reg)
         else:
             def start_index(region):
-                return (region * len(elements)) / self.sky_model.Nsky
+                return (region * len(elements)) // self.sky_model.Nsky
             for reg in range(self.sky_model.Nsky):
                 for ielement in range(start_index(reg), start_index(reg + 1)):
                     residuals[ielement] = residual_from_ielement(ielement, reg)
@@ -763,7 +763,7 @@ class ModelSet(aresModelSet):
             return int(((1. * value) / self.save_freq) + 0.5)
         cpts_to_skip = numcheckpoints(skip)
         cpts_to_stop = numcheckpoints(stop)
-        totalsteps = self.chain.shape[0] / self.nwalkers
+        totalsteps = self.chain.shape[0] // self.nwalkers
         numstps = totalsteps - ((cpts_to_skip + cpts_to_stop) * self.save_freq)
         if (numstps <= 0) or (cpts_to_skip < 0) or (cpts_to_stop < 0):
             raise ValueError("After rounding to the nearest checkpoint, " +\
@@ -771,7 +771,7 @@ class ModelSet(aresModelSet):
                              "or skip and stop take up the entire chain " +\
                              "or more.")
         sw = np.ndarray((numstps, len(pindices)))
-        for icp in range(numstps / self.save_freq):
+        for icp in range(numstps // self.save_freq):
             sw_start = icp * self.save_freq
             sw_end = sw_start + self.save_freq
             chain_start = self.save_freq *\
@@ -790,7 +790,7 @@ class ModelSet(aresModelSet):
         walkers = []
         for iwalker in range(self.nwalkers):
             walkers.append(self.single_walker_from_chain(iwalker, **func_pars))
-        first_included_iter = ((skip / self.save_freq) * self.save_freq)
+        first_included_iter = ((skip // self.save_freq) * self.save_freq)
         iterations = np.arange(walkers[0].shape[0]) + first_included_iter
         try:
             numparams = walkers[0].shape[1]
@@ -879,7 +879,7 @@ class ModelSet(aresModelSet):
             return int(((1. * value) / self.save_freq) + 0.5)
         cpts_to_skip = numcheckpoints(skip)
         cpts_to_stop = numcheckpoints(stop)
-        totalsteps = self.logL.shape[0] / self.nwalkers
+        totalsteps = self.logL.shape[0] // self.nwalkers
         numstps = totalsteps - ((cpts_to_skip + cpts_to_stop) * self.save_freq)
         if (numstps <= 0) or (cpts_to_skip < 0) or (cpts_to_stop < 0):
             raise ValueError("After rounding to the nearest checkpoint, " +\
@@ -887,7 +887,7 @@ class ModelSet(aresModelSet):
                              "or skip and stop take up the entire chain " +\
                              "or more.")
         sw = np.ndarray(numstps)
-        for icp in range(numstps / self.save_freq):
+        for icp in range(numstps // self.save_freq):
             sw_start = icp * self.save_freq
             sw_end = sw_start + self.save_freq
             logL_start = self.save_freq *\

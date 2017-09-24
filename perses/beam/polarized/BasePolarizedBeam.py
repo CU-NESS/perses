@@ -135,7 +135,7 @@ class _PolarizedBeam(_Beam):
             print("using smearing") # TODO remove this
             if np.all(angles[1:] - angles[:-1] < 0) or\
                 np.all(angles[1:] - angles[:-1] > 0):
-                angle_bins = (angles[1:] + angles[:-1]) / 2
+                angle_bins = (angles[1:] + angles[:-1]) / 2.
                 left = (2 * angles[0]) - angles[1]
                 right = (2 * angles[-1]) - angles[-2]
                 angle_bins = np.concatenate([[left], angle_bins, [right]])

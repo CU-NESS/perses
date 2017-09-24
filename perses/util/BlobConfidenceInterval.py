@@ -11,7 +11,7 @@ def blob_interval_many_sets(prefixes, blob, confidence):
             presample = presample.compressed()
         elif type(presample) is not np.ndarray:
             presample = np.array(presample)
-        sample.append(presample[-len(sample)/2:])
+        sample.append(presample[-len(sample)//2:])
     sample = np.concatenate(sample)
     sample_mean = np.mean(sample)
     sample = sample[np.argsort(np.abs(sample - sample_mean))]

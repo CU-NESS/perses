@@ -173,7 +173,7 @@ def impose_curve_confidence_interval(curves, contour, subtract_mean,\
         for ifreq in range(curves.shape[1]):
             argsort = np.argsort(curves[:,ifreq])
             curves[:,ifreq] = curves[argsort,ifreq]
-        left_buffer = (ncurves - ncurves_to_include) / 2
+        left_buffer = (ncurves - ncurves_to_include) // 2
         right_buffer = ncurves_to_include + left_buffer
         return curves[left_buffer:right_buffer]
 

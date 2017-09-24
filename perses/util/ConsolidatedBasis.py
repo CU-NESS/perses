@@ -99,7 +99,7 @@ icase = 11
 ireal = 10
 
 fstep = 1
-frequencies = np.linspace(40, 120, 1 + (80 / fstep))
+frequencies = np.linspace(40, 120, 1 + (80 // fstep))
 nfreq = len(frequencies)
 
 scrunched_beams = [DARESleevedDipole(beam_key) for beam_key in beam_keys]

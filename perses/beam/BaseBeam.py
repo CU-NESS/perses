@@ -128,8 +128,8 @@ class _Beam(object):
         if one freq given, returns a 2D numpy array of shape (nthetas, nphis)
         else, returns a 3D numpy array of shape (nfreqs, nthetas, nphis)
         """
-        numthetas = (180 / theta_res) + 1
-        numphis = 360 / phi_res
+        numthetas = (180 // theta_res) + 1
+        numphis = 360 // phi_res
         nside = nside_from_angular_resolution(numthetas, numphis)
         maps = self.get_maps(frequencies, nside, pointing, psi, normed=False,\
             **kwargs)

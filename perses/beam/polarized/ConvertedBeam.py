@@ -30,7 +30,7 @@ class ConvertedBeam(PolarizedGridMeasuredBeam):
         x_gain = np.sqrt(tpgmb.grids)
         phi_axis = -1
         num_phis = len(self.phis)
-        y_gain = np.roll(x_gain, num_phis / 4, axis=phi_axis)
+        y_gain = np.roll(x_gain, num_phis // 4, axis=phi_axis)
         cos_theta = np.cos(np.radians(self.thetas))[np.newaxis,:,np.newaxis]
         sin_phi = np.sin(np.radians(self.phis))[np.newaxis,np.newaxis,:]
         cos_phi = np.cos(np.radians(self.phis))[np.newaxis,np.newaxis,:]

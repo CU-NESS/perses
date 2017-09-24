@@ -26,7 +26,7 @@ os.chdir('input')
 files = []
 if (len(options) > 0) and ('clean' not in options):
     if 'clean' in options:
-        to_download = aux_data.keys()
+        to_download = list(aux_data.keys())
         files = [None] * len(to_download)
     else:
         to_download = []
@@ -44,10 +44,10 @@ if (len(options) > 0) and ('clean' not in options):
                 
         # In this case, get all new files
         if to_download == [] and 'fresh' in options:
-            to_download = aux_data.keys()
+            to_download = list(aux_data.keys())
             files = [None] * len(to_download)
 else:
-    to_download = aux_data.keys()
+    to_download = list(aux_data.keys())
     files = [None] * len(to_download)
         
 for i, direc in enumerate(to_download):

@@ -25,12 +25,7 @@ class DipoleLikeBeam(_PolarizedBeam):
         if value is None:
             self._modulating_function = None
         elif type(value) is FunctionType:
-            if value.func_code.co_argcount == 3:
-                self._modulating_function = value
-            else:
-                raise ValueError("modulating_function did not have 3 " +\
-                                 "arguments. Its arguments should be: " +\
-                                 "frequency, theta, and, phi.")
+            self._modulating_function = value
         else:
             raise TypeError("modulating_function was neither None nor a " +\
                             "function.")

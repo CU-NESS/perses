@@ -37,12 +37,12 @@ def smear_grids(grids, start_angle, end_angle, degrees=True, phi_axis=-1):
     pre_phi_newaxes = (np.newaxis,) * pre_phi_ndim
     post_phi_ndim = ndim - phi_axis - 1
     post_phi_newaxes = (np.newaxis,) * post_phi_ndim
-    phi_res = (360. / numphis)
+    phi_res = (360. // numphis)
     if not degrees:
         start_angle = np.degrees(start_angle)
         end_angle = np.degrees(end_angle)
-    phi_steps_start = (start_angle / phi_res)
-    phi_steps_end = (end_angle / phi_res)
+    phi_steps_start = (start_angle // phi_res)
+    phi_steps_end = (end_angle // phi_res)
     
     all_phi_steps = np.arange(int(np.floor(phi_steps_start)),\
         int(np.ceil(phi_steps_end)) + 1)
@@ -86,8 +86,8 @@ def spin_grids(grids, angle, degrees=True, phi_axis=-1):
         else:
             angle = angle - 360.
     numphis = grids.shape[phi_axis]
-    phi_res = 360. / numphis
-    phi_steps = angle / phi_res
+    phi_res = 360. // numphis
+    phi_steps = angle // phi_res
     int_part = int(np.floor(phi_steps))
     float_part = phi_steps - int_part # always positive 
     high = np.roll(grids, -(int_part + 1), axis=phi_axis)
@@ -200,7 +200,7 @@ def convolve_grids(grids, thetas, phis, sky_maps, theta_axis=-2, phi_axis=-1,\
         raise ValueError("sky_maps post pixel index is not the same shape " +\
                          "as grids post angle_axes")
     (numthetas, numphis) = (grids.shape[theta_axis], grids.shape[phi_axis])
-    (theta_res, phi_res) = (180 / (numthetas - 1), 360 / numphis)
+    (theta_res, phi_res) = (180 // (numthetas - 1), 360 // numphis)
     interpolated_maps = grids_from_maps(sky_maps, theta_res=theta_res,\
         phi_res=phi_res, nest=nest, pixel_axis=min_axis)
     integral = integrate_grids(interpolated_maps * grids,\
@@ -381,8 +381,8 @@ def maps_from_grids(grid_data, nside, theta_axis=-2, phi_axis=-1, normed=True):
     ndim = grid_data.ndim
     (theta_axis, phi_axis) = (theta_axis % ndim, phi_axis % ndim)
     (nthetas, nphis) = grid_data.shape[theta_axis], grid_data.shape[phi_axis]
-    theta_res = int(180. / (nthetas - 1))
-    phi_res = int(360. / nphis)
+    theta_res = int(180. // (nthetas - 1))
+    phi_res = int(360. // nphis)
     npix = hp.pixelfunc.nside2npix(nside)
     smaller_axis = min(theta_axis, phi_axis)
     larger_axis = max(theta_axis, phi_axis)
@@ -503,8 +503,8 @@ def grids_from_function(func, frequencies, theta_res, phi_res):
     if type(frequencies) in real_numerical_types:
         frequencies = [frequencies]
     numfreqs = len(frequencies)
-    numthetas = int(180 / theta_res) + 1
-    numphis = int(360 / phi_res)
+    numthetas = int(180 // theta_res) + 1
+    numphis = int(360 // phi_res)
     frequencies = np.array(frequencies)[:,np.newaxis,np.newaxis]
     thetas = (np.arange(numthetas) * theta_res)[np.newaxis,:,np.newaxis]
     phis = (np.arange(numphis) * phi_res)[np.newaxis,np.newaxis,:]
@@ -802,9 +802,9 @@ def alm_from_angular_data(data, lmax, mmax):
         """
         Index for the given values of l, m (assuming lmax given in function)
         """
-        return ( mp * ( 2 * lmax + 3 - mp ) ) / 2 + ( lp - mp )
+        return ( mp * ( 2 * lmax + 3 - mp ) ) // 2 + ( lp - mp )
     
-    numlm = ((lmax+1)*(lmax+2))/2
+    numlm = ((lmax+1)*(lmax+2))//2
     alm = np.zeros((len(frequencies), numlm), dtype=np.dtype(np.cfloat))
     for itheta in range(len(thetas)):
         theta = np.radians(thetas[itheta])

@@ -154,7 +154,7 @@ def plot_data(polarized, frequencies, rotation_angles, data, which='all',\
         high_freq = ((3 * frequencies[-1]) - frequencies[-2]) / 2.
         extent = [low_freq, high_freq]
         if fft:
-            max_fft_index = min(80, num_rotation_angles / 2)
+            max_fft_index = min(80, num_rotation_angles // 2)
             max_fft_freq = max_fft_index / num_rotations
             buffer_on_yedge = 0.5 / num_rotations
             plot_kwargs['extent'] = extent +\
@@ -264,7 +264,7 @@ def plot_fourier_component(polarized, frequencies, num_rotation_angles,\
         to_fft = data
     fft_y =\
         fast_fourier_transform(to_fft, axis=angle_axis, use_window=use_window)
-    high_index = (num_rotation_angles / 2) + 1
+    high_index = (num_rotation_angles // 2) + 1
     (fft_x, fft_y) = (fft_x[:high_index], fft_y[...,:high_index,:])
     try:
         index =\
@@ -320,7 +320,7 @@ def plot_QU_phase_difference(polarized, frequencies, data_frequencies,\
     Ip = np.sqrt(np.sum(np.power(data[1:], 2), axis=0))
     QU_Ip = np.stack([data[1], data[2], Ip], axis=0)
     QU_Ip_fft = fast_fourier_transform(QU_Ip, axis=-2, use_window=use_window)
-    high_index = (num_rotation_angles / 2) + 1
+    high_index = (num_rotation_angles // 2) + 1
     QU_Ip_fft = QU_Ip_fft[:,:high_index,:]
     QU_Ip_fft_phase = np.angle(QU_Ip_fft, deg=True)
     Ip_fft_mag = np.abs(QU_Ip_fft[2])

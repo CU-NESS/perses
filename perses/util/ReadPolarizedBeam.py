@@ -18,11 +18,11 @@ def read_polarized_beam(file_names, frequencies, ntheta=181, nphi=360):
     nfreq = file_names.shape[-1]
     data = np.ndarray((4, nfreq, ntheta, nphi), dtype=complex)
     if (np.ceil((ntheta - 1) / 180.) == 1) and ((180 % (ntheta - 1)) == 0):
-        theta_step = 180 / (ntheta - 1)
+        theta_step = 180 // (ntheta - 1)
     else:
         theta_step = 180. / (ntheta - 1)
     if (np.ceil(nphi / 360) == 1) and ((360 % nphi) == 0):
-        phi_step = 360 / nphi
+        phi_step = 360 // nphi
     else:
         phi_step = 360. / nphi
     thetas = np.arange(0, 180 + theta_step, theta_step)
@@ -48,9 +48,9 @@ def read_polarized_beam(file_names, frequencies, ntheta=181, nphi=360):
                                  "files was not as expected. The rows are " +\
                                  "expected to list off all theta values " +\
                                  "for 0th phi before moving on to 1st phi.")
-            data[Jtheta_ind,ifreq,:,:] = (10 ** (fdata[:,:,3] / 10)) *\
+            data[Jtheta_ind,ifreq,:,:] = (10 ** (fdata[:,:,3] / 10.)) *\
                 np.exp(1.j * np.radians(fdata[:,:,4]))
-            data[Jphi_ind,ifreq,:,:] = (10 ** (fdata[:,:,5] / 10)) *\
+            data[Jphi_ind,ifreq,:,:] = (10 ** (fdata[:,:,5] / 10.)) *\
                 np.exp(1.j * np.radians(fdata[:,:,6]))
     return data
 

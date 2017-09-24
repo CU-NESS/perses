@@ -5,10 +5,10 @@ known_gamma_rec_phase = np.zeros_like(frequencies)
 known_gain = np.ones_like(frequencies)
 known_offset = np.zeros_like(frequencies)
 true_gamma_A_mag = known_gamma_A_mag +\
-    (0.00001 * np.sin(2 * np.pi * frequencies / 20))
+    (0.00001 * np.sin(2 * np.pi * frequencies / 20.))
 true_gamma_A_phase = known_gamma_A_phase + 0.01
 true_gamma_rec_mag = known_gamma_rec_mag -\
-    (0.00005 * np.sin(2 * np.pi * frequencies / 30))
+    (0.00005 * np.sin(2 * np.pi * frequencies / 30.))
 true_gamma_rec_phase = known_gamma_rec_phase + 0.01
 true_gain = known_gain +\
     (0.00001 * np.sin(2 * np.pi * frequencies / 80.))
