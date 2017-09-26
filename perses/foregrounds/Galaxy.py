@@ -12,8 +12,8 @@ T. L., Reich P., 2008, MNRAS, 388, 247
 import os, time
 import numpy as np
 import matplotlib.pyplot as pl
+from ares.util.Pickling import read_pickle_file
 from ..util import ParameterFile
-from ..util.Pickling import read_pickle_file
 from ..beam.BeamUtilities import rotate_map, rotate_maps
 from numpy.polynomial.polynomial import polyval
 
@@ -149,7 +149,7 @@ class Galaxy(object):
             t1 = time.time()
             # negative sign in line below is necessary because
             # spectral indices are stored as positive numbers
-            spectral_index = -read_pickle_file(fn)
+            spectral_index = -read_pickle_file(fn, nloads=1, verbose=False)
             self._guzman_spectral_indices =\
                 fix_resolution_if_necessary(spectral_index, nside)
             t2 = time.time()

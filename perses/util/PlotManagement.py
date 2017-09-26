@@ -1,6 +1,6 @@
 import os, sys
 import numpy as np
-from .Pickling import read_pickle_file, write_pickle_file
+from ares.util.Pickling import read_pickle_file, write_pickle_file
 try:
     import healpy as hp
 except:
@@ -41,12 +41,13 @@ def get_saved_data(data_get_string, file_name, save_data=True, clobber=False,\
                     "{}.").format(file_name))
             data = eval(data_get_string, context)
             print("Saving data for signal plot to {}.".format(file_name))
-            write_pickle_file(data, file_name, safe_mode=False)
+            write_pickle_file(data, file_name, ndumps=1, open_mode='w',\
+                safe_mode=False, verbose=False)
         else: # (not clobber) and file_exists
             print(("Using data for signal plot from {!s}. If this isn't " +\
                 "what you want, set clobber=True in the call to " +\
                 "PlotSignal.").format(file_name))
-            data = read_pickle_file(file_name)
+            data = read_pickle_file(file_name, nloads=1, verbose=False)
     else:
         if file_exists:
             print(("Regenerating data for signal plot even though " +\

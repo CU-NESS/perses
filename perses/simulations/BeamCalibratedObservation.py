@@ -11,6 +11,12 @@ try:
     import healpy as hp
 except:
     pass
+try:
+    # this runs with no issues in python 2 but raises error in python 3
+    basestring
+except:
+    # this try/except allows for python 2/3 compatible string type checking
+    basestring = str
 
 class BeamCalibratedObservation(ReceiverCalibratedObservation):
     def __init__(self, known_beam=None, known_galaxy_map=None,\
@@ -150,7 +156,7 @@ class BeamCalibratedObservation(ReceiverCalibratedObservation):
     @fit_function_kwargs.setter
     def fit_function_kwargs(self, value):
         if isinstance(value, dict):
-            if all([isinstance(key, str) for key in value.keys()]):
+            if all([isinstance(key, basestring) for key in value.keys()]):
                 self._fit_function_kwargs = value
             else:
                 raise ValueError("All keys of fit_function_kwargs " +\

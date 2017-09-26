@@ -5,6 +5,12 @@ from ..util import real_numerical_types
 from .RawObservation import RawObservation
 from .ObservationUtilities import normalize_data_for_plot, plot_data,\
     plot_fourier_component, plot_QU_phase_difference
+try:
+    # this runs with no issues in python 2 but raises error in python 3
+    basestring
+except:
+    # this try/except allows for python 2/3 compatible string type checking
+    basestring = str
 
 class ReceiverCalibratedObservation(RawObservation):
     def __init__(self, calibration_equation=None,\
@@ -103,7 +109,7 @@ class ReceiverCalibratedObservation(RawObservation):
         value must be a dictionary with keys which are all strings
         """
         if isinstance(value, dict):
-            if all([isinstance(key, str) for key in value.keys()]):
+            if all([isinstance(key, basestring) for key in value.keys()]):
                 self._reference_calibration_parameters = value
             else:
                 raise TypeError("Types of keys to dictionary passed as " +\

@@ -23,6 +23,12 @@ try:
     import healpy as hp
 except:
     pass
+try:
+    # this runs with no issues in python 2 but raises error in python 3
+    basestring
+except:
+    # this try/except allows for python 2/3 compatible string type checking
+    basestring = str
 
 try:
     from multiprocess.pool import Pool as mpPool
@@ -209,7 +215,7 @@ class Database(object):
         
         value: desired prefix, must be a string path in an extant directory.
         """
-        if type(value) is str:
+        if isinstance(value, basestring):
             directory = ('/').join(value.split('/')[:-1])
             if os.path.isdir(directory) or (directory == ''):
                 self._prefix = value
@@ -957,7 +963,8 @@ class Database(object):
             return None
         else:
             def all_string_keys(dict_to_check):
-                return all([isinstance(key, str) for key in dict_to_check])
+                return all([isinstance(key, basestring)\
+                    for key in dict_to_check])
             if isinstance(list_of_kwargs_dicts, InfiniteIndexer):
                 if isinstance(list_of_kwargs_dicts[0], dict):
                     if all_string_keys(list_of_kwargs_dicts[0]):

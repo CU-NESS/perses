@@ -6,6 +6,7 @@ from ares.simulations.Global21cm import Global21cm
 from ares.analysis import ModelSet as aresModelSet
 from ares.analysis.MultiPlot import MultiPanel
 from ares.util import labels as ares_labels
+from ares.util.Pickling import read_pickle_file, write_pickle_file
 from ares.util.SetDefaultParameterValues import SetAllDefaults as \
     aresSetAllDefaults
 from ..models import ModelWithBiases, ModelWithGamma,\
@@ -15,7 +16,12 @@ from ..util import int_types, float_types, sequence_types
 from ..util.PlotManagement import get_saved_data
 from ..util.Aesthetics import labels as perses_labels
 from ..util.CurvePlot import curve_plot_from_data
-from ..util.Pickling import read_pickle_file, write_pickle_file
+try:
+    # this runs with no issues in python 2 but raises error in python 3
+    basestring
+except:
+    # this try/except allows for python 2/3 compatible string type checking
+    basestring = str
 
 try:
     from mpi4py import MPI
@@ -180,9 +186,8 @@ class ModelSet(aresModelSet):
                 self._data = load_hdf5_database(self.prefix)
             elif os.path.exists('{!s}.data.pkl'.format(self.prefix)):
                 f_name = '{!s}.data.pkl'.format(self.prefix)
-                if rank == 0:
-                    print("Loading {!s}...".format(f_name))
-                (frequencies, Tskys) = read_pickle_file(f_name)
+                (frequencies, Tskys) =\
+                    read_pickle_file(f_name, nloads=1, verbose=True)
                 self._data = DummyDataset(frequencies, Tskys)
             else:
                 self._data = None
@@ -681,7 +686,8 @@ class ModelSet(aresModelSet):
                     "turning point blobs ({!s}) already exists. If you " +\
                     "don't want to retain it, set clobber=True.").format(key))
             else:
-                write_pickle_file(array_to_save, keys_fn, safe_mode=False)
+                write_pickle_file(array_to_save, keys_fn, ndumps=1,\
+                    open_mode='w', safe_mode=False, verbose=False)
     
     def PlotSignalsAndSignalResiduals(self, reg=0, N=100, skip=0, stop=0,\
         plot_band=False, save_data=False, signal=None,\
@@ -730,7 +736,7 @@ class ModelSet(aresModelSet):
                     "cannot be found.").format(par))
         if parameters is None:
             pindices = [i for i in range(self.chain.shape[1])]
-        elif type(parameters) is str:
+        elif isinstance(parameters, basestring):
             try_adding_parameter(parameters)
         elif type(parameters) in [list, tuple]:
             for parameter in parameters:
@@ -811,7 +817,7 @@ class ModelSet(aresModelSet):
                     ax.plot(iterations, walkers[iwalker], **kwargs)
                 if parameters is None:
                     func_pars['parameters'] = self.parameters[iparam]
-                elif type(parameters) is str:
+                elif isinstance(parameters, basestring):
                     assert iparam == 0
                     func_pars['parameters'] = parameters
                 elif type(parameters) in [list, tuple]:

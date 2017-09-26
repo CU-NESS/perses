@@ -125,12 +125,13 @@ elif mode in ['signal', 'residuals', 'additive_biases',\
             else:
                 kwargs[var] = evalled_string
         else:
+            print(key)
             is_simple_import = (nw == 2) and (words[0] == 'import')
             is_from_import =\
                 (nw == 4) and (words[0] == 'from') and (words[2] == 'import')
             if is_simple_import:
                 imports[words[1]] = importlib.import_module(words[1])
-            if is_from_import:
+            elif is_from_import:
                 module = importlib.import_module(words[1])
                 imports[words[3]] = getattr(module, words[3])
             else:

@@ -9,6 +9,7 @@ Description: The ModelFit class is the 'fitter'. When creating a ModelFit
 """
 import re
 import numpy as np
+from ares.util.Pickling import write_pickle_file
 from ares.inference.ModelFit import guesses_from_priors
 from ares.inference.ModelFit import ModelFit as aresModelFit
 from ares.util.SetDefaultParameterValues import SetAllDefaults as \
@@ -18,6 +19,12 @@ from ..simulations import load_hdf5_database
 from ..util import print_fit, real_numerical_types, sequence_types
 from ..util.SetDefaultParameterValues import FitParameters
 from .Likelihood import LogLikelihood
+try:
+    # this runs with no issues in python 2 but raises error in python 3
+    basestring
+except:
+    # this try/except allows for python 2/3 compatible string type checking
+    basestring = str
 
 class DummyDataset(object):
     def __init__(self):
@@ -108,7 +115,8 @@ class ModelFit(aresModelFit):
                 # don't save data if it is already part of a database
                 all_data = (self.data.frequencies, self.data.data)
                 file_name = '{!s}.data.pkl'.format(self.prefix)
-                write_pickle_file(all_data, file_name, safe_mode=False)
+                write_pickle_file(all_data, file_name, ndumps=1,\
+                    open_mode='w', safe_mode=False, verbose=False)
         return pos
 
     @property
@@ -188,7 +196,7 @@ class ModelFit(aresModelFit):
             numpy.ndarray).
             
         """
-        if type(value) is str:
+        if isinstance(value, basestring):
             self._data = load_hdf5_database(value)
             self.frequencies = self._data.attrs['frequencies']
             self._error = self._data['error'].value

@@ -15,6 +15,12 @@ try:
     import healpy as hp
 except ImportError:
     pass
+try:
+    # this runs with no issues in python 2 but raises error in python 3
+    basestring
+except:
+    # this try/except allows for python 2/3 compatible string type checking
+    basestring = str
 
 
 class RawObservation(object):
@@ -256,7 +262,7 @@ class RawObservation(object):
         value must be a dictionary with keys which are all strings
         """
         if isinstance(value, dict):
-            if all([isinstance(key, str) for key in value.keys()]):
+            if all([isinstance(key, basestring) for key in value.keys()]):
                 self._true_calibration_parameters = value
             else:
                 raise TypeError("Types of keys to dictionary passed as " +\
@@ -477,7 +483,7 @@ class RawObservation(object):
     @foreground_kwargs.setter
     def foreground_kwargs(self, value):
         if isinstance(value, dict):
-            if all([isinstance(key, str) for key in value.keys()]):
+            if all([isinstance(key, basestring) for key in value.keys()]):
                 self._foreground_kwargs = value
                 self._foreground_kwargs['include_smearing'] =\
                     self.include_smearing

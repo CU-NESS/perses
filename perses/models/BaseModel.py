@@ -12,6 +12,12 @@ import numpy as np
 from numpy.polynomial.polynomial import polyval
 from ares.analysis.BlobFactory import BlobFactory
 from ..util import int_types, sequence_types, real_numerical_types
+try:
+    # this runs with no issues in python 2 but raises error in python 3
+    basestring
+except:
+    # this try/except allows for python 2/3 compatible string type checking
+    basestring = str
 
 def find_pars(prefix, all_parameters, reg=None):
     """
@@ -70,7 +76,7 @@ class BaseModel(object):
     
     @parameter_names.setter
     def parameter_names(self, value):
-        if (type(value) in sequence_types) and (type(value[0]) is str):
+        if all([isinstance(element, basestring) for element in value]):
             self._parameter_names = list(value) + list(self.base_kwargs.keys())
         else:
             raise ValueError("parameter_names property of model was " +\

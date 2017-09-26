@@ -325,7 +325,7 @@ class _TotalPowerBeam(_Beam):
             pl.savefig('{0!s}{1}{2!s}'.format(frame_prefix, iframe,\
                 frame_suffix))
             pl.close()
-        name_no_spaces = str.join('_', name.split(' '))
+        name_no_spaces = '_'.join(name.split(' '))
         video_file_name = name_no_spaces + '_cross_sections.' + file_extension
         make_video(video_file_name, frame_rate, frame_prefix,\
             np.arange(num_frames), frame_suffix, slowdown)

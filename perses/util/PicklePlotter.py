@@ -9,7 +9,7 @@ Description: Convenience script which opens pickle files which contain curves
 import os, sys
 import numpy as np
 import matplotlib.pyplot as pl
-from .Pickling import read_pickle_file
+from ares.util.Pickling import read_pickle_file
 
 fn = sys.argv[1]
 
@@ -19,7 +19,7 @@ for iarg in range(2, len(sys.argv)):
     kwargs[name] = eval(val_str)
 
 if os.path.exists(fn):
-    curves = read_pickle_file(fn)
+    curves = read_pickle_file(fn, nloads=1, verbose=False)
     if curves.ndim == 1:
         pl.plot(np.arange(len(curves)), curves, **kwargs)
     elif curves.ndim == 2:

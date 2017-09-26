@@ -1,6 +1,12 @@
 import numpy as np
 from ..util import sequence_types
 from .BaseModel import BaseModel
+try:
+    # this runs with no issues in python 2 but raises error in python 3
+    basestring
+except:
+    # this try/except allows for python 2/3 compatible string type checking
+    basestring = str
 
 class LinearModel(BaseModel):
     def __init__(self, basis, prefix):
@@ -31,7 +37,7 @@ class LinearModel(BaseModel):
     
     @prefix.setter
     def prefix(self, value):
-        if isinstance(value, str):
+        if isinstance(value, basestring):
             self._prefix = value
         else:
             raise TypeError("prefix given to LinearModel should be a " +\

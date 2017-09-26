@@ -14,6 +14,12 @@ from .CurvePlot import curve_plot_from_data, impose_curve_confidence_interval
 from .PlotManagement import get_saved_data
 from .TypeCategories import float_types
 from ..analysis import ModelSet
+try:
+    # this runs with no issues in python 2 but raises error in python 3
+    basestring
+except:
+    # this try/except allows for python 2/3 compatible string type checking
+    basestring = str
 
 def rms_from_minmax_and_curves(minmax, curves):
     # it would probably be best for this
@@ -149,9 +155,9 @@ def combined_band_plot(prefix_sets, file_name, colors, ax=None, N=1e2,\
     returns nested tuple of form
             (axes, (band_minmax, dashed_minmax))
     """
-    if type(prefix_sets[0]) is str:
+    if isinstance(prefix_sets[0], basestring):
         prefix_sets = [prefix_sets]
-    if type(labels) is str:
+    if isinstance(labels, basestring):
         labels = [labels] * len(prefix_sets)
     if type(plot_band) not in [list, tuple, np.ndarray]:
         plot_band = [plot_band, 0]
@@ -264,7 +270,7 @@ def combined_band_plot(prefix_sets, file_name, colors, ax=None, N=1e2,\
 #    alpha=0.2):
 #    """
 #    """
-#    if type(prefix_sets[0]) is str:
+#    if isinstance(prefix_sets[0], basestring):
 #        prefix_sets = [prefix_sets]
 #    if type(plot_band) not in [list, tuple, np.ndarray]:
 #        plot_band = [plot_band, 0]

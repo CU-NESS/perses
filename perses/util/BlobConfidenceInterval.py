@@ -1,12 +1,13 @@
 import os, sys
 import numpy as np
-from .Pickling import read_pickle_file
+from ares.util.Pickling import read_pickle_file
 
 def blob_interval_many_sets(prefixes, blob, confidence):
     sample = []
     for prefix in prefixes:
         presample =\
-            read_pickle_file('{0!s}.blob_0d.{1!s}.pkl'.format(prefix, blob))
+            read_pickle_file('{0!s}.blob_0d.{1!s}.pkl'.format(prefix, blob),\
+            nloads=1, verbose=False)
         if type(presample) is np.ma.core.MaskedArray:
             presample = presample.compressed()
         elif type(presample) is not np.ndarray:
