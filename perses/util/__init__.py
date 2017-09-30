@@ -1,4 +1,4 @@
-from perses.util import Pickling, TypeCategories
+from perses.util import TypeCategories
 from perses.util.Aesthetics import labels
 from perses.util.PrintInfo import print_fit
 from perses.util.Misc import generate_galaxy_pars

@@ -1367,7 +1367,7 @@ class Database(object):
         attributes are saved in the root directory of the hdf5 file.
         """
         if os.path.exists(self.file_name):
-            os.system('rm' + self.file_name)
+            os.remove(self.file_name)
         hdf5_file = h5py.File(self.file_name, 'w')
         datasets_to_save =\
         [\

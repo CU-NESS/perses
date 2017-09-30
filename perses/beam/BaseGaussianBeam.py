@@ -39,7 +39,7 @@ class _GaussianBeam(object):
 
     @y_fwhm.setter
     def y_fwhm(self, value):
-        if (value is None) or (type(fwhm) is FunctionType):
+        if (value is None) or (type(value) is FunctionType):
             self._y_fwhm = value
         else:
             raise AttributeError("If y_fwhm is given, it must be a single " +\

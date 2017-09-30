@@ -30,11 +30,6 @@ class DummyDataset(object):
     def __init__(self):
         pass
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
-
 default_offset = 0.1
 def_kwargs = {'galaxy_pivot': 80., 'galaxy_model': 'logpoly'}
 signal_model_classes = ['AresSignalModel', 'SVDSignalModel', 'LinearModel']

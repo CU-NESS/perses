@@ -1,4 +1,4 @@
-import os, time, pickle 
+import os, time
 import numpy as np
 import numpy.linalg as la
 import matplotlib.pyplot as pl
