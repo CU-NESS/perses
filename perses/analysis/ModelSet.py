@@ -828,7 +828,7 @@ class ModelSet(aresModelSet):
                                      "string, or a list of strings.")
                 vmomv = self.vmomv(**func_pars)
                 ax.text(0.85, 0.85,\
-                    '$\\frac{{Var(Mean)}}{{Mean(Var)}}$={:.3g}'.format(vmomv),\
+                    '$\\frac{{Var(Mean)}}{{Mean(Var)}}$={!s}'.format(vmomv),\
                     horizontalalignment='center', verticalalignment='center',\
                     transform=ax.transAxes)
             pl.title('Chain for {!s}'.format(\

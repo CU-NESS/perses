@@ -12,4 +12,4 @@ except ImportError:
 from perses.util.TypeCategories import bool_types, int_types, float_types,\
     real_numerical_types, complex_numerical_types, numerical_types,\
     sequence_types
-
+from perses.util.AresSignal import ares_signal, combine_dicts

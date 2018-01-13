@@ -38,6 +38,7 @@ class ReceiverCalibratedObservation(RawObservation):
                include_moon
                inverse_calibration_equation
                frequencies
+               channel_widths
                seed
                pointing
                psi

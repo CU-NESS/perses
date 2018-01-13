@@ -36,7 +36,7 @@ def read_polarized_beam(file_names, frequencies, ntheta=181, nphi=360):
         Jtheta_ind = which_antenna
         Jphi_ind = 2 + which_antenna
         for ifreq in range(nfreq):
-            prefix, suffix = file_names[:,which_antenna,ifreq]
+            (prefix, suffix) = file_names[:,which_antenna,ifreq]
             file_name = prefix + str(frequencies[ifreq]) + suffix
             fdata = pd.read_table(file_name, **read_kwargs).values
             fdata = np.reshape(fdata, (nphi, ntheta) + fdata.shape[1:])
@@ -48,10 +48,16 @@ def read_polarized_beam(file_names, frequencies, ntheta=181, nphi=360):
                                  "files was not as expected. The rows are " +\
                                  "expected to list off all theta values " +\
                                  "for 0th phi before moving on to 1st phi.")
-            data[Jtheta_ind,ifreq,:,:] = (10 ** (fdata[:,:,3] / 10.)) *\
-                np.exp(1.j * np.radians(fdata[:,:,4]))
-            data[Jphi_ind,ifreq,:,:] = (10 ** (fdata[:,:,5] / 10.)) *\
-                np.exp(1.j * np.radians(fdata[:,:,6]))
+            if take_sqrt:
+                data[Jtheta_ind,ifreq,:,:] = (10 ** (fdata[:,:,3] / 20.)) *\
+                    np.exp(1.j * np.radians(fdata[:,:,4]))
+                data[Jphi_ind,ifreq,:,:] = (10 ** (fdata[:,:,5] / 20.)) *\
+                    np.exp(1.j * np.radians(fdata[:,:,6]))
+            else:
+                data[Jtheta_ind,ifreq,:,:] = (10 ** (fdata[:,:,3] / 10.)) *\
+                    np.exp(1.j * np.radians(fdata[:,:,4]))
+                data[Jphi_ind,ifreq,:,:] = (10 ** (fdata[:,:,5] / 10.)) *\
+                    np.exp(1.j * np.radians(fdata[:,:,6]))
     return data
 
 

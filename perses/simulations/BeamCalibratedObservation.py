@@ -56,6 +56,7 @@ class BeamCalibratedObservation(ReceiverCalibratedObservation):
                calibration_equation
                inverse_calibration_equation
                frequencies
+               channel_widths
                seed
                pointing
                psi

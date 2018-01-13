@@ -36,6 +36,7 @@ nside = 32
 npix = hp.pixelfunc.nside2npix(nside)
 fstep = 1
 frequencies = np.linspace(50, 120, (70 // fstep) + 1)
+channel_widths = np.ones_like(frequencies) * fstep
 #pointings = [earths_celestial_north_pole]
 pointings = [(90, 0)]
 psis = [0.]
@@ -83,11 +84,11 @@ def noise_magnitude_from_powers(powers, channel_width=1000000., tint=2880000.):
 kwargs = {}
 for key in ['calibration_equation', 'inverse_calibration_equation',\
             'all_true_calibration_parameters', 'nside', 'frequencies',\
-            'pointings', 'psis', 'include_moon', 'signal_data', 'seeds',\
-            'prefix', 'polarized', 'verbose', 'galaxy_map', 'beams',\
-            'all_known_calibration_parameters', 'noise_magnitude_from_powers',\
-            'rotation_angles', 'tint', 'known_beams', 'all_foreground_kwargs',\
-            'include_smearing']:
+            'channel_widths', 'pointings', 'psis', 'include_moon',\
+            'signal_data', 'seeds', 'prefix', 'polarized', 'verbose',\
+            'galaxy_map', 'beams', 'all_known_calibration_parameters',\
+            'noise_magnitude_from_powers', 'rotation_angles', 'tint',\
+            'known_beams', 'all_foreground_kwargs', 'include_smearing']:
     try:
         kwargs[key] = eval(key)
     except:

@@ -31,10 +31,10 @@ class RawObservation(object):
     """
     def __init__(self, verbose=True, polarized=True, galaxy_map=None,\
         nside=None, include_moon=None, inverse_calibration_equation=None,\
-        frequencies=None, seed=None, pointing=None, psi=None, tint=None,\
-        beam=None, true_calibration_parameters=None, signal_data=None,\
-        moon_temp=None, moon_blocking_fraction=None, rotation_angles=None,\
-        include_foreground=None, foreground_kwargs=None,\
+        frequencies=None, channel_widths=None, seed=None, pointing=None,\
+        psi=None, tint=None, beam=None, true_calibration_parameters=None,\
+        signal_data=None, moon_temp=None, moon_blocking_fraction=None,\
+        rotation_angles=None, include_foreground=None, foreground_kwargs=None,\
         include_smearing=None, include_signal=None):
         """
         Initializes the observation.
@@ -51,6 +51,7 @@ class RawObservation(object):
         self.include_moon = include_moon
         self.inverse_calibration_equation = inverse_calibration_equation
         self.frequencies = frequencies
+        self.channel_widths = channel_widths
         self.seed = seed
         self.pointing = pointing
         self.psi = psi
@@ -462,6 +463,25 @@ class RawObservation(object):
                                  "typecast into a 1D numpy.ndarray")
     
     @property
+    def channel_widths(self):
+        """
+        """
+        if not hasattr(self, '_channel_widths'):
+            raise AttributeError("channel_widths must be set by hand.")
+        return self._channel_widths
+    
+    @channel_widths.setter
+    def channel_widths(self, value):
+        """
+        """
+        if value is not None:
+            if value.shape == self.frequencies.shape:
+                self._channel_widths = value
+            else:
+                raise ValueError("channel_widths was set to an array of a " +\
+                    "different shape than the frequencies.")
+    
+    @property
     def Nchannels(self):
         """
         The number of frequency channels in this observation.
@@ -689,18 +709,29 @@ class RawObservation(object):
             raise TypeError("seed given to RawObservation must be None or " +\
                             "an integer.")
     
-    def noise_magnitude_from_powers(self, Tsys, channel_width=1e6,\
-        tint=2.88e6):
-        reduction_factor = np.sqrt(channel_width * tint)
+    def noise_magnitude_from_powers(self, Tsys, tint=1):
+        """
+        Finds the magnitude of the noise from the given integration time,
+        channel width, and system temperature spectra.
+        
+        Tsys: in K
+        tint: in hr
+        """
+        channel_widths_in_Hz = self.channel_widths * 1e6
+        tint_in_s = tint * 3600.
+        reduction_factor = np.sqrt(channel_widths_in_Hz * tint_in_s)
         if self.polarized:
             Tsys2 = Tsys ** 2
             error = np.stack((Tsys2[0] + Tsys2[1] + Tsys2[2] + Tsys2[3],\
                 Tsys2[0] + Tsys2[1] - Tsys2[2] - Tsys2[3],\
                 Tsys2[0] - Tsys2[1] + Tsys2[2] - Tsys2[3],\
                 Tsys2[0] - Tsys2[1] - Tsys2[2] + Tsys2[3]))
-            return np.sqrt(error) / reduction_factor
+            answer = np.sqrt(error)
         else:
-            return np.abs(Tsys) / reduction_factor
+            answer = np.abs(Tsys)
+        reduction_factor_slice =\
+            ((np.newaxis,) * (answer.ndim - 1)) + (slice(None),)
+        return answer / reduction_factor[reduction_factor_slice]
     
     def calculate_noise(self):
         """
@@ -708,12 +739,11 @@ class RawObservation(object):
         value of Tsys and the stored value of the integration time.
         """
         band_width = self.frequencies[-1] - self.frequencies[0]
-        tint_per_angle_in_s = (self.tint * 3600.) / self.num_rotation_angles
-        channel_width_Hz = ((1e6 * band_width) / (self.Nchannels - 1.))
-        error = self.noise_magnitude_from_powers(self.Tsys,\
-            channel_width=channel_width_Hz, tint=tint_per_angle_in_s)
+        tint_per_angle = self.tint / self.num_rotation_angles
+        error =\
+            self.noise_magnitude_from_powers(self.Tsys, tint=tint_per_angle)
         np.random.seed(self.seed)
-        return error, error * np.random.normal(size=error.shape)
+        return (error, error * np.random.normal(size=error.shape))
     
     @property
     def data_shape(self):

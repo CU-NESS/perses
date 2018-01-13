@@ -85,8 +85,8 @@ class Database(object):
     """
     def __init__(self, prefix=None, verbose=None, polarized=None,\
         pointings=None, galaxy_maps=None, nside=None, include_moon=None,\
-        inverse_calibration_equation=None, frequencies=None, seeds=None,\
-        psis=None, tint=None, beams=None,\
+        inverse_calibration_equation=None, frequencies=None,\
+        channel_widths=None, seeds=None, psis=None, tint=None, beams=None,\
         all_true_calibration_parameters=None, signal_data=None,\
         moon_temps=None, moon_blocking_fractions=None, rotation_angles=None,\
         include_foreground=None, all_foreground_kwargs=None,\
@@ -128,6 +128,7 @@ class Database(object):
         frequencies: the frequencies (in MHz) for which the antenna temperature
                      or Stokes parameters is to be simulated. No default. An
                      error will be given if no frequencies are given.
+        channel_widths: frequency widths of each channel
         seeds: list (with same length as pointings) of integer seeds for
                numpy.random to seed the random number generator.
                Default: None (time will be used)
@@ -189,8 +190,8 @@ class Database(object):
         for attribute in ['verbose', 'polarized', 'pointings',\
                           'galaxy_maps', 'nside', 'include_smearing',\
                           'include_moon', 'inverse_calibration_equation',\
-                          'frequencies', 'seeds', 'psis', 'tint', 'beams',\
-                          'all_true_calibration_parameters',\
+                          'frequencies', 'channel_widths', 'seeds', 'psis',\
+                          'tint', 'beams', 'all_true_calibration_parameters',\
                           'signal_data', 'moon_temps',\
                           'moon_blocking_fractions', 'rotation_angles',\
                           'include_foreground', 'include_signal',\
@@ -265,7 +266,8 @@ class Database(object):
                 include_smearing=self.include_smearing, nside=self.nside,\
                 include_moon=self.include_moon, inverse_calibration_equation=\
                 self.inverse_calibration_equation,\
-                frequencies=self.frequencies, seed=self.seeds[region],\
+                frequencies=self.frequencies,\
+                channel_widths=self.channel_widths, seed=self.seeds[region],\
                 psi=self.psis[region], tint=self.tint[region],\
                 beam=self.beams[region],\
                 true_calibration_parameters=\
@@ -937,6 +939,25 @@ class Database(object):
             else:
                 raise ValueError("Proposed frequencies cannot be " +\
                                  "typecast into a 1D numpy.ndarray")
+    
+    @property
+    def channel_widths(self):
+        """
+        """
+        if not hasattr(self, '_channel_widths'):
+            raise AttributeError("channel_widths must be set by hand.")
+        return self._channel_widths
+    
+    @channel_widths.setter
+    def channel_widths(self, value):
+        """
+        """
+        if value is not None:
+            if value.shape == self.frequencies.shape:
+                self._channel_widths = value
+            else:
+                raise ValueError("channel_widths was set to an array of a " +\
+                    "different shape than the frequencies.")
     
     @property
     def all_foreground_kwargs(self):
