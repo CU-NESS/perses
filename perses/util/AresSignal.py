@@ -1,9 +1,10 @@
 """
 """
+import gc
 import numpy as np
 from ares.simulations.Global21cm import Global21cm
 
-def ares_signal(frequencies, in_Kelvin=False, **kwargs):
+def ares_signal(frequencies, in_Kelvin=False, gc_collect=False, **kwargs):
     """
     
     """
@@ -11,6 +12,9 @@ def ares_signal(frequencies, in_Kelvin=False, **kwargs):
     sim.run()
     nu = 1420.41 / (1 + sim.history['z'])
     signal = np.interp(frequencies, nu, sim.history['dTb'])
+    if gc_collect:
+        del sim
+        gc.collect()
     if in_Kelvin:
         return signal / 1e3
     else:
