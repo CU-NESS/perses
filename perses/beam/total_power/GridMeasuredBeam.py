@@ -273,7 +273,7 @@ class GridMeasuredBeam(_TotalPowerBeam):
         t2 = time.time()
         if verbose:
             print(('Convolved beam at {0} frequencies with a map in ' +\
-                '{0:.2g} s.').format(numfreqs, t2 - t1))
+                '{1:.2g} s.').format(numfreqs, t2 - t1))
         return spectrum
 
     # try not to use function below.

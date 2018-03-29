@@ -107,7 +107,19 @@ def spin_maps(maps, angle, degrees=True, pixel_axis=-1, nest=False):
 
 def smear_maps(maps, angle_start, angle_end, degrees=True, pixel_axis=-1,\
     nest=False):
-    # TODO documentation and make this method more exact/faster
+    """
+    Smears the given maps (uniformly) between the given angles.
+    
+    maps: numpy.ndarray of maps to smear
+    angle_start: the starting azimuthal angle
+    angle_end: the ending azimuthal angle
+    degrees: if True, angle_start and angle_end are in degrees
+             otherwise, they are in radians
+    pixel_axis: axis of maps representing healpy pixels
+    nest: if True, maps are in NESTED format. otherwise maps are in RING format
+    
+    returns: numpy.ndarray of same shape as maps containing smeared maps
+    """
     pixel_axis = (pixel_axis % maps.ndim)
     average_angle = (angle_start + angle_end) / 2.
     angle_difference = (angle_end - angle_start)
@@ -130,29 +142,88 @@ def smear_maps(maps, angle_start, angle_end, degrees=True, pixel_axis=-1,\
 
 def smear_maps_approximate(sky_maps, delta):
     """
-    Smears the given maps from phi-(delta/2) to phi+(delta/2) using the
-    spherical harmonic approximation.
+    Smears the given maps (uniformly) from phi-(delta/2) to phi+(delta/2) using
+    the spherical harmonic approximation.
     
-    sky_maps: 1 or 2 dimensional numpy.ndarray whose last axis is the pixel
-              axis.
+    sky_maps: 2D numpy.ndarray whose last axis represents healpy pixels
+    delta: the angle (centered on the current position), in degrees, through
+           which the smearing takes place
     
+    returns: array of same shape as sky_maps containing smeared maps
     """
     npix = sky_maps.shape[-1]
     nside = hp.pixelfunc.npix2nside(npix)
     alm = np.array(hp.sphtfunc.map2alm(sky_maps, pol=False))
+    if sky_maps.shape[0] == 1:
+        alm = alm[np.newaxis,:]
     lmax = hp.sphtfunc.Alm.getlmax(alm.shape[1])
-    m_values = np.zeros(alm.shape)
     accounted_for = 0
-    for m in range(lmax):
-        m_values[:,accounted_for:accounted_for+(lmax-m+1)] = m
-        accounted_for += (lmax - m + 1)
-    alm = alm * np.sinc(m_values * delta / 360.)
+    for m_value in range(lmax + 1):
+        multiplicity = (lmax - m_value + 1)
+        alm[:,accounted_for:accounted_for+multiplicity] *=\
+            np.sinc((m_value * delta) / 360.)
+        accounted_for += multiplicity
+    return np.array(hp.sphtfunc.alm2map(alm, nside, pol=False))
+
+def patchy_smear_maps_approximate(sky_maps, patch_size, patch_locations):
+    """
+    Smears the given maps through patches of the given size centered on the
+    given locations the spherical harmonic approximation.
+    
+    sky_maps: 2D numpy.ndarray whose last axis represents healpy pixels
+    patch_size: full (not half) angle (in degrees) subtended by the patches
+                which compose the full smear
+    patch_locations: 1D array of patch centers, as measured in degrees azimuth
+    
+    returns: array of same shape as sky_maps containing smeared maps
+    """
+    npix = sky_maps.shape[-1]
+    nside = hp.pixelfunc.npix2nside(npix)
+    alm = np.array(hp.sphtfunc.map2alm(sky_maps, pol=False))
+    if sky_maps.shape[0] == 1:
+        alm = alm[np.newaxis,:]
+    lmax = hp.sphtfunc.Alm.getlmax(alm.shape[1])
+    accounted_for = 0
+    m_values = np.arange(lmax + 1)
+    multiplicative_factors = (1.j * m_values[np.newaxis,:] *\
+        np.radians(patch_locations[:,np.newaxis]))
+    multiplicative_factors = np.mean(np.exp(multiplicative_factors), axis=0) *\
+        np.sinc(m_values * patch_size / 360.)
+    for m_value in m_values:
+        multiplicity = (lmax - m_value + 1)
+        alm[:,accounted_for:accounted_for+multiplicity] *=\
+            multiplicative_factors[m_value]
+        accounted_for += multiplicity
     return np.array(hp.sphtfunc.alm2map(alm, nside, pol=False))
 
 def convolve_map(beam_map, sky_map, normed=True):
+    """
+    Convolves the given beam and sky maps.
+    
+    beam_maps: 1D numpy.ndarray of shape (npix,)
+    sky_maps: 1D numpy.ndarray of shape (npix,)
+    normed: if False, beam_map is assumed to be normalized already, so
+                      normalization is not performed here.
+            otherwise, normalization is performed here
+    
+    returns: single number convolution result
+    """
     convolve_maps(beam_map, sky_map, normed=normed, pixel_axis=0)
 
 def convolve_maps(beam_maps, sky_maps, normed=True, pixel_axis=-1):
+    """
+    Convolves the given beam and sky maps along the given axis.
+    
+    beam_maps: numpy.ndarray which has 1 dimension of shape npix
+    sky_maps: numpy.ndarray of shape compatible with beam_maps shape
+    normed: if False, beam_maps are assumed to be normalized already, so
+                      normalization is not performed here.
+            otherwise, normalization is performed here
+    pixel_axis: the index of the axis representing healpy pixels
+    
+    returns: array with same shape as beam_maps*sky_maps with
+             pixel_axis missing
+    """
     convolution = np.sum(beam_maps * sky_maps, axis=pixel_axis)
     if normed:
         return convolution / np.sum(beam_maps, axis=pixel_axis)
@@ -349,7 +420,6 @@ def call_rotator(rotator, thetas, phis):
 
 def symmetrize_grid(grids, phi_axis=-1):
     return smear_grids(grids, 0., 360., degrees=True, phi_axis=phi_axis)
-
 
 def grids_from_maps(maps, theta_res=1, phi_res=1, nest=False, pixel_axis=-1):
     """

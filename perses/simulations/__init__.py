@@ -10,3 +10,5 @@ from perses.simulations.BeamCalibratedObservation\
 from perses.simulations.Database import Database, load_hdf5_database
 from perses.simulations.GroundObservatory import GroundObservatory,\
     EDGESObservatory
+from perses.simulations.Driftscan import rotate_maps_to_LST,\
+    smear_maps_through_LST
