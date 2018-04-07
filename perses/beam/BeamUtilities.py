@@ -94,12 +94,35 @@ def spin_grids(grids, angle, degrees=True, phi_axis=-1):
     low = np.roll(grids, -int_part, axis=phi_axis)
     return (high * float_part) + (low * (1 - float_part))
 
-def spin_maps(maps, angle, degrees=True, pixel_axis=-1, nest=False):
+def spin_maps(maps, angle, degrees=True, pixel_axis=-1, nest=False,\
+    pixel_fraction_tolerance=1e-6):
+    """
+    Spins the given maps through the given angle.
+    
+    maps: numpy.ndarray of maps to smear
+    angle: the angle through which to spin the maps
+    degrees: if True, angle is interpreted to be in degrees
+             if False, angle is interpreted to be in radians
+    pixel_axis: the axis of the maps which corresponds to healpy pixels
+    nest: if True, maps are in NESTED format
+          if False (default), maps are in RING format
+    pixel_fraction_tolerance: the smallest fraction of a pixel which this
+                              function should bother spinning through. The
+                              default is 1e-6, which is the equivalent of about
+                              1 ms of rotation at nside=32. If angle is within
+                              this tolerance of a multiple of 2 * np.pi, then
+                              no spinning is performed
+    
+    returns: numpy.ndarray of same shape as maps containing the spun maps
+    """
     pixel_axis = (pixel_axis % maps.ndim)
     if degrees:
         angle = np.radians(angle)
     npix = maps.shape[pixel_axis]
     nside = hp.pixelfunc.npix2nside(npix)
+    pixel_size = np.sqrt(np.pi / 3) / nside
+    if np.cos(angle) >= np.cos(pixel_size * pixel_fraction_tolerance):
+        return maps
     thetas, phis = hp.pixelfunc.pix2ang(nside, np.arange(npix))
     phis = (phis + angle) % (2 * np.pi)
     return interpolate_maps(maps, thetas, phis, nest=nest, axis=pixel_axis,\
@@ -204,11 +227,11 @@ def convolve_map(beam_map, sky_map, normed=True):
     sky_maps: 1D numpy.ndarray of shape (npix,)
     normed: if False, beam_map is assumed to be normalized already, so
                       normalization is not performed here.
-            otherwise, normalization is performed here
+            otherwise (default), normalization is performed here
     
     returns: single number convolution result
     """
-    convolve_maps(beam_map, sky_map, normed=normed, pixel_axis=0)
+    return convolve_maps(beam_map, sky_map, normed=normed, pixel_axis=0)
 
 def convolve_maps(beam_maps, sky_maps, normed=True, pixel_axis=-1):
     """
