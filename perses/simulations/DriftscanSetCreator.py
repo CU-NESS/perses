@@ -291,13 +291,12 @@ class DriftscanSetCreator(object):
         completed = self.file.attrs['next_index']
         try:
             for ibeam in range(self.nbeams):
-                if (ibeam * self.nmaps * self.nlst_intervals) < completed:
+                if (ibeam * self.nmaps) < completed:
                     continue
                 beam = self.beam_function(ibeam, *beam_args[ibeam],\
                     **beam_kwargs[ibeam])
                 for imaps in range(self.nmaps):
-                    if (((ibeam * self.nmaps) + imaps) *\
-                        self.nlst_intervals) < completed:
+                    if ((ibeam * self.nmaps) + imaps) < completed:
                         continue
                     maps = self.maps_function(imaps, *maps_args[imaps],\
                         **maps_kwargs[imaps])
