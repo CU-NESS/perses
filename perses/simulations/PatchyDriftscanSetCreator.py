@@ -141,7 +141,7 @@ class PatchyDriftscanSetCreator(DriftscanSetCreator):
         returns: single 1D numpy.ndarray of length self.nfrequencies
         """
         smeared_maps = smear_maps_through_LST_patches(maps, self.observatory,\
-            self.lst_sample[ilst], self.lst_duration)
+            self.lst_samples[ilst], self.lst_duration)
         return\
             beam.convolve(self.frequencies, (90, 0), 0, smeared_maps, **kwargs)
 
