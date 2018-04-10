@@ -203,7 +203,7 @@ def patchy_smear_maps_approximate(sky_maps, patch_size, patch_locations):
     npix = sky_maps.shape[-1]
     nside = hp.pixelfunc.npix2nside(npix)
     alm = np.array(hp.sphtfunc.map2alm(sky_maps, pol=False))
-    if sky_maps.shape[0] == 1:
+    if (sky_maps.ndim == 1) or (sky_maps.shape[0] == 1):
         alm = alm[np.newaxis,:]
     lmax = hp.sphtfunc.Alm.getlmax(alm.shape[1])
     accounted_for = 0
@@ -217,7 +217,10 @@ def patchy_smear_maps_approximate(sky_maps, patch_size, patch_locations):
         alm[:,accounted_for:accounted_for+multiplicity] *=\
             multiplicative_factors[m_value]
         accounted_for += multiplicity
-    return np.array(hp.sphtfunc.alm2map(alm, nside, pol=False))
+    if sky_maps.ndim == 1:
+        return np.array(hp.sphtfunc.alm2map(alm[0], nside, pol=False))
+    else:
+        return np.array(hp.sphtfunc.alm2map(alm, nside, pol=False))
 
 def convolve_map(beam_map, sky_map, normed=True):
     """
