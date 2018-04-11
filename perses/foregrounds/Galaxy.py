@@ -9,7 +9,7 @@ T. L., Reich P., 2008, MNRAS, 388, 247
 
 """
 
-import os, time
+import os, time, h5py
 import numpy as np
 import matplotlib.pyplot as pl
 from ares.util.Pickling import read_pickle_file
@@ -47,16 +47,24 @@ class Galaxy(object):
         """
         Constructor of Galaxy class. Possible keyword arguments include:
         
-        galaxy_pivot  pivot to use when calculating log polynomials
-        galaxy_map  "haslam1982"          ---> Haslam map, 408 MHz,
+        galaxy_map  "Haslam1982"          ---> Haslam map, 408 MHz, with
+                                               constant -2.5 spectral index (or
+                                               a spectral index which is given
+                                               as a 'spectral_index' kwarg)
+                    "Guzman"              ---> Same as haslam1982 except using
+                                               the Guzman map at 45 MHz. Note
+                                               that this map has a hole
+                                               centered on the north celestial
+                                               pole
                     "extrapolated_Guzman" ---> Guzman et. al. 45 MHz map
+                                               extrapolated to frequencies
+                                               using haslam1982 map
                     anything else         ---> GSM
-        spectral_index  if galaxy_map=="haslam1982", spectral index to assume
-                        when scaling the Haslam map
+        spectral_index: if galaxy_map in ["haslam1982", "Guzman"], spectral
+                        index to assume when scaling the map
         """
         self.pf = ParameterFile(**kwargs)
-
-        self.map = self.pf['galaxy_map'] 
+        self.map = self.pf['galaxy_map'].lower()
         self.pivot = self.pf['galaxy_pivot']
 
     def PlotGSM(self, freq, beam=None, **kwargs):
@@ -81,7 +89,9 @@ class Galaxy(object):
         
         if self.map == 'haslam1982':
             map_name = 'Scaled Haslam map'
-        elif self.map == 'extrapolated_Guzman':
+        elif self.map == 'extrapolated_guzman':
+            map_name = 'Haslam-scaled Guzman map'
+        elif self.map == 'guzman':
             map_name = 'Scaled Guzman et al 45 MHz map'
         else:
             map_name = 'GSM'
@@ -115,22 +125,6 @@ class Galaxy(object):
 
         return np.exp(polyval(np.log(freq / self.pivot), coeff))
 
-    def powlaw(self, freq, coeff):
-        return coeff[0] * (freq / self.pivot)**coeff[1]
-
-    #@property
-    #def polycoeff(self):
-    #    if not hasattr(self, '_polycoeff'):
-    #        self._polycoeff = self.mean_coeff(np.linspace(35.25,119.75,170))
-    #
-    #    return self._polycoeff
-
-    #def foreground_dOC(self, freq):
-    #    """
-    #    Compute galactic foreground spectrum using de Oliviera-Costa GSM.
-    #    """        
-    #    return np.exp(np.polyval(self.polycoeff, np.log(freq / self.pivot)))
-
     def haslam_map_408(self, nside, verbose=True):
         if not hasattr(self, '_haslam_map'):
             file_name = '{!s}/haslam/lambda_haslam408_dsds.fits'.format(prefix)
@@ -142,6 +136,25 @@ class Galaxy(object):
             if verbose:
                 print('Prepared Haslam map in {0:.2g} s.'.format(t2 - t1))
         return self._haslam_map
+    
+    def guzman_map_45(self, nside, verbose=True):
+        """
+        Function which retrieves the Guzman map (with a 0-masked hole around
+        the northern celestial pole).
+        
+        nside: the resolution parameter in healpy. Must be a power of 2
+        verbose: if True, print how long it took to prepare the map
+        
+        returns: array of shape (npix,) where npix=12*(nside**2)
+        """
+        if not hasattr(self, '_guzman_map'):
+            file_name = '{!s}/guzman/guzman_map_45_MHz.hdf5'.format(prefix)
+            hdf5_file = h5py.File(file_name, 'r')
+            self._guzman_map = hdf5_file['map'].value
+            self._guzman_map =\
+                fix_resolution_if_necessary(self._guzman_map, nside)
+            hdf5_file.close()
+        return self._guzman_map
     
     def Guzman_spectral_indices(self, nside, verbose=True):
         if not hasattr(self, '_guzman_spectral_indices'):
@@ -173,10 +186,15 @@ class Galaxy(object):
         nsideread = 512
         npixread = 12 * (nsideread ** 2)
         npix = 12 * (nside ** 2) # Number of pixels
-        if self.map == 'haslam1982' or self.map == 'extrapolated_Guzman':
-            haslam_map = self.haslam_map_408(nside, verbose=verbose)
+        if self.map in ['haslam1982', 'extrapolated_guzman', 'guzman']:
+            if self.map == 'haslam1982' or self.map == 'extrapolated_guzman':
+                map_to_scale = self.haslam_map_408(nside, verbose=verbose)
+                frequency_to_scale_from = 408.
+            else:
+                map_to_scale = self.guzman_map_45(nside, verbose=verbose)
+                frequency_to_scale_from = 45.
             scaled_maps = np.ndarray((freq.size, npix))
-            if self.map == 'extrapolated_Guzman':
+            if self.map == 'extrapolated_guzman':
                 self.spectral_index =\
                     self.Guzman_spectral_indices(nside, verbose=verbose)
             elif 'spectral_index' in self.pf:
@@ -184,8 +202,9 @@ class Galaxy(object):
             else:
                 self.spectral_index = -2.5
             for i in range(freq.size):
-                scaled_maps[i,:] =\
-                    haslam_map * np.power(freq[i] / 408., self.spectral_index)
+                scaled_maps[i,:] =  map_to_scale *\
+                    np.power(freq[i] / frequency_to_scale_from,\
+                    self.spectral_index)
             if scaled_maps.shape[0] == 1:
                 scaled_maps = scaled_maps[0,:]
             return scaled_maps
