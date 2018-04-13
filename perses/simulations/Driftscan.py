@@ -40,7 +40,7 @@ def rotate_maps_to_LST(sky_maps, observatory, local_sidereal_time):
     first_rotation_rotator = spherical_rotator(first_rotation_theta,\
         first_rotation_phi, first_rotation_psi).get_inverse()
     (rotated_vernal_equinox_longitude, rotated_vernal_equinox_latitude) =\
-        first_rotation_rotator(vernal_equinox[1], 90 - vernal_equinox[0],\
+        first_rotation_rotator(vernal_equinox[1], vernal_equinox[0],\
         lonlat=True)
     # Now that we know where VE gets rotated to, we add and subtract to get psi
     # correct. The longitude is what matters here because we're rotating psi at
@@ -50,7 +50,7 @@ def rotate_maps_to_LST(sky_maps, observatory, local_sidereal_time):
     # negative.
     local_sidereal_time_angle = local_sidereal_time * 360.
     amount_to_spin = rotated_vernal_equinox_longitude -\
-        (observatory.longitude + local_sidereal_time_angle)
+        (observatory.longitude - local_sidereal_time_angle)
     celestial_pole_centered_maps =\
         spin_maps(celestial_pole_centered_maps, amount_to_spin)
     # The other thing we need to worry about is where to put the x-axis when we
@@ -108,7 +108,7 @@ def smear_maps_through_LST(sky_maps, observatory, lst_start, lst_end,\
     first_rotation_rotator = spherical_rotator(first_rotation_theta,\
         first_rotation_phi, first_rotation_psi).get_inverse()
     (rotated_vernal_equinox_longitude, rotated_vernal_equinox_latitude) =\
-        first_rotation_rotator(vernal_equinox[1], 90 - vernal_equinox[0],\
+        first_rotation_rotator(vernal_equinox[1], vernal_equinox[0],\
         lonlat=True)
     # Now that we know where VE gets rotated to, we add and subtract to get psi
     # correct. The longitude is what matters here because we're rotating psi at
@@ -118,7 +118,7 @@ def smear_maps_through_LST(sky_maps, observatory, lst_start, lst_end,\
     # negative.
     lst_start_angle = lst_start * 360.
     amount_to_spin = rotated_vernal_equinox_longitude -\
-        (observatory.longitude + lst_start_angle)
+        (observatory.longitude - lst_start_angle)
     celestial_pole_centered_maps =\
         spin_maps(celestial_pole_centered_maps, amount_to_spin)
     delta_lst = lst_end - lst_start
@@ -126,12 +126,12 @@ def smear_maps_through_LST(sky_maps, observatory, lst_start, lst_end,\
     #Smear Map:
     if approximate:
         celestial_pole_centered_maps = spin_maps(celestial_pole_centered_maps,\
-            -delta_lst_angle/2., pixel_axis=-1)
+            delta_lst_angle/2., pixel_axis=-1)
         smeared_celestial_pole_centered_maps = smear_maps_approximate(\
             celestial_pole_centered_maps, delta_lst_angle)
     else:
         smeared_celestial_pole_centered_maps = smear_maps(\
-            celestial_pole_centered_maps, -delta_lst_angle, 0,\
+            celestial_pole_centered_maps, 0, delta_lst_angle,\
             pixel_axis=-1)
     # The other thing we need to worry about is where to put the x-axis when we
     # rotated to the beam coordinates. We do this by finding negative thetahat
@@ -188,7 +188,7 @@ def smear_maps_through_LST_patches(sky_maps, observatory, lst_locations,\
     first_rotation_rotator = spherical_rotator(first_rotation_theta,\
         first_rotation_phi, first_rotation_psi).get_inverse()
     (rotated_vernal_equinox_longitude, rotated_vernal_equinox_latitude) =\
-        first_rotation_rotator(vernal_equinox[1], 90 - vernal_equinox[0],\
+        first_rotation_rotator(vernal_equinox[1], vernal_equinox[0],\
         lonlat=True)
     # Now that we know where VE gets rotated to, we add and subtract to get psi
     # correct. The longitude is what matters here because we're rotating psi at
@@ -202,7 +202,7 @@ def smear_maps_through_LST_patches(sky_maps, observatory, lst_locations,\
     # maps are centered on celestial pole and spinning phi=phi0 sets LST=-phi0
     # now, smear map!
     patch_size = (360. * lst_duration)
-    patch_locations = ((-360.) * lst_locations)
+    patch_locations = (360. * lst_locations)
     smeared_celestial_pole_centered_maps = patchy_smear_maps_approximate(\
         celestial_pole_centered_maps, patch_size, patch_locations)
     # The other thing we need to worry about is where to put the x-axis when we
