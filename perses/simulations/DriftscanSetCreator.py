@@ -367,6 +367,49 @@ class DriftscanSetCreator(object):
                 np.reshape(training_set, training_set.shape[:-2] + (-1,))
         return training_set
     
+    @staticmethod
+    def load_training_set(file_name, flatten_identifiers=False,\
+        flatten_curves=False):
+        """
+        Loads a training set from the DriftscanSetCreator which was saved to
+        the given file name.
+        
+        file_name: the file in which a DriftscanSetCreator was saved
+        flatten_identifiers: boolean determining whether beam and map axis
+                             should be combined into one (maps is the "inner"
+                             axis)
+        flatten_curves: boolean determining whether LST and frequency axis
+                        should be combined into one (frequency is the "inner"
+                        axis)
+        
+        returns: numpy.ndarray whose shape is (identifier_shape + curve_shape)
+                 where identifier_shape is (nbeams, nmaps) if
+                 flatten_identifiers is False and (nbeams*nmaps,) if
+                 flatten_curves is True and curve_shape is
+                 (nlst_intervals, nfreqs) if flatten_curves if False and
+                 (nlst_intervals*nfreqs,) if flatten_curves is True
+        """
+        hdf5_file = h5py.File(file_name, 'r')
+        (nlst, nfreq) = hdf5_file['beam_0_maps_0'].shape
+        nbeams = 0
+        while 'beam_{:d}_maps_0'.format(nbeams) in hdf5_file:
+            nbeams += 1
+        nmaps = 0
+        while 'beam_0_maps_{:d}'.format(nmaps) in hdf5_file:
+            nmaps += 1
+        training_set = np.ndarray((nbeams, nmaps, nlst, nfreq))
+        for ibeam in range(nbeams):
+            for imaps in range(nmaps):
+                training_set[ibeam,imaps,:,:] = hdf5_file[].value
+        hdf5_file.close()
+        if flatten_identifiers:
+            training_set =\
+                np.reshape(training_set, (-1,) + training_set.shape[-2:])
+        if flatten_curves:
+            training_set =\
+                np.reshape(training_set, training_set.shape[:-2] + (-1,))
+        return training_set
+    
     def close(self):
         """
         Closes the file containing the driftscan spectra made by this object.
