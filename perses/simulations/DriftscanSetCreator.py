@@ -400,7 +400,8 @@ class DriftscanSetCreator(object):
         training_set = np.ndarray((nbeams, nmaps, nlst, nfreq))
         for ibeam in range(nbeams):
             for imaps in range(nmaps):
-                training_set[ibeam,imaps,:,:] = hdf5_file[].value
+                training_set[ibeam,imaps,:,:] =\
+                    hdf5_file['beam_{0}_maps_{1}'.format(ibeam, imaps)].value
         hdf5_file.close()
         if flatten_identifiers:
             training_set =\
