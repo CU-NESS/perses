@@ -49,8 +49,8 @@ def rotate_maps_to_LST(sky_maps, observatory, local_sidereal_time):
     # EDGES telescope, a positive spin, and finally the LST, which is also
     # negative.
     local_sidereal_time_angle = local_sidereal_time * 360.
-    amount_to_spin = rotated_vernal_equinox_longitude -\
-        (observatory.longitude - local_sidereal_time_angle)
+    amount_to_spin = observatory.longitude -\
+        (rotated_vernal_equinox_longitude + local_sidereal_time_angle)
     celestial_pole_centered_maps =\
         spin_maps(celestial_pole_centered_maps, amount_to_spin)
     # The other thing we need to worry about is where to put the x-axis when we
@@ -117,8 +117,8 @@ def smear_maps_through_LST(sky_maps, observatory, lst_start, lst_end,\
     # EDGES telescope, a positive spin, and finally the LST, which is also
     # negative.
     lst_start_angle = lst_start * 360.
-    amount_to_spin = rotated_vernal_equinox_longitude -\
-        (observatory.longitude - lst_start_angle)
+    amount_to_spin = observatory.longitude -\
+        (rotated_vernal_equinox_longitude + lst_start_angle)
     celestial_pole_centered_maps =\
         spin_maps(celestial_pole_centered_maps, amount_to_spin)
     delta_lst = lst_end - lst_start
@@ -126,7 +126,7 @@ def smear_maps_through_LST(sky_maps, observatory, lst_start, lst_end,\
     #Smear Map:
     if approximate:
         celestial_pole_centered_maps = spin_maps(celestial_pole_centered_maps,\
-            delta_lst_angle/2., pixel_axis=-1)
+            -delta_lst_angle/2., pixel_axis=-1)
         smeared_celestial_pole_centered_maps = smear_maps_approximate(\
             celestial_pole_centered_maps, delta_lst_angle)
     else:
@@ -196,7 +196,7 @@ def smear_maps_through_LST_patches(sky_maps, observatory, lst_locations,\
     # negatively with respect to the Earth's rotation, the longitude of the
     # EDGES telescope, a positive spin, and finally the LST, which is also
     # negative.
-    amount_to_spin = rotated_vernal_equinox_longitude - observatory.longitude
+    amount_to_spin = observatory.longitude - rotated_vernal_equinox_longitude
     celestial_pole_centered_maps =\
         spin_maps(celestial_pole_centered_maps, amount_to_spin)
     # maps are centered on celestial pole and spinning phi=phi0 sets LST=-phi0
@@ -205,6 +205,9 @@ def smear_maps_through_LST_patches(sky_maps, observatory, lst_locations,\
     patch_locations = (360. * lst_locations)
     smeared_celestial_pole_centered_maps = patchy_smear_maps_approximate(\
         celestial_pole_centered_maps, patch_size, patch_locations)
+    final_maps = rotate_maps(smeared_celestial_pole_centered_maps,\
+        observatory.theta, observatory.phi, 0, use_inverse=True,\
+        axis=-1, deg=False)
     # The other thing we need to worry about is where to put the x-axis when we
     # rotated to the beam coordinates. We do this by finding negative thetahat
     # (i.e. unit vector pointing north) and keeping track of where north goes
@@ -222,9 +225,6 @@ def smear_maps_through_LST_patches(sky_maps, observatory, lst_locations,\
         np.degrees(np.arctan2(rotated_northhat[1], rotated_northhat[0]))
     # Rotate the map such that the beam is at the center with correct psi from
     # above rotator:
-    final_maps = rotate_maps(smeared_celestial_pole_centered_maps,\
-        observatory.theta, observatory.phi, 0, use_inverse=True,\
-        axis=-1, deg=False)
     final_maps = spin_maps(final_maps, -displacement, pixel_axis=-1)
     return final_maps
 

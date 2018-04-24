@@ -48,11 +48,14 @@ class GuzmanHarmonicPowerLawGalaxy(HarmonicPowerLawGalaxy):
         returns: array of shape (npix,) where npix=12*(nside**2)
         """
         if not hasattr(self, '_guzman_map_45'):
-            file_name = '{!s}/guzman/guzman_map_45_MHz.hdf5'.format(prefix)
+            file_name = '{!s}/input/guzman/guzman_map_45_MHz.hdf5'.format(\
+                os.environ['PERSES'])
+            t1 = time.time()
             hdf5_file = h5py.File(file_name, 'r')
             self._guzman_map_45 = hdf5_file['map'].value
             self._guzman_map_45 = self.fix_resolution(self._guzman_map_45)
             hdf5_file.close()
+            t2 = time.time()
             print('Prepared Guzman map in {0:.3g} s.'.format(t2 - t1))
         return self._guzman_map_45
 

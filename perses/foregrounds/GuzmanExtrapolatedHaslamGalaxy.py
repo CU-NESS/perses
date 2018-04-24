@@ -12,7 +12,8 @@ Based on:
 Haslam CGT, Salter CJ, Stoffel H, Wilson WE. 1982. A 408 MHz all-sky
 continuum survey. II - The atlas of contour maps. A and AS. 47.
 
-Guzman AE, May J, Alvarez H, Maeda K. 2011. All-sky Galactic radiation at 45 MHz and spectral index between 45 and 408 MHz. A&A. A138.
+Guzman AE, May J, Alvarez H, Maeda K. 2011. All-sky Galactic radiation at 45
+MHz and spectral index between 45 and 408 MHz. A&A. A138.
 """
 import os, time
 import healpy as hp

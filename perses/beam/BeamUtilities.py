@@ -97,7 +97,8 @@ def spin_grids(grids, angle, degrees=True, phi_axis=-1):
 def spin_maps(maps, angle, degrees=True, pixel_axis=-1, nest=False,\
     pixel_fraction_tolerance=1e-6):
     """
-    Spins the given maps through the given angle.
+    Spins the given maps (in a direction given by the right hand rule and the
+    current north pole) through the given angle.
     
     maps: numpy.ndarray of maps to smear
     angle: the angle through which to spin the maps
@@ -124,7 +125,7 @@ def spin_maps(maps, angle, degrees=True, pixel_axis=-1, nest=False,\
     if np.cos(angle) >= np.cos(pixel_size * pixel_fraction_tolerance):
         return maps
     thetas, phis = hp.pixelfunc.pix2ang(nside, np.arange(npix))
-    phis = (phis + angle) % (2 * np.pi)
+    phis = (phis - angle) % (2 * np.pi)
     return interpolate_maps(maps, thetas, phis, nest=nest, axis=pixel_axis,\
         degrees=False)
 
@@ -163,7 +164,7 @@ def smear_maps(maps, angle_start, angle_end, degrees=True, pixel_axis=-1,\
             degrees=degrees, pixel_axis=pixel_axis, nest=nest))
     return cumulative_maps / (num_points_for_integration - 1)
 
-def smear_maps_approximate(sky_maps, delta):
+def smear_maps_approximate(sky_maps, delta, lmax=None):
     """
     Smears the given maps (uniformly) from phi-(delta/2) to phi+(delta/2) using
     the spherical harmonic approximation.
@@ -171,12 +172,14 @@ def smear_maps_approximate(sky_maps, delta):
     sky_maps: 2D numpy.ndarray whose last axis represents healpy pixels
     delta: the angle (centered on the current position), in degrees, through
            which the smearing takes place
+    lmax: the maximum l-value to go to in approximation.
+          Default: None (uses lmax=3*nside-1)
     
     returns: array of same shape as sky_maps containing smeared maps
     """
     npix = sky_maps.shape[-1]
     nside = hp.pixelfunc.npix2nside(npix)
-    alm = np.array(hp.sphtfunc.map2alm(sky_maps, pol=False))
+    alm = np.array(hp.sphtfunc.map2alm(sky_maps, lmax=lmax, pol=False))
     if sky_maps.shape[0] == 1:
         alm = alm[np.newaxis,:]
     lmax = hp.sphtfunc.Alm.getlmax(alm.shape[1])
@@ -188,7 +191,8 @@ def smear_maps_approximate(sky_maps, delta):
         accounted_for += multiplicity
     return np.array(hp.sphtfunc.alm2map(alm, nside, pol=False))
 
-def patchy_smear_maps_approximate(sky_maps, patch_size, patch_locations):
+def patchy_smear_maps_approximate(sky_maps, patch_size, patch_locations,\
+    lmax=None):
     """
     Smears the given maps through patches of the given size centered on the
     given locations the spherical harmonic approximation.
@@ -197,12 +201,14 @@ def patchy_smear_maps_approximate(sky_maps, patch_size, patch_locations):
     patch_size: full (not half) angle (in degrees) subtended by the patches
                 which compose the full smear
     patch_locations: 1D array of patch centers, as measured in degrees azimuth
+    lmax: the maximum l-value to go to in approximation.
+          Default: None (uses lmax=3*nside-1)
     
     returns: array of same shape as sky_maps containing smeared maps
     """
     npix = sky_maps.shape[-1]
     nside = hp.pixelfunc.npix2nside(npix)
-    alm = np.array(hp.sphtfunc.map2alm(sky_maps, pol=False))
+    alm = np.array(hp.sphtfunc.map2alm(sky_maps, lmax=lmax, pol=False))
     if (sky_maps.ndim == 1) or (sky_maps.shape[0] == 1):
         alm = alm[np.newaxis,:]
     lmax = hp.sphtfunc.Alm.getlmax(alm.shape[1])

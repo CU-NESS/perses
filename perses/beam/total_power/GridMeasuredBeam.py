@@ -205,7 +205,7 @@ class GridMeasuredBeam(_TotalPowerBeam):
         return self._inverse_self_freqs
 
     def convolve(self, frequencies, pointing, psi, sky_maps, func_pars={},\
-        verbose=True, angles=None, degrees=True, include_smearing=True):
+        verbose=False, angles=None, degrees=True, include_smearing=True):
         """
         Convolves this beam with the given sky maps by taking the product of
         the beam maps and the sky maps and integrating over the entire solid

@@ -6,6 +6,7 @@ Date: 22 Apr 2018
 Description: File containing a class representing a Galaxy whose spectral
              dependence is given by a (possibly spatially-dependent) power law.
 """
+import numpy as np
 from ..util import real_numerical_types
 from .Galaxy import Galaxy
 
