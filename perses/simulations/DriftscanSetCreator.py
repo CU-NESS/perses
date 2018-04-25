@@ -309,13 +309,13 @@ class DriftscanSetCreator(object):
                         ibeam, imaps), data=convolution)
                     completed += 1
                     self.file.attrs['next_index'] = completed
+                    self.close()
                     if self.verbose:
                         print("Finished convolution #{0:d} at {1!s}.".format(\
                             completed, time.ctime()))
         except KeyboardInterrupt:
             if self.verbose:
                 print("Stopping convolutions at {!s}.".format(time.ctime()))
-        self.close()
     
     @property
     def file(self):
