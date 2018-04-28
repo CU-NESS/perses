@@ -8,6 +8,7 @@ Description: File containing DriftscanSetCreator subclass which performs
 """
 import numpy as np
 from .Driftscan import smear_maps_through_LST
+from .DriftscanSet import DriftscanSet
 from .DriftscanSetCreator import DriftscanSetCreator
 
 class UniformDriftscanSetCreator(DriftscanSetCreator):
@@ -69,10 +70,46 @@ class UniformDriftscanSetCreator(DriftscanSetCreator):
         """
         value = np.array(value)
         if (value.ndim == 1) and (value.size > 1):
-            self._lsts = value
+            if np.sum(value[:-1] > value[1:]) <= 1:
+                self._lsts = value
+            else:
+                raise ValueError("lsts must be monotonically increasing " +\
+                    "with at most one exception. More than one exception " +\
+                    "was found.")
         else:
             raise ValueError("LST array must be 1D and have length larger " +\
                 "than 1.")
+    
+    @property
+    def left_lst_edges(self):
+        """
+        Property storing (in a 1D array) the left edges of each lst bin.
+        """
+        if not hasattr(self, '_left_lst_edges'):
+            self._left_lst_edges = self.lsts[:-1]
+        return self._left_lst_edges
+    
+    @property
+    def right_lst_edges(self):
+        """
+        Property storing (in a 1D array) the right edges of each lst bin.
+        """
+        if not hasattr(self, '_right_lst_edges'):
+            self._right_lst_edges = self.lsts[:-1]
+        return self._right_lst_edges
+    
+    @property
+    def lst_bin_centers(self):
+        """
+        Property storing the centers of each LST bin in a 1D array.
+        """
+        if not hasattr(self, '_lst_bin_centers'):
+            naive_centers = (self.right_lst_edges + self.left_lst_edges) / 2
+            naive_correct_condition =\
+                (self.right_lst_edges > self.left_lst_edges)
+            self._lst_bin_centers = np.where(naive_correct_condition,\
+                naive_centers, np.mod(naive_centers + 0.5, 1))
+        return self._lst_bin_centers
     
     @property
     def nlst_intervals(self):
@@ -83,7 +120,18 @@ class UniformDriftscanSetCreator(DriftscanSetCreator):
             self._nlst_intervals = len(self.lsts) - 1
         return self._nlst_intervals
     
-    def simulate_single_spectrum(self, beam, maps, ilst, approximate=False,\
+    @property
+    def driftscan_set(self):
+        """
+        Property storing the DriftscanSet object created by this
+        DriftscanSetCreator object.
+        """
+        self.generate()
+        curve_set = self.get_training_set(flatten_identifiers=True,\
+            flatten_curves=False)
+        return DriftscanSet(self.lst_bin_centers, self.frequencies, curve_set)
+    
+    def simulate_single_spectrum(self, beam, maps, ilst, approximate=True,\
         **kwargs):
         """
         Simulates single spectrum for this driftscan set.
@@ -94,13 +142,15 @@ class UniformDriftscanSetCreator(DriftscanSetCreator):
               integer less than nlst_intervals
         approximate: if approximation should be used in smearing the maps
                      through LST intervals. See smear_maps_through_LST
-                     docstring for more details. Default: False. Approximation
+                     docstring for more details. Default: True. Approximation
                      makes the calculations significantly faster.
         **kwargs: keyword arguments to pass on to beam.convolve
         
         returns: single 1D numpy.ndarray of length self.nfrequencies
         """
-        (start, end) = (self.lsts[ilst], self.lsts[ilst+1])
+        (start, end) = (self.left_lst_edges[ilst], self.right_lst_edges[ilst])
+        if end < start:
+            end = end + 1
         smeared_maps = smear_maps_through_LST(maps, self.observatory, start,\
             end, approximate=approximate)
         return\

@@ -411,6 +411,17 @@ class DriftscanSetCreator(object):
                 np.reshape(training_set, training_set.shape[:-2] + (-1,))
         return training_set
     
+    @property
+    def driftscan_set(self):
+        """
+        Property storing the DriftscanSet object created by this
+        DriftscanSetCreator object.
+        """
+        raise NotImplementedError("driftscan_set property must be " +\
+            "implemented separately by each subclass of the " +\
+            "DriftscanSetCreator class. If you are seeing this message, it " +\
+            "means your DriftscanSetCreator subclass of choice is incomplete.")
+    
     def close(self):
         """
         Closes the file containing the driftscan spectra made by this object.

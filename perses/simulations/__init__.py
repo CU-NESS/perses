@@ -10,6 +10,7 @@ from perses.simulations.GroundObservatory import GroundObservatory,\
     EDGESObservatory
 from perses.simulations.Driftscan import rotate_maps_to_LST,\
     smear_maps_through_LST, smear_maps_through_LST_patches
+from perses.simulations.DriftscanSet import DriftscanSet
 from perses.simulations.DriftscanSetCreator import DriftscanSetCreator
 from perses.simulations.UniformDriftscanSetCreator import\
     UniformDriftscanSetCreator

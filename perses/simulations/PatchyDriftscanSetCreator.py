@@ -10,6 +10,7 @@ Description: File containing DriftscanSetCreator subclass which performs
 import numpy as np
 from ..util import real_numerical_types, sequence_types
 from .Driftscan import smear_maps_through_LST_patches
+from .DriftscanSet import DriftscanSet
 from .DriftscanSetCreator import DriftscanSetCreator
 
 class PatchyDriftscanSetCreator(DriftscanSetCreator):
@@ -18,9 +19,9 @@ class PatchyDriftscanSetCreator(DriftscanSetCreator):
     through LST patches, as is represented in real instruments which have
     downtime.
     """
-    def __init__(self, file_name, observatory, frequencies, lst_samples,\
-        lst_duration, beam_function, nbeams, maps_function, nmaps,\
-        verbose=True):
+    def __init__(self, file_name, observatory, frequencies, nominal_lsts,\
+        lst_samples, lst_duration, beam_function, nbeams, maps_function,\
+        nmaps, verbose=True):
         """
         Creates a set of foreground curves with the given beams and maps at the
         given local sidereal time samples.
@@ -30,7 +31,11 @@ class PatchyDriftscanSetCreator(DriftscanSetCreator):
         observatory: GroundObservatory object describing the location and
                      orientation of the experiment making these observations
         frequencies: 1D numpy.ndarray of frequency values to which data applies
-        lst_samples: list of 1D arrays of LST's, given in fractions of a day
+        nominal_lsts: 1D array of LST's to associate with each spectrum for
+                      plotting purposes.
+        lst_samples: list of 1D arrays of LST's corresponding to the spectra
+                     that were used in binning to the nominal_lsts, given in
+                     fractions of a day
         lst_duration: duration of each LST patch, given in fraction of a day
         beam_function: either a sequence of Beam objects or a function which,
                        when given an index satisfying 0<=index<nbeams, yields a
@@ -47,12 +52,49 @@ class PatchyDriftscanSetCreator(DriftscanSetCreator):
         self.file_name = file_name
         self.observatory = observatory
         self.frequencies = frequencies
+        self.nominal_lsts = nominal_lsts
         self.lst_samples = lst_samples
         self.lst_duration = lst_duration
         self.nbeams = nbeams
         self.beam_function = beam_function
         self.nmaps = nmaps
         self.maps_function = maps_function
+    
+    @property
+    def nominal_lsts(self):
+        """
+        Property storing the LST's (in fractions of a day) to associate with
+        each spectrum of each curve.
+        """
+        if not hasattr(self, '_nominal_lsts'):
+            raise AttributeError("nominal_lsts was referenced before it " +\
+                "was set.")
+        return self._nominal_lsts
+    
+    @nominal_lsts.setter
+    def nominal_lsts(self, value):
+        """
+        Setter for the nominal LST values associated with each spectrum.
+        
+        value: 1D array of LST values in fractions of a day
+        """
+        if type(value) in sequence_types:
+            value = np.array(value)
+            if value.ndim == 1:
+                self._nominal_lsts = np.mod(value, 1)
+            else:
+                raise ValueError("nominal_lsts was set to a non-1D array.")
+        else:
+            raise TypeError("nominal_lsts was set to a non-sequence.")
+    
+    @property
+    def nlst_intervals(self):
+        """
+        Property storing the integer number of LST intervals used in this set.
+        """
+        if not hasattr(self, '_nlst_intervals'):
+            self._nlst_intervals = len(self.nominal_lsts)
+        return self._nlst_intervals
     
     @property
     def lst_samples(self):
@@ -74,19 +116,24 @@ class PatchyDriftscanSetCreator(DriftscanSetCreator):
                with any integer number of days added)
         """
         if type(value) in sequence_types:
-            if all([isinstance(element, np.ndarray) for element in value]):
-                if all([(element.ndim == 1) for element in value]):
-                    if all([(element.size != 0) for element in value]):
-                        self._lst_samples =\
-                            [np.mod(element, 1) for element in value]
+            if len(value) == self.nlst_intervals:
+                if all([isinstance(element, np.ndarray) for element in value]):
+                    if all([(element.ndim == 1) for element in value]):
+                        if all([(element.size != 0) for element in value]):
+                            self._lst_samples =\
+                                [np.mod(element, 1) for element in value]
+                        else:
+                            raise ValueError("Not all 1D array elements of " +\
+                                "lst_samples were non-empty.")
                     else:
-                        raise ValueError("Not all 1D array elements of " +\
-                            "lst_samples were non-empty.")
+                        raise ValueError("Not all array elements of " +\
+                            "lst_samples were 1-dimensional.")
                 else:
-                    raise ValueError("Not all array elements of " +\
-                        "lst_samples were 1-dimensional.")
+                    raise TypeError("Not all elements of lst_samples were " +\
+                        "arrays.")
             else:
-                raise TypeError("Not all elements of lst_samples were arrays.")
+                raise ValueError("lst_samples list was not of the same " +\
+                    "length as the nominal_lsts array.")
         else:
             raise TypeError("lst_samples was set to a non-sequence.")
     
@@ -118,13 +165,15 @@ class PatchyDriftscanSetCreator(DriftscanSetCreator):
             raise TypeError("lst_duration was set to a non-number.")
     
     @property
-    def nlst_intervals(self):
+    def driftscan_set(self):
         """
-        Property storing the integer number of LST intervals used in this set.
+        Property storing the DriftscanSet object created by this
+        DriftscanSetCreator object.
         """
-        if not hasattr(self, '_nlst_intervals'):
-            self._nlst_intervals = len(self.lst_samples)
-        return self._nlst_intervals
+        self.generate()
+        curve_set = self.get_training_set(flatten_identifiers=True,\
+            flatten_curves=False)
+        return DriftscanSet(self.nominal_lsts, self.frequencies, curve_set)
     
     def simulate_single_spectrum(self, beam, maps, ilst, **kwargs):
         """
