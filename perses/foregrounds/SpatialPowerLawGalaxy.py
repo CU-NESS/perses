@@ -6,7 +6,9 @@ Date: 22 Apr 2018
 Description: File containing a class representing a Galaxy whose spectral
              dependence is given by a (possibly spatially-dependent) power law.
 """
+from types import FunctionType
 import numpy as np
+import healpy as hp
 from ..util import real_numerical_types
 from .Galaxy import Galaxy
 
@@ -84,9 +86,26 @@ class SpatialPowerLawGalaxy(Galaxy):
         Setter for the spectral index to use for spectral interpolation
         
         value: either a single (negative) number or a 1D array containing a map
-               at native resolution
+               at native resolution. Can also be a function which takes either
+               1 or 2 parameters. In the former case, the parameter is an array
+               of theta values in radians. In the latter case, the parameters
+               are an array of theta values in radians and an array of phi
+               values in radians.
         """
-        if type(value) in real_numerical_types:
+        if type(value) is FunctionType:
+            argcount = value.func_code.co_argcount
+            pixels = np.arange(self.npix)
+            (thetas, phis) = hp.pixelfunc.pix2ang(self.nside, pixels)
+            if argcount == 1:
+                self._spectral_index = value(thetas)
+            elif argcount == 2:
+                self._spectral_index = value(thetas, phis)
+            else:
+                raise ValueError("spectral_index function must take either " +\
+                    "1 parameter (array of theta values in radians) or 2 " +\
+                    "parameters (array of theta values in radians and phi " +\
+                    "values in radians).")
+        elif type(value) in real_numerical_types:
             self._spectral_index = np.ones(1) * value
         elif isinstance(value, np.ndarray):
             if len(value) == self.npix:
