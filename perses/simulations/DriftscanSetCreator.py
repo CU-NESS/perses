@@ -445,8 +445,9 @@ class DriftscanSetCreator(object):
         returns: a DriftscanSet object
         """
         (curve_set, frequencies, nominal_lsts) =\
-            DriftscanSetCreator.load_training_set(flatten_identifiers=True,\
-            flatten_curves=False, return_frequencies=True, return_times=True)
+            DriftscanSetCreator.load_training_set(file_name,\
+            flatten_identifiers=True, flatten_curves=False,\
+            return_frequencies=True, return_times=True)
         return DriftscanSet(nominal_lsts, frequencies, curve_set)
     
     @property
