@@ -145,7 +145,7 @@ class DriftscanSet(object):
         return self._num_curves
     
     def plot_time_dependence(self, frequency_index, curve_index=None,\
-        hour_units=False, ax=None, label=None, show=False, fontsize=28,\
+        hour_units=False, ax=None, label=None, fontsize=28, show=False,\
         **scatter_kwargs):
         """
         Plots the time dependence of one (or more) of the curves in this set
@@ -159,6 +159,8 @@ class DriftscanSet(object):
         ax: Axes object on which to make plot. If None (default), a new one is
             made
         label: the label to apply to the scatter points. Default: None
+        fontsize: the size of the font for tick labels, legend entries, axis
+                  labels, and the plot title
         show: if True, matplotlib.pyplot.show() is called before this function
                        returns
         scatter_kwargs: extra keyword arguments to pass to ax.scatter
@@ -191,6 +193,59 @@ class DriftscanSet(object):
             size=fontsize)
         ax.set_ylabel('Brightness temperature (K)', size=fontsize)
         ax.set_title('Simulated driftscan, {:.4g} MHz'.format(frequency),\
+            size=fontsize)
+        ax.tick_params(labelsize=fontsize, width=2.5, length=7.5,\
+            which='major')
+        ax.tick_params(width=1.5, length=4.5, which='minor')
+        if label is not None:
+            ax.legend(fontsize=fontsize)
+        if show:
+            pl.show()
+        else:
+            return ax
+    
+    def plot_frequency_dependence(self, time_index, curve_index=None, ax=None,\
+        label=None, fontsize=28, show=False, **scatter_kwargs):
+        """
+        Plots the frequency dependence of one (or more) of the curves in this
+        set through a scatter plot.
+        
+        time_index: integer index of time (spectrum) for which to plot values
+        curve_index: the index of the curve to plot. If None (default), all
+                     curves are plotted.
+        ax: Axes object on which to make plot. If None (default), a new one is
+            made
+        label: the label to apply to the scatter points. Default: None
+        fontsize: the size of the font for tick labels, legend entries, axis
+                  labels, and the plot title
+        show: if True, matplotlib.pyplot.show() is called before this function
+                       returns
+        scatter_kwargs: extra keyword arguments to pass to ax.scatter
+        
+        returns: None if show is True. Otherwise, Axes object used for plot.
+        """
+        if (time_index >= 0) and (time_index < self.num_times):
+            LST = self.times[time_index]
+            temperatures = self.temperatures[:,time_index,:]
+        else:
+            raise ValueError("time_index did not satisfy " +\
+                "0<=time_index<self.num_times")
+        if curve_index is not None:
+            temperatures = temperatures[curve_index,:]
+        if ax is None:
+            fig = pl.figure()
+            ax = fig.add_subplot(111)
+        if curve_index is None:
+            ax.scatter(self.frequencies, temperatures[0,:].T, label=label,\
+                **scatter_kwargs)
+            ax.scatter(self.frequencies, temperatures[1:,:].T,\
+                **scatter_kwargs)
+        else:
+            ax.scatter(self.frequencies, temperatures.T, label=label,\
+                **scatter_kwargs)
+        ax.set_xlabel('Frequency (MHz)', size=fontsize)
+        ax.set_ylabel('Brightness temperature (K)', size=fontsize)
+        ax.set_title('Simulated driftscan, LST={:.4g}'.format(LST),\
             size=fontsize)
         ax.tick_params(labelsize=fontsize, width=2.5, length=7.5,\
             which='major')
