@@ -8,9 +8,10 @@ Description: File containing a class which, at heart, stores a 3D array of
              of time and frequency dependent curves.
 """
 import numpy as np
+from distpy import Savable, Loadable
 from perses.util import sequence_types
 
-class DriftscanSet(object):
+class DriftscanSet(Savable, Loadable):
     """
     Class which, at heart, stores a 3D array of shape
     (num_curves, num_times, num_frequencies) which holds a set of time and
@@ -143,6 +144,31 @@ class DriftscanSet(object):
         if not hasattr(self, '_num_curves'):
             self._num_curves = self.temperatures.shape[0]
         return self._num_curves
+    
+    def fill_hdf5_group(self, group):
+        """
+        Fills the given hdf5 file group with information about this
+        DriftscanSet so it can be recreated later.
+        
+        group: hdf5 file group to fill with information about this DriftscanSet
+        """
+        group.create_dataset('times', data=self.times)
+        group.create_dataset('frequencies', data=self.frequencies)
+        group.create_dataset('temperatures', data=self.temperatures)
+    
+    @staticmethod
+    def load_from_hdf5_group(group):
+        """
+        Loads a DriftscanSet from the given hdf5 file group.
+        
+        group: hdf5 file group from which to load DriftscanSet object
+        
+        returns: DriftscanSet object loaded from the given hdf5 file group
+        """
+        times = group['times'].value
+        frequencies = group['frequencies'].value
+        temperatures = group['temperatures'].value
+        return DriftscanSet(times, frequencies, temperatures)
     
     def plot_time_dependence(self, frequency_index, curve_index=None,\
         hour_units=False, ax=None, label=None, fontsize=28, show=False,\

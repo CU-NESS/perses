@@ -239,12 +239,11 @@ class DriftscanSetCreator(object):
     @property
     def nlst_intervals(self):
         """
-        Property storing the integer number of LST intervals for which to
-        provide spectra for each beam and Galaxy map.
+        Property storing the integer number of LST intervals used in this set.
         """
-        raise NotImplementedError("The nlst_intervals property must be set " +\
-            "by a subclass of DriftscanSetCreator and the " +\
-            "DriftscanSetCreator class should never be directly instantiated.")
+        if not hasattr(self, '_nlst_intervals'):
+            self._nlst_intervals = len(self.nominal_lsts)
+        return self._nlst_intervals
     
     def simulate_single_spectrum(self, beam, maps, ilst, **kwargs):
         """
@@ -305,8 +304,9 @@ class DriftscanSetCreator(object):
                     for ilst in range(self.nlst_intervals):
                          convolution[ilst,:] = self.simulate_single_spectrum(\
                              beam, maps, ilst, **kwargs)
-                    self.file.create_dataset('beam_{0:d}_maps_{1:d}'.format(\
-                        ibeam, imaps), data=convolution)
+                    self.file['temperatures'].create_dataset(\
+                        'beam_{0:d}_maps_{1:d}'.format(ibeam, imaps),\
+                        data=convolution)
                     completed += 1
                     self.file.attrs['next_index'] = completed
                     self.close()
@@ -328,6 +328,9 @@ class DriftscanSetCreator(object):
                 self._file = h5py.File(self.file_name, 'r+')
             else:
                 self._file = h5py.File(self.file_name, 'w')
+                self._file.create_group('temperatures')
+                self._file.create_dataset('frequencies', data=self.frequencies)
+                self._file.create_dataset('times', data=self.nominal_lsts)
                 self._file.attrs['next_index'] = 0
         return self._file
     
@@ -354,10 +357,11 @@ class DriftscanSetCreator(object):
         """
         training_set = np.ndarray((self.nbeams, self.nmaps,\
             self.nlst_intervals, self.nfrequencies))
+        group = self.file['temperatures']
         for ibeam in range(self.nbeams):
             for imaps in range(self.nmaps):
                  dataset_name = 'beam_{0:d}_maps_{1:d}'.format(ibeam, imaps)
-                 training_set[ibeam,imaps,:,:] = self.file[dataset_name].value
+                 training_set[ibeam,imaps,:,:] = group[dataset_name].value
         self.close()
         if flatten_identifiers:
             training_set =\
@@ -390,18 +394,21 @@ class DriftscanSetCreator(object):
                  (nlst_intervals*nfreqs,) if flatten_curves is True
         """
         hdf5_file = h5py.File(file_name, 'r')
-        (nlst, nfreq) = hdf5_file['beam_0_maps_0'].shape
+        frequencies = hdf5_file['frequencies'].value
+        nominal_lsts = hdf5_file['times'].value
+        (nlst, nfreq) = (len(nominal_lsts), len(frequencies))
+        group = hdf5_file['temperatures']
         nbeams = 0
-        while 'beam_{:d}_maps_0'.format(nbeams) in hdf5_file:
+        while 'beam_{:d}_maps_0'.format(nbeams) in group:
             nbeams += 1
         nmaps = 0
-        while 'beam_0_maps_{:d}'.format(nmaps) in hdf5_file:
+        while 'beam_0_maps_{:d}'.format(nmaps) in group:
             nmaps += 1
         training_set = np.ndarray((nbeams, nmaps, nlst, nfreq))
         for ibeam in range(nbeams):
             for imaps in range(nmaps):
                 training_set[ibeam,imaps,:,:] =\
-                    hdf5_file['beam_{0}_maps_{1}'.format(ibeam, imaps)].value
+                    group['beam_{0}_maps_{1}'.format(ibeam, imaps)].value
         hdf5_file.close()
         if flatten_identifiers:
             training_set =\
@@ -409,7 +416,39 @@ class DriftscanSetCreator(object):
         if flatten_curves:
             training_set =\
                 np.reshape(training_set, training_set.shape[:-2] + (-1,))
-        return training_set
+        to_return = [training_set]
+        if return_frequencies:
+            to_return.append(frequencies)
+        if return_times:
+            to_return.append(nominal_lsts)
+        if len(to_return) == 1:
+            return to_return[0]
+        else:
+            return tuple(to_return)
+    
+    @staticmethod
+    def load_driftscan_set(file_name):
+        """
+        Loads a DriftscanSet object associated with the curves saved and
+        created by a DriftscanSetCreator.
+        
+        file_name: filesystem location of hdf5 file in which
+                   DriftscanSetCreator has saved a DriftscanSet
+        
+        returns: a DriftscanSet object
+        """
+        (curve_set, frequencies, nominal_lsts) =\
+            DriftscanSetCreator.load_training_set(flatten_identifiers=True,\
+            flatten_curves=False, return_frequencies=True, return_times=True)
+        return DriftscanSet(nominal_lsts, frequencies, curve_set)
+    
+    @property
+    def nominal_lsts(self):
+        """
+        Property storing the 1D array of LSTs to associate with each spectrum.
+        """
+        raise NotImplementedError("nominal_lsts should be implemented by " +\
+            "each subclass of DriftscanSetCreators individually.")
     
     @property
     def driftscan_set(self):
@@ -417,10 +456,10 @@ class DriftscanSetCreator(object):
         Property storing the DriftscanSet object created by this
         DriftscanSetCreator object.
         """
-        raise NotImplementedError("driftscan_set property must be " +\
-            "implemented separately by each subclass of the " +\
-            "DriftscanSetCreator class. If you are seeing this message, it " +\
-            "means your DriftscanSetCreator subclass of choice is incomplete.")
+        self.generate()
+        curve_set = self.get_training_set(flatten_identifiers=True,\
+            flatten_curves=False)
+        return DriftscanSet(self.nominal_lsts, self.frequencies, curve_set)
     
     def close(self):
         """

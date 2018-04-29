@@ -99,37 +99,17 @@ class UniformDriftscanSetCreator(DriftscanSetCreator):
         return self._right_lst_edges
     
     @property
-    def lst_bin_centers(self):
+    def nominal_lsts(self):
         """
         Property storing the centers of each LST bin in a 1D array.
         """
-        if not hasattr(self, '_lst_bin_centers'):
+        if not hasattr(self, '_nominal_lsts'):
             naive_centers = (self.right_lst_edges + self.left_lst_edges) / 2
             naive_correct_condition =\
                 (self.right_lst_edges > self.left_lst_edges)
-            self._lst_bin_centers = np.where(naive_correct_condition,\
+            self._nominal_lsts = np.where(naive_correct_condition,\
                 naive_centers, np.mod(naive_centers + 0.5, 1))
-        return self._lst_bin_centers
-    
-    @property
-    def nlst_intervals(self):
-        """
-        Property storing the integer number of LST intervals used in this set.
-        """
-        if not hasattr(self, '_nlst_intervals'):
-            self._nlst_intervals = len(self.lsts) - 1
-        return self._nlst_intervals
-    
-    @property
-    def driftscan_set(self):
-        """
-        Property storing the DriftscanSet object created by this
-        DriftscanSetCreator object.
-        """
-        self.generate()
-        curve_set = self.get_training_set(flatten_identifiers=True,\
-            flatten_curves=False)
-        return DriftscanSet(self.lst_bin_centers, self.frequencies, curve_set)
+        return self._nominal_lsts
     
     def simulate_single_spectrum(self, beam, maps, ilst, approximate=True,\
         **kwargs):

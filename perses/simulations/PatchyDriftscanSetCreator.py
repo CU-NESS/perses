@@ -88,15 +88,6 @@ class PatchyDriftscanSetCreator(DriftscanSetCreator):
             raise TypeError("nominal_lsts was set to a non-sequence.")
     
     @property
-    def nlst_intervals(self):
-        """
-        Property storing the integer number of LST intervals used in this set.
-        """
-        if not hasattr(self, '_nlst_intervals'):
-            self._nlst_intervals = len(self.nominal_lsts)
-        return self._nlst_intervals
-    
-    @property
     def lst_samples(self):
         """
         Property storing the list of 1D array samples of LST's (one array for
@@ -163,17 +154,6 @@ class PatchyDriftscanSetCreator(DriftscanSetCreator):
                     "was not between 0 and 1.")
         else:
             raise TypeError("lst_duration was set to a non-number.")
-    
-    @property
-    def driftscan_set(self):
-        """
-        Property storing the DriftscanSet object created by this
-        DriftscanSetCreator object.
-        """
-        self.generate()
-        curve_set = self.get_training_set(flatten_identifiers=True,\
-            flatten_curves=False)
-        return DriftscanSet(self.nominal_lsts, self.frequencies, curve_set)
     
     def simulate_single_spectrum(self, beam, maps, ilst, **kwargs):
         """
