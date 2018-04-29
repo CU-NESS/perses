@@ -373,7 +373,7 @@ class DriftscanSetCreator(object):
     
     @staticmethod
     def load_training_set(file_name, flatten_identifiers=False,\
-        flatten_curves=False):
+        flatten_curves=False, return_frequencies=False, return_times=False):
         """
         Loads a training set from the DriftscanSetCreator which was saved to
         the given file name.
@@ -385,13 +385,20 @@ class DriftscanSetCreator(object):
         flatten_curves: boolean determining whether LST and frequency axis
                         should be combined into one (frequency is the "inner"
                         axis)
+        return_frequencies: if True, frequency array is also returned (as
+                            second value of returned tuple)
+        return_times: if True, time array is also returned (as last value of
+                      returned tuple)
         
         returns: numpy.ndarray whose shape is (identifier_shape + curve_shape)
                  where identifier_shape is (nbeams, nmaps) if
                  flatten_identifiers is False and (nbeams*nmaps,) if
                  flatten_curves is True and curve_shape is
                  (nlst_intervals, nfreqs) if flatten_curves if False and
-                 (nlst_intervals*nfreqs,) if flatten_curves is True
+                 (nlst_intervals*nfreqs,) if flatten_curves is True. If
+                 return_frequencies is True, frequencies also returned as
+                 second element of tuple. If return_times, times also returned
+                 as last element of tuple.
         """
         hdf5_file = h5py.File(file_name, 'r')
         frequencies = hdf5_file['frequencies'].value
