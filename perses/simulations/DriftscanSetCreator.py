@@ -11,6 +11,7 @@ import os, time, h5py
 import numpy as np
 from ..util import bool_types, sequence_types
 from .GroundObservatory import GroundObservatory
+from .DriftscanSet import DriftscanSet
 try:
     # this runs with no issues in python 2 but raises error in python 3
     basestring
