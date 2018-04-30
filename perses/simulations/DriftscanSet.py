@@ -8,6 +8,7 @@ Description: File containing a class which, at heart, stores a 3D array of
              of time and frequency dependent curves.
 """
 import numpy as np
+import matplotlib.pyplot as pl
 from distpy import Savable, Loadable
 from perses.util import sequence_types
 
@@ -170,8 +171,63 @@ class DriftscanSet(Savable, Loadable):
         temperatures = group['temperatures'].value
         return DriftscanSet(times, frequencies, temperatures)
     
+    def waterfall_plot(self, curve_index, hour_units=True, ax=None,\
+        fontsize=28, show=False, **imshow_kwargs):
+        """
+        Creates a waterfall plot of a driftscan in this DriftscanSet. In order
+        for this function to make sense, the data must be time binned. If this
+        is not True, an error is raised.
+        
+        curve_index: integer index of the curve in this DriftscanSet for which
+                     to make a waterfall plot
+        hour_units: if True (default), time axis is given in hours.
+                    if False, time axis is given in fraction of a day
+        ax: Axes object on which to make plot. If None (default), a new one is
+            made
+        fontsize: the size of the font for tick labels, legend entries, axis
+                  labels, and the plot title
+        show: if True, matplotlib.pyplot.show() is called before this function
+                       returns
+        imshow_kwargs: keyword arguments to pass on to matplotlib.pyplot.imshow
+                       (Do not pass the extent kwarg. It won't take effect.)
+        
+        returns: None if show is True, the Axes which house the plot otherwise
+        """
+        if (curve_index < 0) or (curve_index >= self.num_curves):
+            raise ValueError("curve_index must be an integer between 0 " +\
+                "(inclusive) and self.num_curves (exclusive)")
+        if ax is None:
+            fig = pl.figure()
+            ax = fig.add_subplot(111)
+        (left, right) = (self.frequencies[0], self.frequencies[-1])
+        LSTs = self.times
+        if hour_units:
+            LSTs = LSTs * 24.
+        num_LSTs = len(LSTs)
+        (bottom, top) = (num_LSTs - 0.5, -0.5)
+        kwargs = {'interpolation': None, 'cmap': 'viridis', 'aspect': 'auto'}
+        kwargs.update(imshow_kwargs)
+        kwargs['extent'] = [left, right, bottom, top]
+        image = ax.imshow(self.temperatures[curve_index], **kwargs)
+        cbar = pl.colorbar(image)
+        cbar.ax.tick_params(labelsize=fontsize, width=2.5, length=7.5)
+        ax.set_yticks(np.arange(num_LSTs))
+        ax.set_yticklabels(['{:.4g}'.format(lst) for lst in LSTs])
+        ax.tick_params(labelsize=fontsize, width=2.5, length=7.5,\
+            which='major')
+        ax.tick_params(width=1.5, length=4.5, which='minor')
+        ax.set_xlabel('Frequency (MHz)', size=fontsize)
+        unit_string = ('hr' if hour_units else 'day')
+        ax.set_ylabel('LST ({!s})'.format(unit_string), size=fontsize)
+        ax.set_title(('Waterfall plot of driftscan simulation (curve ' +\
+            '{:d})').format(curve_index), size=fontsize)
+        if show:
+            pl.show()
+        else:
+            return ax
+    
     def plot_time_dependence(self, frequency_index, curve_index=None,\
-        hour_units=False, ax=None, label=None, fontsize=28, show=False,\
+        hour_units=True, ax=None, label=None, fontsize=28, show=False,\
         **scatter_kwargs):
         """
         Plots the time dependence of one (or more) of the curves in this set
@@ -207,13 +263,18 @@ class DriftscanSet(Savable, Loadable):
         if ax is None:
             fig = pl.figure()
             ax = fig.add_subplot(111)
-        if curve_index is None:
-            ax.scatter(times_to_plot, temperatures[0,:].T, label=label,\
+        if temperatures.ndim == 1:
+            ax.scatter(times_to_plot, temperatures, label=label,\
                 **scatter_kwargs)
-            ax.scatter(times_to_plot, temperatures[1:,:].T, **scatter_kwargs)
+        elif temperatures.ndim == 2:
+            ax.scatter(times_to_plot, temperatures[0], label=label,\
+                **scatter_kwargs)
+            for index in range(1, temperatures.shape[0]):
+                ax.scatter(times_to_plot, temperatures[index],\
+                    **scatter_kwargs)
         else:
-            ax.scatter(times_to_plot, temperatures.T, label=label,\
-                **scatter_kwargs)
+            raise NotImplementedError("Cannot plot 3D temperatures array. " +\
+                "Most likely, curve_index is set to something strange.")
         unit_string = ('hr' if hour_units else 'day')
         ax.set_xlabel('Local sidereal time ({!s})'.format(unit_string),\
             size=fontsize)
@@ -231,7 +292,8 @@ class DriftscanSet(Savable, Loadable):
             return ax
     
     def plot_frequency_dependence(self, time_index, curve_index=None, ax=None,\
-        label=None, fontsize=28, show=False, **scatter_kwargs):
+        label=None, hour_units=True, fontsize=28, show=False,\
+        **scatter_kwargs):
         """
         Plots the frequency dependence of one (or more) of the curves in this
         set through a scatter plot.
@@ -261,18 +323,27 @@ class DriftscanSet(Savable, Loadable):
         if ax is None:
             fig = pl.figure()
             ax = fig.add_subplot(111)
-        if curve_index is None:
-            ax.scatter(self.frequencies, temperatures[0,:].T, label=label,\
+        if temperatures.ndim == 1:
+            ax.scatter(self.frequencies, temperatures, label=label,\
                 **scatter_kwargs)
-            ax.scatter(self.frequencies, temperatures[1:,:].T,\
+        elif temperatures.ndim == 2:
+            ax.scatter(self.frequencies, temperatures[0], label=label,\
                 **scatter_kwargs)
+            for index in range(1, temperatures.shape[0]):
+                ax.scatter(self.frequencies, temperatures[index],\
+                    **scatter_kwargs)
         else:
-            ax.scatter(self.frequencies, temperatures.T, label=label,\
-                **scatter_kwargs)
+            raise NotImplementedError("Cannot plot 3D temperatures array. " +\
+                "Most likely, curve_index is set to something strange.")
         ax.set_xlabel('Frequency (MHz)', size=fontsize)
         ax.set_ylabel('Brightness temperature (K)', size=fontsize)
-        ax.set_title('Simulated driftscan, LST={:.4g}'.format(LST),\
-            size=fontsize)
+        if hour_units:
+            unit_string = 'hr'
+            LST = LST * 24
+        else:
+            unit_string = 'day'
+        ax.set_title('Simulated driftscan, LST={0:.4g} ({1!s})'.format(LST,\
+            unit_string), size=fontsize)
         ax.tick_params(labelsize=fontsize, width=2.5, length=7.5,\
             which='major')
         ax.tick_params(width=1.5, length=4.5, which='minor')
