@@ -105,6 +105,16 @@ class DriftscanSet(Savable, Loadable):
         return self._num_frequencies
     
     @property
+    def num_channels(self):
+        """
+        Property storing the number of channels in each set of driftscan
+        spectra.
+        """
+        if not hasattr(self, '_num_channels'):
+            self._num_channels = self.num_frequencies * self.num_times
+        return self._num_channels
+    
+    @property
     def temperatures(self):
         """
         Property storing the actual temperature data in a 3D numpy.ndarray of
@@ -170,6 +180,63 @@ class DriftscanSet(Savable, Loadable):
         frequencies = group['frequencies'].value
         temperatures = group['temperatures'].value
         return DriftscanSet(times, frequencies, temperatures)
+    
+    def plot_channels_1D(self, curve_index=None, time_inner_dimension=False,\
+        ax=None, label=None, fontsize=28, show=False, **scatter_kwargs):
+        """
+        Plots entire driftscan(s) in a 1D plot.
+        
+        curve_index: 
+        time_inner_dimension: if True, the inner dimension (the one that is
+                              actually continuous on the channel-to-channel
+                              level) is time. Otherwise (default), the inner
+                              dimension is frequency
+        ax: Axes object on which to make plot. If None (default), a new one is
+            made
+        label: the label to apply to the scatter points. Default: None
+        fontsize: the size of the font for tick labels, legend entries, axis
+                  labels, and the plot title
+        show: if True, matplotlib.pyplot.show() is called before this function
+                       returns
+        scatter_kwargs: extra keyword arguments to pass on to
+                        matplotlib.pyplot.scatter
+        
+        returns: None if show is False, Axes on which plot was made otherwise
+        """
+        if ax is None:
+            fig = pl.figure()
+            ax = fig.add_subplot(111)
+        channels = np.arange(self.num_channels)
+        if time_inner_dimension:
+            temperature = np.swapaxes(self.temperatures, -2, -1)
+        else:
+            temperature = self.temperatures
+        temperature = np.reshape(temperature, (self.num_curves, -1))
+        if curve_index is not None:
+            temperature = self.temperatures[curve_index]
+        if temperature.ndim == 1:
+            ax.scatter(channels, temperature, label=label, **scatter_kwargs)
+        elif temperature.ndim == 2:
+            ax.scatter(channels, temperature[0], label=label, **scatter_kwargs)
+            for index in range(1, temperature.shape[0]):
+                ax.scatter(channels, temperature[index], **scatter_kwargs)
+        else:
+            raise ValueError("temperatures to plot were neither 1D nor 2D. " +\
+                "This means that curve_index is probably set to something " +\
+                "strange.")
+        ax.set_xlabel('Channel #', size=fontsize)
+        ax.set_ylabel('Brightness temperature (K)', size=fontsize)
+        ax.set_title('Flattened simulated driftscan{!s}'.format(\
+            's' if temperature.ndim == 2 else ''), size=fontsize)
+        ax.tick_params(labelsize=fontsize, width=2.5, length=7.5,\
+            which='major')
+        ax.tick_params(width=1.5, length=4.5, which='minor')
+        if label is not None:
+            ax.legend(fontsize=fontsize)
+        if show:
+            pl.show()
+        else:
+            return ax
     
     def waterfall_plot(self, curve_index, hour_units=True, ax=None,\
         fontsize=28, show=False, **imshow_kwargs):
