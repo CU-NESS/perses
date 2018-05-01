@@ -147,6 +147,16 @@ class DriftscanSet(Savable, Loadable):
                 "object.")
     
     @property
+    def mean_curve(self):
+        """
+        Property storing the mean of all curves in this DriftscanSet object in
+        a 2D numpy.ndarray of shape (num_times, num_frequencies).
+        """
+        if not hasattr(self, '_mean_curve'):
+            self._mean_curve = np.mean(self.temperatures, axis=0)
+        return self._mean_curve
+    
+    @property
     def num_curves(self):
         """
         Property storing the number of different driftscans (i.e. sets of
@@ -155,6 +165,28 @@ class DriftscanSet(Savable, Loadable):
         if not hasattr(self, '_num_curves'):
             self._num_curves = self.temperatures.shape[0]
         return self._num_curves
+    
+    def form_training_set(self, combine_times=True):
+        """
+        Forms a training set (or multiple training sets) from this set of
+        driftscan simulations.
+        
+        combine_times: if True, all times are combined and training set is
+                                defined in space which is the direct product of
+                                the individual frequency spaces
+                       if False, each time is afforded its own training set
+                                 (i.e. there are num_times different training
+                                 sets which each exist in the space of a single
+                                 spectrum.
+        
+        returns: if combine_times is True, one 1D array of length num_channels
+                 otherwise, list of num_times arrays of length num_frequencies
+        """
+        if combine_times:
+            return np.reshape(self.temperatures, (self.num_curves, -1))
+        else:
+            return [self.temperatures[:,itime,:]\
+                for itime in range(self.num_times)]
     
     def fill_hdf5_group(self, group):
         """
