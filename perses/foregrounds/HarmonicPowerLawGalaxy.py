@@ -60,8 +60,8 @@ class HarmonicPowerLawGalaxy(Galaxy):
         the reference map.
         """
         if not hasattr(self, '_reference_alm'):
-            self._reference_alm =\
-                hp.sphtfunc.map2alm(self.reference_map, lmax=self.lmax)
+            self._reference_alm = hp.sphtfunc.map2alm(\
+                self.reference_map - self.thermal_background, lmax=self.lmax)
         return self._reference_alm
     
     @property
@@ -149,5 +149,5 @@ class HarmonicPowerLawGalaxy(Galaxy):
         return np.array(hp.sphtfunc.alm2map(self.reference_alm[np.newaxis,:] *\
             np.power(frequencies[:,np.newaxis] / self.reference_frequency,\
             self.expanded_spectral_index[np.newaxis,:]), self.nside,\
-            pol=False))
+            pol=False)) + self.thermal_background
 

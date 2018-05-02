@@ -21,7 +21,8 @@ class HaslamGalaxy(SpatialPowerLawGalaxy):
     Class representing a Galaxy map with both angular and spectral dependence
     with the former taken from the Haslam map and the latter being a power law.
     """
-    def __init__(self, nside=128, spectral_index=-2.5):
+    def __init__(self, nside=128, spectral_index=-2.5,\
+        thermal_background=2.725):
         """
         Galaxy objects should not be directly instantiated. Only its subclasses
         should be instantiated.
@@ -29,11 +30,15 @@ class HaslamGalaxy(SpatialPowerLawGalaxy):
         nside: the healpy resolution parameter defining native resolution
         spectral_index: either a number or a 1D array of numbers at native
                         resolution (default: -2.5)
+        thermal_background: level (in K) of the thermal background (e.g. CMB)
+                            to exclude from power law extrapolation.
+                            Default: 2.725 (CMB temperature)
         """
         self.nside = nside
         self.reference_map = self.haslam_map_408
         self.reference_frequency = 408.
         self.spectral_index = spectral_index
+        self.thermal_background = thermal_background
     
     @property
     def haslam_map_408(self):

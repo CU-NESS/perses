@@ -21,7 +21,8 @@ class GuzmanHarmonicPowerLawGalaxy(HarmonicPowerLawGalaxy):
     Class representing a Galaxy map with both angular and spectral dependence
     with the former taken from the Guzman map and the latter being a power law.
     """
-    def __init__(self, nside=128, spectral_index=-2.5):
+    def __init__(self, nside=128, spectral_index=-2.5,\
+        thermal_background=2.725):
         """
         Galaxy objects should not be directly instantiated. Only its subclasses
         should be instantiated.
@@ -31,11 +32,15 @@ class GuzmanHarmonicPowerLawGalaxy(HarmonicPowerLawGalaxy):
                         3*nside applying to all harmonic l values' spectral
                         indices or a function of a single parameter, the
                         harmonic number l. (default: -2.5)
+        thermal_background: level (in K) of the thermal background (e.g. CMB)
+                            to exclude from power law extrapolation.
+                            Default: 2.725 (CMB temperature)
         """
         self.nside = nside
         self.reference_map = self.guzman_map_45
         self.reference_frequency = 45.
         self.spectral_index = spectral_index
+        self.thermal_background = thermal_background
     
     @property
     def guzman_map_45(self):

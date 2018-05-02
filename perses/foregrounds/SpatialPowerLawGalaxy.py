@@ -125,7 +125,7 @@ class SpatialPowerLawGalaxy(Galaxy):
         
         returns: 2D array of shape (len(frequencies), npix)
         """
-        return self.reference_map[np.newaxis,:] *\
+        return ((self.reference_map[np.newaxis,:] - self.thermal_background) *\
             np.power(frequencies[:,np.newaxis] / self.reference_frequency,\
-            self.spectral_index[np.newaxis,:])
+            self.spectral_index[np.newaxis,:])) + self.thermal_background
 

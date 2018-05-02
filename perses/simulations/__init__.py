@@ -16,3 +16,6 @@ from perses.simulations.UniformDriftscanSetCreator import\
     UniformDriftscanSetCreator
 from perses.simulations.PatchyDriftscanSetCreator import\
     PatchyDriftscanSetCreator
+from perses.simulations.ObservationUtilities import\
+    earths_celestial_north_pole, earths_celestial_south_pole, vernal_equinox
+

@@ -18,7 +18,7 @@ T. L., Reich P., 2008, MNRAS, 388, 247
 import os, time, h5py
 import numpy as np
 import healpy as hp
-from ..util import int_types
+from ..util import int_types, real_numerical_types
 from ..beam.BeamUtilities import rotate_maps
 
 class Galaxy(object):
@@ -68,6 +68,37 @@ class Galaxy(object):
         if not hasattr(self, '_npix'):
             self._npix = hp.pixelfunc.nside2npix(self.nside)
         return self._npix
+    
+    @property
+    def thermal_background(self):
+        """
+        Property storing the thermal background (a single number in K) to
+        subtract before extrapolating with a power law before the thermal
+        background is added back.
+        """
+        if not hasattr(self, '_thermal_background'):
+            raise AttributeError("thermal_background was referenced before " +\
+                "it was set.")
+        return self._thermal_background
+    
+    @thermal_background.setter
+    def thermal_background(self, value):
+        """
+        The thermal background to exclude from power law extrapolation. It is
+        subtracted from the reference map, the map is extrapolated, and it is
+        added back in. Since it is necessarily added back in at a different
+        frequency, for the background to be constant through frequency space,
+        it must be thermal (e.g. the CMB).
+        
+        value: single number in K
+        """
+        if type(value) in real_numerical_types:
+            if value >= 0:
+                self._thermal_background = value
+            else:
+                raise ValueError("A thermal background cannot be negative.")
+        else:
+            raise TypeError("thermal_background was set to a non-number.")
     
     def fix_resolution(self, to_fix):
         """
