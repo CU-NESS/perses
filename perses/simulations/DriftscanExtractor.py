@@ -7,6 +7,7 @@ Description: File containing subclass of the pylinex's Extractor class. It
              allows for easier initialization through the use of a DriftscanSet
              object.
 """
+import numpy as np
 from pylinex import AttributeQuantity, CompiledQuantity, NullExpander,\
     PadExpander, RepeatExpander, CompositeExpander, Extractor
 
@@ -15,7 +16,7 @@ class DriftscanExtractor(Extractor):
     Subclass of the pylinex's Extractor class. It allows for easier
     initialization through the use of a DriftscanSet object.
     """
-    def __init__(self, driftscan_set, data, error, signal_training_set,\
+    def __init__(self, driftscan_set, data, error, signal_training_set=None,\
         combine_times=True, max_num_foreground_terms=20,\
         max_num_signal_terms=30, quantity_to_minimize='DIC',\
         use_priors_in_fit=False, signal_modulation_expander=None,\
@@ -27,7 +28,8 @@ class DriftscanExtractor(Extractor):
         driftscan_set: DriftscanSet object
         data: either 2D or flattened array
         error: either 2D or flattened array of same size as data
-        signal_training_set: 2D array of shape (num_curves, num_frequencies)
+        signal_training_set: 2D array of shape (num_curves, num_frequencies).
+                             if None, only foreground model is used for fit
         combine_times: if True, basis vectors span 2D frequency-time space
                        if False, basis vectors defined separately for each
                                  spectrum
@@ -58,20 +60,26 @@ class DriftscanExtractor(Extractor):
             foreground_expanders = [PadExpander('{:d}*'.format(itime),\
                 '{:d}*'.format(driftscan_set.num_times - itime - 1))\
                 for itime in range(driftscan_set.num_times)]
-        names = ['signal'] + foreground_names
-        training_sets = [signal_training_set] + foreground_training_sets
-        signal_dimension = {'signal': 1 + np.arange(max_num_signal_terms)}
-        dimensions = [signal_dimension, foreground_dimension]
+        if signal_training_set is None:
+            names = foreground_names
+            training_sets = foreground_training_sets
+            dimensions = [foreground_dimension]
+            expanders = foreground_expanders
+        else:
+            names = ['signal'] + foreground_names
+            training_sets = [signal_training_set] + foreground_training_sets
+            signal_dimension = {'signal': 1 + np.arange(max_num_signal_terms)}
+            dimensions = [signal_dimension, foreground_dimension]
+            outer_signal_expander = RepeatExpander(driftscan_set.num_times)
+            if signal_modulation_expander is None:
+                signal_expander = outer_signal_expander
+            else:
+                signal_expander = CompositeExpander(\
+                    signal_modulation_expander, outer_signal_expander)
+            expanders = [signal_expander] + foreground_expanders
         qnames = ['DIC', 'BIC', 'BPIC', 'AIC']
         quantities = [AttributeQuantity(qname) for qname in qnames]
         compiled_quantity = CompiledQuantity('sole', *quantities)
-        outer_signal_expander = RepeatExpander(driftscan_set.num_times)
-        if signal_modulation_expander is None:
-            signal_expander = outer_signal_expander
-        else:
-            signal_expander = CompositeExpander(signal_modulation_expander,\
-                outer_signal_expander)
-        expanders = [signal_expander] + foreground_expanders
         Extractor.__init__(self, data.flatten(), error.flatten(), names,\
             training_sets, dimensions, compiled_quantity=compiled_quantity,\
             quantity_to_minimize=quantity_to_minimize, expanders=expanders,\
