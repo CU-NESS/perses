@@ -7,6 +7,7 @@ Description: File containing DriftscanSetCreator subclass which performs
              driftscans by smoothly smearing maps through LST.
 """
 import numpy as np
+from ..util import sequence_types
 from .Driftscan import smear_maps_through_LST
 from .DriftscanSet import DriftscanSet
 from .DriftscanSetCreator import DriftscanSetCreator
@@ -16,8 +17,9 @@ class UniformDriftscanSetCreator(DriftscanSetCreator):
     DriftscanSetCreator subclass which performs driftscans by smoothly smearing
     maps through LST.
     """
-    def __init__(self, file_name, observatory, frequencies, lsts,\
-        beam_function, nbeams, maps_function, nmaps, verbose=True):
+    def __init__(self, file_name, observatory, frequencies, left_lst_edges,\
+        right_lst_edges, beam_function, nbeams, maps_function, nmaps,\
+        verbose=True):
         """
         Creates a set of foreground curves with the given beams and maps at the
         given local sidereal times.
@@ -27,9 +29,10 @@ class UniformDriftscanSetCreator(DriftscanSetCreator):
         observatory: GroundObservatory object describing the location and
                      orientation of the experiment making these observations
         frequencies: 1D numpy.ndarray of frequency values to which data applies
-        lsts: sequence of local sidereal times (in fractions of a day!) at
-              which observations are made (length of lsts must be greater than
-              1)
+        left_lst_edges: 1D array of LST values (in fractions of a day!)
+                        corresponding to the "beginning time" of each bin.
+        right_lst_edges: 1D array of LST values (in fractions of a day!)
+                         corresponding to the "ending time" of each bin.
         beam_function: either a sequence of Beam objects or a function which,
                        when given an index satisfying 0<=index<nbeams, yields a
                        Beam object
@@ -45,40 +48,12 @@ class UniformDriftscanSetCreator(DriftscanSetCreator):
         self.file_name = file_name
         self.observatory = observatory
         self.frequencies = frequencies
-        self.lsts = lsts
+        self.left_lst_edges = left_lst_edges
+        self.right_lst_edges = right_lst_edges
         self.nbeams = nbeams
         self.beam_function = beam_function
         self.nmaps = nmaps
         self.maps_function = maps_function
-    
-    @property
-    def lsts(self):
-        """
-        Property storing a 1D numpy.ndarray of local sidereal times bookending
-        observations.
-        """
-        if not hasattr(self, '_lsts'):
-            raise AttributeError("lsts was referenced before it was set.")
-        return self._lsts
-    
-    @lsts.setter
-    def lsts(self, value):
-        """
-        Setter for the local sidereal times bookending observations.
-        
-        value: 1D numpy.ndarray of length greater than 1
-        """
-        value = np.array(value)
-        if (value.ndim == 1) and (value.size > 1):
-            if np.sum(value[:-1] > value[1:]) <= 1:
-                self._lsts = value
-            else:
-                raise ValueError("lsts must be monotonically increasing " +\
-                    "with at most one exception. More than one exception " +\
-                    "was found.")
-        else:
-            raise ValueError("LST array must be 1D and have length larger " +\
-                "than 1.")
     
     @property
     def left_lst_edges(self):
@@ -86,8 +61,25 @@ class UniformDriftscanSetCreator(DriftscanSetCreator):
         Property storing (in a 1D array) the left edges of each lst bin.
         """
         if not hasattr(self, '_left_lst_edges'):
-            self._left_lst_edges = self.lsts[:-1]
+            raise AttributeError("left_lst_edges was referenced before it " +\
+                "was set.")
         return self._left_lst_edges
+    
+    @left_lst_edges.setter
+    def left_lst_edges(self, value):
+        """
+        Setter for the ending times of each bin.
+        
+        value: 1D array of LST values (given in fractions of a day!)
+        """
+        if type(value) in sequence_types:
+            value = np.array(value)
+            if value.ndim == 1:
+                self._left_lst_edges = value
+            else:
+                raise ValueError("left_lst_edges was not 1D.")
+        else:
+            raise TypeError("left_lst_edges was set to a non-sequence.")
     
     @property
     def right_lst_edges(self):
@@ -95,8 +87,26 @@ class UniformDriftscanSetCreator(DriftscanSetCreator):
         Property storing (in a 1D array) the right edges of each lst bin.
         """
         if not hasattr(self, '_right_lst_edges'):
-            self._right_lst_edges = self.lsts[:-1]
+            raise AttributeError("right_lst_edges was referenced before it " +\
+                "was set.")
         return self._right_lst_edges
+    
+    @right_lst_edges.setter
+    def right_lst_edges(self, value):
+        """
+        Setter for the ending times of each bin.
+        
+        value: 1D array of LST values (given in fractions of a day!)
+        """
+        if type(value) in sequence_types:
+            value = np.array(value)
+            if value.shape == self.left_lst_edges.shape:
+                self._right_lst_edges = value
+            else:
+                raise ValueError("left_lst_edges and right_lst_edges did " +\
+                    "not have the same length.")
+        else:
+            raise TypeError("right_lst_edges was set to a non-sequence.")
     
     @property
     def nominal_lsts(self):
@@ -129,7 +139,7 @@ class UniformDriftscanSetCreator(DriftscanSetCreator):
         returns: single 1D numpy.ndarray of length self.nfrequencies
         """
         (start, end) = (self.left_lst_edges[ilst], self.right_lst_edges[ilst])
-        if end < start:
+        if end <= start:
             end = end + 1
         smeared_maps = smear_maps_through_LST(maps, self.observatory, start,\
             end, approximate=approximate)
