@@ -10,7 +10,14 @@ Description: File containing a class which, at heart, stores a 3D array of
 import numpy as np
 import matplotlib.pyplot as pl
 from distpy import Savable, Loadable
-from perses.util import sequence_types
+from perses.util import int_types, bool_types, sequence_types
+
+try:
+    # this runs with no issues in python 2 but raises error in python 3
+    basestring
+except:
+    # this try/except allows for python 2/3 compatible string type checking
+    basestring = str
 
 class DriftscanSet(Savable, Loadable):
     """
@@ -18,18 +25,22 @@ class DriftscanSet(Savable, Loadable):
     (num_curves, num_times, num_frequencies) which holds a set of time and
     frequency dependent curves.
     """
-    def __init__(self, times, frequencies, temperatures):
+    def __init__(self, times, frequencies, temperatures, curve_names=None):
         """
         Initializes a new DriftscanSet object with the given data.
         
         times: 1D array of LST values (in fractions of a day)
         frequencies: 1D array of frequency values in MHz
-        temperatures: 3D array of shape (X, num_times, num_frequencies) where
-                      X>0
+        temperatures: 3D array of shape
+                      (num_curves, num_times, num_frequencies) where
+                      num_curves>0
+        curve_names: list of string names of curves of length num_curves.
+                     If None, 'curve_X' for X in [0..num_curves-1] is used
         """
         self.times = times
         self.frequencies = frequencies
         self.temperatures = temperatures
+        self.curve_names = curve_names
     
     @property
     def times(self):
@@ -166,6 +177,39 @@ class DriftscanSet(Savable, Loadable):
             self._num_curves = self.temperatures.shape[0]
         return self._num_curves
     
+    @property
+    def curve_names(self):
+        """
+        Property storing the names of the curves in this DriftscanSet.
+        """
+        if not hasattr(self, '_curve_names'):
+            raise AttributeError("curve_names was referenced before it was " +\
+                "set.")
+        return self._curve_names
+    
+    @curve_names.setter
+    def curve_names(self, value):
+        """
+        Setter for the names of the curves in this set of driftscan curves.
+        
+        value: list of (unique) strings whose length is given by the number of
+               curves in the temperatures array property.
+        """
+        if value is None:
+            self._curve_names =\
+                ['curve_{}'.format(index) for index in range(self.num_curves)]
+        elif type(value) in sequence_types:
+            if len(value) == self.num_curves:
+                if all([isinstance(element, basestring) for element in value]):
+                    self._curve_names = [element for element in value]
+                else:
+                    raise TypeError("Not all curve names were strings.")
+            else:
+                raise ValueError("Length of curve_names list was not equal " +\
+                    "to the number of driftscan curves in this DriftscanSet.")
+        else:
+            raise TypeError("curve_names was neither None nor a sequence.")
+    
     def form_training_set(self, combine_times=True):
         """
         Forms a training set (or multiple training sets) from this set of
@@ -198,6 +242,10 @@ class DriftscanSet(Savable, Loadable):
         group.create_dataset('times', data=self.times)
         group.create_dataset('frequencies', data=self.frequencies)
         group.create_dataset('temperatures', data=self.temperatures)
+        subgroup = group.create_group('curve_names')
+        for (curve_name_index, curve_name) in enumerate(self.curve_names):
+            subgroup.create_dataset('{:d}'.format(curve_name_index),\
+                data=curve_name)
     
     @staticmethod
     def load_from_hdf5_group(group):
@@ -211,14 +259,154 @@ class DriftscanSet(Savable, Loadable):
         times = group['times'].value
         frequencies = group['frequencies'].value
         temperatures = group['temperatures'].value
-        return DriftscanSet(times, frequencies, temperatures)
+        subgroup = group['curve_names']
+        icurve = 0
+        curve_names = []
+        while '{:d}'.format(icurve) in subgroup:
+            curve_names.append(subgroup['{:d}'.format(icurve)].value)
+            icurve += 1
+        return DriftscanSet(times, frequencies, temperatures,\
+            curve_names=curve_names)
+    
+    def __contains__(self, key):
+        """
+        Checks to see if the given string is in curve names list
+        
+        key: string name of curve to check for containment
+        
+        returns: True if key is one of the curve_names, False otherwise
+        """
+        if isinstance(key, basestring):
+            return (key in self.curve_names)
+        else:
+            return False
+    
+    def __iter__(self):
+        """
+        Returns this object to iterate over itself.
+        """
+        self._completed = 0
+        return self
+    
+    def __next__(self):
+        """
+        Gets the next curve from this DriftscanSet.
+        
+        returns: a 2D array of shape (num_times, num_frequencies)
+        """
+        if self._completed == self.num_curves:
+            del self._completed
+            raise StopIteration
+        result = self.temperatures[self._completed]
+        self._completed += 1
+        return result
+    
+    def next(self):
+        """
+        Alias for __next__ function for python 2/3 functionality.
+        """
+        return self.__next__()
+    
+    def __add__(self, other):
+        """
+        Creates another DriftscanSet from the combination of this one and other.
+        
+        other: another DriftscanSet object whose curve_names are different than
+               this one's
+        
+        returns: a new DriftscanSet object which contains both the curves from
+                 self and other
+        """
+        if isinstance(other, DriftscanSet):
+            if len(set(self.curve_names) & set(other.curve_names)) == 0:
+                if np.allclose(self.frequencies, other.frequencies):
+                    if np.allclose(self.times, other.times):
+                        curve_names = self.curve_names + other.curve_names
+                        temperatures = np.concatenate(\
+                            [self.temperatures, other.temperatures], axis=0)
+                        return DriftscanSet(self.times, self.frequencies,\
+                            temperatures, curve_names=curve_names)
+                    else:
+                        raise ValueError("These two DriftscanSet objects " +\
+                            "apply to different times, so they cannot be " +\
+                            "added.")
+                else:
+                    raise ValueError("These two DriftscanSet objects apply " +\
+                        "to different frequencies, so they cannot be added.")
+            else:
+                raise ValueError("Not all curve_names were unique. So " +\
+                    "these two DriftscanSet objects cannot be added.")
+        else:
+            raise TypeError("DriftscanSet objects can only be added to " +\
+                "other DriftscanSet objects.")
+    
+    def __getitem__(self, curve_index):
+        """
+        Gets the curve(s) associated with the given index.
+        
+        curve_index: None (returns all curves), a slice, a 1D numpy.ndarray, a
+                     string, or an integer corresponding to the desired curves
+        
+        returns: if curve_index is a slice, an array, or None, returns 3D array
+                 otherwise, returns a 2D array
+        """
+        if curve_index is None:
+            return self.temperatures
+        elif (type(curve_index) in int_types) or\
+            isinstance(curve_index, slice):
+            return self.temperatures[curve_index,:,:]
+        elif isinstance(curve_index, np.ndarray):
+            if curve_index.ndim == 1:
+                if curve_index.dtype.type in (int_types + bool_types):
+                    return self.temperatures[curve_index,:,:]
+                elif issubclass(curve_index.dtype.type, basestring):
+                    try:
+                        processed_indices = []
+                        for (istring, string) in enumerate(curve_index):
+                            processed_indices.append(\
+                                self.curve_names.index(string))
+                    except ValueError:
+                        raise ValueError(("At least one element of " +\
+                            "curve_index (e.g. the one with index {:d}) " +\
+                            "was a string which was not one of the curve " +\
+                            "names.").format(istring))
+                    return self.temperatures[np.array(processed_indices),:,:]
+            else:
+                raise ValueError("curve_index was a numpy.ndarray but it " +\
+                    "was not 1-dimensional.")
+        elif type(curve_index) in sequence_types:
+            if all([isinstance(string, basestring) for string in curve_index]):
+                try:
+                    processed_indices = []
+                    for (istring, string) in enumerate(curve_index):
+                        processed_indices.append(\
+                            self.curve_names.index(string))
+                except ValueError:
+                    raise ValueError(("At least one element of curve_index " +\
+                        "(e.g. the one with index {:d}) was a string which " +\
+                        "was not one of the curve names.").format(istring))
+                return self.temperatures[np.array(processed_indices),:,:]
+            else:
+                raise TypeError("curve_index can only be list if all " +\
+                    "elements are strings.")
+        elif isinstance(curve_index, basestring):
+            try:
+                processed_index = self.curve_names.index(curve_index)
+            except ValueError:
+                raise ValueError("curve_index was a string but it was not " +\
+                    "one of the curve names.")
+            return self.temperatures[processed_index,:,:]
+        else:
+            raise IndexError("curve_index was neither None, an int, a " +\
+                "slice, nor a 1D numpy.ndarray object.")
     
     def plot_channels_1D(self, curve_index=None, time_inner_dimension=False,\
         ax=None, label=None, fontsize=28, show=False, **scatter_kwargs):
         """
         Plots entire driftscan(s) in a 1D plot.
         
-        curve_index: 
+        curve_index: None (returns all curves), a slice, a 1D numpy.ndarray, a
+                     string, or an integer corresponding to the desired curves
         time_inner_dimension: if True, the inner dimension (the one that is
                               actually continuous on the channel-to-channel
                               level) is time. Otherwise (default), the inner
@@ -239,13 +427,10 @@ class DriftscanSet(Savable, Loadable):
             fig = pl.figure()
             ax = fig.add_subplot(111)
         channels = np.arange(self.num_channels)
+        temperature = self[curve_index]
         if time_inner_dimension:
-            temperature = np.swapaxes(self.temperatures, -2, -1)
-        else:
-            temperature = self.temperatures
-        temperature = np.reshape(temperature, (self.num_curves, -1))
-        if curve_index is not None:
-            temperature = self.temperatures[curve_index]
+            temperature = np.swapaxes(temperature, -2, -1)
+        temperature = np.reshape(temperature, temperature.shape[:-2] + (-1,))
         if temperature.ndim == 1:
             ax.scatter(channels, temperature, label=label, **scatter_kwargs)
         elif temperature.ndim == 2:
@@ -277,8 +462,7 @@ class DriftscanSet(Savable, Loadable):
         for this function to make sense, the data must be time binned. If this
         is not True, an error is raised.
         
-        curve_index: integer index of the curve in this DriftscanSet for which
-                     to make a waterfall plot
+        curve_index: a string or integer corresponding to the desired curve
         hour_units: if True (default), time axis is given in hours.
                     if False, time axis is given in fraction of a day
         ax: Axes object on which to make plot. If None (default), a new one is
@@ -292,9 +476,10 @@ class DriftscanSet(Savable, Loadable):
         
         returns: None if show is True, the Axes which house the plot otherwise
         """
-        if (curve_index < 0) or (curve_index >= self.num_curves):
-            raise ValueError("curve_index must be an integer between 0 " +\
-                "(inclusive) and self.num_curves (exclusive)")
+        if (not isinstance(curve_index, basestring)) and\
+            (type(curve_index) not in int_types):
+            raise TypeError("curve_index must be either a single integer " +\
+                "index or a single string in the curve_names array property.")
         if ax is None:
             fig = pl.figure()
             ax = fig.add_subplot(111)
@@ -307,7 +492,7 @@ class DriftscanSet(Savable, Loadable):
         kwargs = {'interpolation': None, 'cmap': 'viridis', 'aspect': 'auto'}
         kwargs.update(imshow_kwargs)
         kwargs['extent'] = [left, right, bottom, top]
-        image = ax.imshow(self.temperatures[curve_index], **kwargs)
+        image = ax.imshow(self[curve_index], **kwargs)
         cbar = pl.colorbar(image)
         cbar.ax.tick_params(labelsize=fontsize, width=2.5, length=7.5)
         ax.set_yticks(np.arange(num_LSTs))
@@ -333,8 +518,8 @@ class DriftscanSet(Savable, Loadable):
         through a scatter plot.
         
         frequency_index: integer index of frequency for which to plot values
-        curve_index: the index of the curve to plot. If None (default), all
-                     curves are plotted.
+        curve_index: None (returns all curves), a slice, a 1D numpy.ndarray, a
+                     string, or an integer corresponding to the desired curves
         hour_units: if True, time axis is given in hours.
                     if False (default), time axis is given in fraction of a day
         ax: Axes object on which to make plot. If None (default), a new one is
@@ -348,14 +533,13 @@ class DriftscanSet(Savable, Loadable):
         
         returns: None if show is True. Otherwise, Axes object used for plot.
         """
+        temperatures = self[curve_index]
         if (frequency_index >= 0) and (frequency_index < self.num_frequencies):
             frequency = self.frequencies[frequency_index]
-            temperatures = self.temperatures[:,:,frequency_index]
+            temperatures = temperatures[...,frequency_index]
         else:
             raise ValueError("frequency_index did not satisfy " +\
                 "0<=frequency_index<self.num_frequencies")
-        if curve_index is not None:
-            temperatures = temperatures[curve_index,:]
         times_to_plot = self.times
         if hour_units:
             times_to_plot = times_to_plot * 24
@@ -398,8 +582,8 @@ class DriftscanSet(Savable, Loadable):
         set through a scatter plot.
         
         time_index: integer index of time (spectrum) for which to plot values
-        curve_index: the index of the curve to plot. If None (default), all
-                     curves are plotted.
+        curve_index: None (returns all curves), a slice, a 1D numpy.ndarray, a
+                     string, or an integer corresponding to the desired curves
         ax: Axes object on which to make plot. If None (default), a new one is
             made
         label: the label to apply to the scatter points. Default: None
@@ -411,14 +595,13 @@ class DriftscanSet(Savable, Loadable):
         
         returns: None if show is True. Otherwise, Axes object used for plot.
         """
+        temperatures = self[curve_index]
         if (time_index >= 0) and (time_index < self.num_times):
             LST = self.times[time_index]
-            temperatures = self.temperatures[:,time_index,:]
+            temperatures = temperatures[...,time_index,:]
         else:
             raise ValueError("time_index did not satisfy " +\
                 "0<=time_index<self.num_times")
-        if curve_index is not None:
-            temperatures = temperatures[curve_index,:]
         if ax is None:
             fig = pl.figure()
             ax = fig.add_subplot(111)

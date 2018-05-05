@@ -238,6 +238,14 @@ class DriftscanSetCreator(object):
             raise TypeError("nmaps was set to a non-int.")
     
     @property
+    def num_driftscans(self):
+        """
+        """
+        if not hasattr(self, '_num_driftscans'):
+            self._num_driftscans = self.nbeams * self.nmaps
+        return self._num_driftscans
+    
+    @property
     def nlst_intervals(self):
         """
         Property storing the integer number of LST intervals used in this set.
@@ -312,8 +320,9 @@ class DriftscanSetCreator(object):
                     self.file.attrs['next_index'] = completed
                     self.close()
                     if self.verbose:
-                        print("Finished convolution #{0:d} at {1!s}.".format(\
-                            completed, time.ctime()))
+                        print(("Finished convolution #{0:d}/{1:d} at " +\
+                            "{2!s}.").format(completed, self.num_driftscans,\
+                            time.ctime()))
         except KeyboardInterrupt:
             if self.verbose:
                 print("Stopping convolutions at {!s}.".format(time.ctime()))
@@ -332,6 +341,14 @@ class DriftscanSetCreator(object):
                 self._file.create_group('temperatures')
                 self._file.create_dataset('frequencies', data=self.frequencies)
                 self._file.create_dataset('times', data=self.nominal_lsts)
+                group = self._file.create_group('beam_names')
+                for (beam_name_index, beam_name) in enumerate(self.beam_names):
+                    group.create_dataset('{:d}'.format(beam_name_index),\
+                        data=beam_name)
+                group = self._file.create_group('map_names')
+                for (map_name_index, map_name) in enumerate(self.map_names):
+                    group.create_dataset('{:d}'.format(map_name_index),\
+                        data=map_name)
                 self._file.attrs['next_index'] = 0
         return self._file
     
@@ -449,7 +466,24 @@ class DriftscanSetCreator(object):
             DriftscanSetCreator.load_training_set(file_name,\
             flatten_identifiers=True, flatten_curves=False,\
             return_frequencies=True, return_times=True)
-        return DriftscanSet(nominal_lsts, frequencies, curve_set)
+        hdf5_file = h5py.File(file_name, 'r')
+        group = hdf5_file['beam_names']
+        ibeam = 0
+        beam_names = []
+        while '{:d}'.format(ibeam) in group:
+            beam_names.append(group['{:d}'.format(ibeam)].value)
+            ibeam += 1
+        group = hdf5_file['map_names']
+        imap = 0
+        map_names = []
+        while '{:d}'.format(imap) in group:
+            map_names.append(group['{:d}'.format(imap)].value)
+            imap += 1
+        hdf5_file.close()
+        curve_names = sum([['{0!s}_{1!s}'.format(beam_name, map_name)\
+            for map_name in map_names] for beam_name in beam_names], [])
+        return DriftscanSet(nominal_lsts, frequencies, curve_set,\
+            curve_names=curve_names)
     
     @property
     def nominal_lsts(self):
@@ -460,6 +494,72 @@ class DriftscanSetCreator(object):
             "each subclass of DriftscanSetCreators individually.")
     
     @property
+    def beam_names(self):
+        """
+        Property storing the names of the beams in this DriftscanSet.
+        """
+        if not hasattr(self, '_beam_names'):
+            raise AttributeError("beam_names was referenced before it was " +\
+                "set.")
+        return self._beam_names
+    
+    @beam_names.setter
+    def beam_names(self, value):
+        """
+        Setter for the names of the beams in this set of driftscan curves.
+        
+        value: list of (unique) strings whose length is given by the number of
+               beams in this set
+        """
+        if value is None:
+            self._beam_names =\
+                ['beam_{}'.format(index) for index in range(self.nbeams)]
+        elif type(value) in sequence_types:
+            if len(value) == self.nbeams:
+                if all([isinstance(element, basestring) for element in value]):
+                    self._beam_names = [element for element in value]
+                else:
+                    raise TypeError("Not all beam names were strings.")
+            else:
+                raise ValueError("Length of beam_names list was not equal " +\
+                    "to the number of beams in this DriftscanSet.")
+        else:
+            raise TypeError("beam_names was neither None nor a sequence.")
+    
+    @property
+    def map_names(self):
+        """
+        Property storing the names of the maps in this DriftscanSet.
+        """
+        if not hasattr(self, '_map_names'):
+            raise AttributeError("map_names was referenced before it was set.")
+        return self._map_names
+    
+    @map_names.setter
+    def map_names(self, value):
+        """
+        Setter for the names of the galaxy maps in this set of driftscan
+        curves.
+        
+        value: list of (unique) strings whose length is given by the number of
+               galaxy maps in this set
+        """
+        if value is None:
+            self._map_names = ['galaxy_map_{:d}'.format(index)\
+                for index in range(self.nmaps)]
+        elif type(value) in sequence_types:
+            if len(value) == self.nmaps:
+                if all([isinstance(element, basestring) for element in value]):
+                    self._map_names = [element for element in value]
+                else:
+                    raise TypeError("Not all curve names were strings.")
+            else:
+                raise ValueError("Length of map_names list was not equal " +\
+                    "to the number of galaxy maps in this DriftscanSet.")
+        else:
+            raise TypeError("map_names was neither None nor a sequence.")
+    
+    @property
     def driftscan_set(self):
         """
         Property storing the DriftscanSet object created by this
@@ -468,7 +568,11 @@ class DriftscanSetCreator(object):
         self.generate()
         curve_set = self.get_training_set(flatten_identifiers=True,\
             flatten_curves=False)
-        return DriftscanSet(self.nominal_lsts, self.frequencies, curve_set)
+        curve_names = sum([['{0!s}_{1!s}'.format(beam_name, map_name)\
+            for map_name in self.map_names] for beam_name in self.beam_names],\
+            [])
+        return DriftscanSet(self.nominal_lsts, self.frequencies, curve_set,\
+            curve_names=curve_names)
     
     def close(self):
         """

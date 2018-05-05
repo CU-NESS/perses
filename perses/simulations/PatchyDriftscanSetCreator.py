@@ -21,7 +21,7 @@ class PatchyDriftscanSetCreator(DriftscanSetCreator):
     """
     def __init__(self, file_name, observatory, frequencies, nominal_lsts,\
         lst_samples, lst_duration, beam_function, nbeams, maps_function,\
-        nmaps, verbose=True):
+        nmaps, beam_names=None, map_names=None, verbose=True):
         """
         Creates a set of foreground curves with the given beams and maps at the
         given local sidereal time samples.
@@ -45,6 +45,10 @@ class PatchyDriftscanSetCreator(DriftscanSetCreator):
                        which, when given an index satisfying 0<=index<nmaps,
                        yields a 2D numpy.ndarray
         nmaps: not used if maps_function is a sequence
+        beam_names: None or a list of nbeams unique strings. If None (default),
+                    beams are listed as 'beam_{:d}'.format(ibeam)
+        map_names: None or a list of nmaps unique strings. If None (default),
+                  maps are listed as 'galaxy_map_{:d}'.format(imap)
         verbose: boolean determining if message is printed after each
                  convolution (i.e. pair of beam+maps)
         """
@@ -59,6 +63,8 @@ class PatchyDriftscanSetCreator(DriftscanSetCreator):
         self.beam_function = beam_function
         self.nmaps = nmaps
         self.maps_function = maps_function
+        self.beam_names = beam_names
+        self.map_names = map_names
     
     @property
     def nominal_lsts(self):
