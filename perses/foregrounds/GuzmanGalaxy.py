@@ -40,6 +40,13 @@ class GuzmanGalaxy(SpatialPowerLawGalaxy):
         self.thermal_background = thermal_background
     
     @property
+    def map(self):
+        """
+        Returns 'guzman'
+        """
+        return 'guzman'
+    
+    @property
     def guzman_map_45(self):
         """
         Function which retrieves the Guzman map (with a 0-masked hole around

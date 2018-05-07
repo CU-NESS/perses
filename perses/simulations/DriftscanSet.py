@@ -145,11 +145,21 @@ class DriftscanSet(Savable, Loadable):
         """
         if isinstance(value, np.ndarray):
             if value.ndim == 3:
-                if value.shape[-2:] == (self.num_times, self.num_frequencies):
+                num_times_correct = (value.shape[1] == self.num_times)
+                num_frequencies_correct =\
+                    (value.shape[2] == self.num_frequencies)
+                if num_times_correct and num_frequencies_correct:
                     self._temperatures = value
+                elif num_frequencies_correct:
+                    raise ValueError("The number of times does not match " +\
+                        "up between the data and the given times property.")
+                elif num_times_correct:
+                    raise ValueError("The number of frequencies does not " +\
+                        "match up between the data and the frequencies " +\
+                        "property.")
                 else:
-                    raise ValueError("The number of times or the number of " +\
-                        "frequencies does not match up between the data " +\
+                    raise ValueError("The number of times and the number " +\
+                        "of frequencies do not match up between the data " +\
                         "and the given times and frequencies properties.")
             else:
                 raise ValueError("temperatures was set to a non-3D array.")
@@ -239,11 +249,13 @@ class DriftscanSet(Savable, Loadable):
         key: the index to use in numpy for the axis indexing different spectra
         """
         self.times = self.times[key]
-        self.temperatures = self.temperatures[:,key,:]
         if hasattr(self, '_num_times'):
             delattr(self, '_num_times')
+        if hasattr(self, '_num_channels'):
+            delattr(self, '_num_channels')
         if hasattr(self, '_mean_curve'):
             delattr(self, '_mean_curve')
+        self.temperatures = self.temperatures[:,key,:]
     
     def frequency_slice(self, key):
         """
@@ -252,11 +264,13 @@ class DriftscanSet(Savable, Loadable):
         key: the index to use in numpy for the axis associated with frequency
         """
         self.frequencies = self.frequencies[key]
-        self.temperatures = self.temperatures[:,:,key]
         if hasattr(self, '_num_frequencies'):
             delattr(self, '_num_frequencies')
         if hasattr(self, '_num_channels'):
             delattr(self, '_num_channels')
+        if hasattr(self, '_mean_curve'):
+            delattr(self, '_mean_curve')
+        self.temperatures = self.temperatures[:,:,key]
     
     def fill_hdf5_group(self, group):
         """

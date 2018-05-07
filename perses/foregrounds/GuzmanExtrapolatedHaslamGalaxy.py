@@ -49,6 +49,13 @@ class GuzmanExtrapolatedHaslamGalaxy(SpatialPowerLawGalaxy):
         self.spectral_index = self.interpolated_spectral_index
     
     @property
+    def map(self):
+        """
+        Returns 'guzman_extrapolated_haslam'
+        """
+        return 'guzman_extrapolated_haslam'
+    
+    @property
     def haslam_map_408(self):
         """
         Property storing the Haslam map at 408 MHz in Galactic coordinates at
