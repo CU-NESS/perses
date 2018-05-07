@@ -41,7 +41,7 @@ class HaslamGalaxy(SpatialPowerLawGalaxy):
         self.thermal_background = thermal_background
     
     @property
-    def map[(self):
+    def map(self):
         """
         Returns 'haslam'
         """
