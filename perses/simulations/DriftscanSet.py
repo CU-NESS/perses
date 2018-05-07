@@ -232,6 +232,32 @@ class DriftscanSet(Savable, Loadable):
             return [self.temperatures[:,itime,:]\
                 for itime in range(self.num_times)]
     
+    def spectrum_slice(self, key):
+        """
+        Cuts out data from this dataset. User determines what is kept with key.
+        
+        key: the index to use in numpy for the axis indexing different spectra
+        """
+        self.times = self.times[key]
+        self.temperatures = self.temperatures[:,key,:]
+        if hasattr(self, '_num_times'):
+            delattr(self, '_num_times')
+        if hasattr(self, '_mean_curve'):
+            delattr(self, '_mean_curve')
+    
+    def frequency_slice(self, key):
+        """
+        Cuts out data from this dataset. User determines what is kept with key.
+        
+        key: the index to use in numpy for the axis associated with frequency
+        """
+        self.frequencies = self.frequencies[key]
+        self.temperatures = self.temperatures[:,:,key]
+        if hasattr(self, '_num_frequencies'):
+            delattr(self, '_num_frequencies')
+        if hasattr(self, '_num_channels'):
+            delattr(self, '_num_channels')
+    
     def fill_hdf5_group(self, group):
         """
         Fills the given hdf5 file group with information about this
