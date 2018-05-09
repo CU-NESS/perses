@@ -140,18 +140,18 @@ class Galaxy(object):
         title = r'{0!s} @ $\nu={1:g}$ MHz'.format(map_name, frequency)
         hp.mollview(m, title=title, norm='log', **kwargs)
     
-    def get_map_sum(self, freq, pointings, psis, weights, verbose=True,\
+    def get_maps_sum(self, freq, pointings, psis, weights, verbose=True,\
         **kwargs):
         """
         A version of get_maps which weights multiple different pointings.
         
-        freq the frequency, 1D array in MHz
+        frequencies the frequencies, 1D array in MHz
         pointings the pointing directions of the sky regions
         psis rotation of the beam about its axis
         weights weighting of different pointings in final map
         verbose boolean determining whether to print more output
         """
-        main_map = self.get_maps(freq, **kwargs)
+        main_map = self.get_maps(frequencies, **kwargs)
         weighted_sum = np.zeros_like(main_map)
         for ipointing, pointing in enumerate(pointings):
             (lat, pphi) = pointing
@@ -161,16 +161,32 @@ class Galaxy(object):
             rmap = rotate_maps(main_map, ptheta, pphi, psi, use_inverse=True)
             weighted_sum = (weighted_sum + (weight * rmap))
         return weighted_sum
+    
+    def get_map_sum(self, frequency, pointings, psis, weights, verbose=True,\
+        **kwargs):
+        """
+        A version of get_maps which weights multiple different pointings.
+        
+        frequency the frequency, a single number in MHz
+        pointings the pointing directions of the sky regions
+        psis rotation of the beam about its axis
+        weights weighting of different pointings in final map
+        verbose boolean determining whether to print more output
+        """
+        return self.get_maps_sum(frequency * np.ones(1), pointings, psis,\
+            weights, verbose=verbose, **kwargs)[0]
 
-    def get_moon_blocked_map(self, frequencies, blocking_fraction, moon_temp,\
+    def get_moon_blocked_maps(self, frequencies, blocking_fraction, moon_temp,\
         **kwargs):
         """
         The nside parameter inferred from the blocking_fraction map must be
         same as this Galaxy's.
         
-        blocking_fraction healpy map with values between 0 and 1 which
-                          indicate what fraction of observing time each pixel
-                          is blocked by the moon
+        frequencies: 1D array of values in MHz
+        blocking_fraction: healpy map with values between 0 and 1 which
+                           indicate what fraction of observing time each pixel
+                           is blocked by the moon
+        moon_temp: in degrees C
         kwargs keyword arguments to pass to get_map
         """
         if self.nside != hp.pixelfunc.npix2nside(len(blocking_fraction)):
@@ -178,29 +194,54 @@ class Galaxy(object):
                 "correct resolution. It should have the same nside as this " +\
                 "Galaxy.")
         maps = self.get_maps(frequencies, **kwargs)
-        if maps.ndim == 1:
-            maps = (maps * (1 - blocking_fraction))
-            return maps + (moon_temp * blocking_fraction)
-        else:
-            maps = maps * np.expand_dims(1 - blocking_fraction, 1)
-            return maps + np.expand_dims(moon_temp * blocking_fraction, 1)
+        return (maps - ((maps - moon_temp) * blocking_fraction[np.newaxis,:]))
+
+    def get_moon_blocked_map(self, frequency, blocking_fraction, moon_temp,\
+        **kwargs):
+        """
+        Gets a map of this Galaxy at a single frequency.
+        
+        frequency: single number, in MHz
+        blocking_fraction healpy map with values between 0 and 1 which
+                          indicate what fraction of observing time each pixel
+                          is blocked by the moon
+        moon_temp: in degrees C
+        kwargs keyword arguments to pass to get_map
+        
+        returns: 1D array of length npix
+        """
+        return self.get_moon_blocked_maps(np.ones(1) * frequency,\
+            blocking_fraction, moon_temp, **kwargs)[0]
     
-    def get_moon_blocked_map_sum(self, freq, blocking_fraction, tint_fraction,\
-        points, psis, moon_temp, verbose=True, **kwargs):
+    def get_moon_blocked_maps_sum(self, frequencies, blocking_fraction,\
+        tint_fraction, points, psis, moon_temp, verbose=True, **kwargs):
         """
         """
         if self.nside != hp.pixelfunc.npix2nside(len(blocking_fraction)):
             raise ValueError("blocking_fraction was not a map of the " +\
                 "correct resolution. It should have the same nside as this " +\
                 "Galaxy.")
-        maps = self.get_map_sum(freq, points, psis, tint_fraction,\
+        maps = self.get_maps_sum(frequencies, points, psis, tint_fraction,\
             verbose=verbose, **kwargs)
-        if maps.ndim == 1:
-            maps = (maps * (1 - blocking_fraction))
-            return maps + (moon_temp * blocking_fraction)
-        else:
-            maps = maps * np.expand_dims(1 - blocking_fraction, 1)
-            return maps + np.expand_dims(moon_temp * blocking_fraction, 1)
+        return maps - ((maps - moon_temp) * blocking_fraction[np.newaxis,:])
+
+    def get_moon_blocked_map_sum(self, frequency, blocking_fraction,\
+        tint_fraction, points, psis, moon_temp, verbose=True, **kwargs):
+        """
+        Gets a map of this Galaxy at a single frequency.
+        
+        frequency: single number, in MHz
+        blocking_fraction healpy map with values between 0 and 1 which
+                          indicate what fraction of observing time each pixel
+                          is blocked by the moon
+        moon_temp: in degrees C
+        kwargs keyword arguments to pass to get_map
+        
+        returns: 1D array of length npix
+        """
+        return self.get_moon_blocked_maps_sum(np.ones(1) * frequency,\
+            blocking_fraction, tint_fraction, points, psis, moon_temp,\
+            verbose=True, **kwargs)[0]
 
     def get_map(self, frequency):
         """

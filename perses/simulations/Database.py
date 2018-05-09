@@ -12,6 +12,7 @@ import os, h5py
 from types import FunctionType
 import numpy as np
 from ..util import int_types, real_numerical_types, sequence_types
+from ..foregrounds import Galaxy, HaslamGalaxy
 from ..beam.total_power.BaseTotalPowerBeam import _TotalPowerBeam
 from ..beam.polarized.BasePolarizedBeam import _PolarizedBeam
 from .InfiniteIndexer import InfiniteIndexer
@@ -84,7 +85,7 @@ class Database(object):
     Database class which runs ReceiverCalibratedObservation many times.
     """
     def __init__(self, prefix=None, verbose=None, polarized=None,\
-        pointings=None, galaxy_maps=None, nside=None, include_moon=None,\
+        pointings=None, galaxies=None, include_moon=None,\
         inverse_calibration_equation=None, frequencies=None,\
         channel_widths=None, seeds=None, psis=None, tint=None, beams=None,\
         all_true_calibration_parameters=None, signal_data=None,\
@@ -109,12 +110,8 @@ class Database(object):
                   pointing directions of the individual observations. A single
                   (lat, lon) tuple can also be given if only one observation is
                   desired.
-        galaxy_maps: the galaxy map with which to convolve the beam (allowed
-                   values are 'haslam1982', 'extrapolated_Guzman'; see
-                   perses/foregrounds/Galaxy.py for more details).
-                   Default: 'extrapolated_Guzman'
-        nside: the healpy resolution parameter. Must be a power of 2 less than 
-               2**30 Default: 128
+        galaxies: the galaxy(ies) with which to convolve the beam
+                 Default: Haslam map with -2.5 spectral index and nside=64
         include_moon: Boolean determining whether moon should be included in
                       simulations (can also be used to model Earth as long as a
                       model where the ground is modelled as thermal emission at
@@ -188,7 +185,7 @@ class Database(object):
         """
         self.prefix = prefix
         for attribute in ['verbose', 'polarized', 'pointings',\
-                          'galaxy_maps', 'nside', 'include_smearing',\
+                          'galaxies', 'include_smearing',\
                           'include_moon', 'inverse_calibration_equation',\
                           'frequencies', 'channel_widths', 'seeds', 'psis',\
                           'tint', 'beams', 'all_true_calibration_parameters',\
@@ -262,8 +259,8 @@ class Database(object):
             observation = ReceiverCalibratedObservation(\
                 verbose=False, polarized=self.polarized,\
                 pointing=self.pointings[region],\
-                galaxy_map=self.galaxy_maps[region],\
-                include_smearing=self.include_smearing, nside=self.nside,\
+                galaxy=self.galaxies[region],\
+                include_smearing=self.include_smearing,\
                 include_moon=self.include_moon, inverse_calibration_equation=\
                 self.inverse_calibration_equation,\
                 frequencies=self.frequencies,\
@@ -481,47 +478,6 @@ class Database(object):
         to_set = self._check_bool_to_set(value)
         if to_set is not None:
             self._polarized = to_set
-
-    @property
-    def nside(self):
-        """
-        Property storing the healpy resolution parameter. A power of 2 less
-        than 2**30.
-        """
-        if not hasattr(self, '_nside'):
-            if self.verbose:
-                print("WARNING: nside of Database is being referenced " +\
-                    "before being set. Using nside=128 as default.")
-            self._nside = None
-        return self._nside
-    
-    @property
-    def npix(self):
-        """
-        The number of pixels in the beam and Galaxy maps to use for
-        convolutions.
-        """
-        if not hasattr(self, '_npix'):
-            self._npix = hp.pixelfunc.nside2npix(self.nside)
-        return self._npix
-    
-    @nside.setter
-    def nside(self, value):
-        """
-        Setter for the healpy resolution parameters, nside.
-        
-        value: must be a power of 2 less than 2**30
-        """
-        if type(value) in int_types:
-            is_power_of_two = ((value != 0) and ((value & (value - 1)) == 0))
-            if is_power_of_two and (value < 2**30):
-                self._nside = value
-            else:
-                raise ValueError("nside given to Database was " +\
-                                 "not a power of 2 less than 2**30.")
-        elif value is not None:
-            raise TypeError("Type of nside given to Database " +\
-                            "was not an integer.")
     
     @property
     def include_moon(self):
@@ -609,7 +565,7 @@ class Database(object):
             else:
                 if all([val is None for val in value]):
                     return
-                npix = hp.pixelfunc.nside2npix(self.nside)
+                npix = hp.pixelfunc.nside2npix(self.galaxies[0].nside)
                 if value.ndim == 1:
                     if value.shape[0] == npix:
                         if self.num_regions == 1:
@@ -1098,6 +1054,41 @@ class Database(object):
         if not hasattr(self, '_using_ares'):
             self._using_ares = isinstance(self.signal_data, dict)
         return self._using_ares
+    
+    @property
+    def galaxies(self):
+        """
+        The galaxies to use for simulation in the different spectra. It is an
+        iterable of Galaxy objects.
+        """
+        if not hasattr(self, '_galaxies'):
+            raise AttributeError("galaxies was referenced before it was set.")
+        return self._galaxies
+    
+    @galaxies.setter
+    def galaxies(self, value):
+        """
+        Setter for the galaxies to use for simulation in the different spectra.
+        
+        value: either None (sets to HaslamGalaxy object; default), a Galaxy
+               object, or a sequence of Galaxy objects
+        """
+        if value is None:
+            print("galaxies was not set. So the Haslam map with a -2.5 " +\
+                "spectral index and a resolution of nside=64 is being used " +\
+                "by default.")
+            value = HaslamGalaxy(nside=64)
+        if isinstance(value, Galaxy):
+            self._galaxies = InfiniteIndexer(value)
+        elif type(value) in sequence_types:
+            if all([isinstance(element, Galaxy) for element in value]):
+                self._galaxies = [element for element in value]
+            else:
+                raise TypeError("Not all elements of galaxies sequence " +\
+                    "were Galaxy objects.")
+        else:
+            raise TypeError("galaxies object was neither None, a Galaxy " +\
+                "object, nor a sequence of Galaxy objects.")
     
     @property
     def galaxy_maps(self):

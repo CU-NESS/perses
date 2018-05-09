@@ -29,8 +29,8 @@ class RawObservation(object):
     moon temperature, beam, pointing, psi, signal, galaxy, instrument
     calibration.
     """
-    def __init__(self, verbose=True, polarized=True, galaxy_map=None,\
-        nside=None, include_moon=None, inverse_calibration_equation=None,\
+    def __init__(self, verbose=True, polarized=True, galaxy=None,\
+        include_moon=None, inverse_calibration_equation=None,\
         frequencies=None, channel_widths=None, seed=None, pointing=None,\
         psi=None, tint=None, beam=None, true_calibration_parameters=None,\
         signal_data=None, moon_temp=None, moon_blocking_fraction=None,\
@@ -46,8 +46,7 @@ class RawObservation(object):
         """
         self.verbose = verbose
         self.polarized = polarized
-        self.galaxy_map = galaxy_map
-        self.nside = nside
+        self.galaxy = galaxy
         self.include_moon = include_moon
         self.inverse_calibration_equation = inverse_calibration_equation
         self.frequencies = frequencies
@@ -100,37 +99,6 @@ class RawObservation(object):
             raise TypeError("polarized was set to a non-bool.")
     
     @property
-    def nside(self):
-        """
-        The healpy resolution parameter. A power of 2 less than 2**30.
-        """
-        if not hasattr(self, '_nside'):
-            if self.verbose:
-                print("WARNING: nside of RawObservation is being " +\
-                    "referenced before being set. Using nside=128 as default.")
-            self._nside = 128
-        return self._nside
-    
-    @nside.setter
-    def nside(self, value):
-        if type(value) in int_types:
-            is_power_of_two = ((value != 0) and ((value & (value - 1)) == 0))
-            if is_power_of_two and (value < 2**30):
-                self._nside = value
-            else:
-                raise ValueError("nside given to RawObservation was " +\
-                                 "not a power of 2 less than 2**30.")
-        elif value is not None:
-            raise TypeError("Type of nside given to RawObservation " +\
-                            "was not an integer.")
-    
-    @property
-    def npix(self):
-        if not hasattr(self, '_npix'):
-            self._npix = hp.pixelfunc.nside2npix(self.nside)
-        return self._npix
-    
-    @property
     def include_moon(self):
         if not hasattr(self, '_include_moon'):
             if self.verbose:
@@ -177,10 +145,10 @@ class RawObservation(object):
                         "before it was set. Therefore, it is assumed to be " +\
                         "1 when greater than 90 degrees from the " +\
                         "pointing direction.")
-                self.moon_blocking_fraction =\
-                    full_blockage_opposite_pointing(self.pointing, self.nside)
+                self.moon_blocking_fraction = full_blockage_opposite_pointing(\
+                    self.pointing, self.galaxy.nside)
             else:
-                self.moon_blocking_fraction = np.zeros(self.npix)
+                self.moon_blocking_fraction = np.zeros(self.galaxy.npix)
         return self._moon_blocking_fraction
     
     @moon_blocking_fraction.setter
@@ -198,7 +166,7 @@ class RawObservation(object):
                                 "to np.ndarray.")
             else:
                 if value.ndim == 1:
-                    if len(value) == self.npix:
+                    if len(value) == self.galaxy.npix:
                         self._moon_blocking_fraction = value
                     else:
                         raise ValueError("moon_blocking_fraction did not " +\
@@ -596,42 +564,26 @@ class RawObservation(object):
         return self._Tsignal
     
     @property
-    def galaxy_map(self):
-        """
-        Allows the user to toggle the galaxy map to use. Choices right now are
-        'haslam1982' and 'gsm'.
-        """
-        if not hasattr(self, '_galaxy_map'):
-            if self.verbose:
-                print("WARNING: no galaxy_map was given so the " +\
-                    "extrapolated Guzman map was assumed.")
-            self._galaxy_map = 'extrapolated_Guzman'
-        return self._galaxy_map
-    
-    @galaxy_map.setter
-    def galaxy_map(self, value):
-        """
-        Allows the user to set the Galaxy map.
-        
-        value must be one of: 'gsm', 'haslam1982', or 'extrapolated_Guzman'
-        """
-        acceptable_maps = ['gsm', 'haslam1982', 'extrapolated_Guzman']
-        if value in acceptable_maps:
-            self._galaxy_map = value
-        elif value is not None:
-            raise ValueError(("The galaxy_map given to RawObservation " +\
-                "was not one of the acceptable_maps, which are {!s}.").format(\
-                acceptable_map))
-    
-    @property
     def galaxy(self):
         """
         The perses.foregrounds.Galaxy.Galaxy object which retrieves the map
         from the model.
         """
         if not hasattr(self, '_galaxy'):
-            self._galaxy = Galaxy(galaxy_map=self.galaxy_map)
+            raise AttributeError("galaxy was referenced before it was set.")
         return self._galaxy
+    
+    @galaxy.setter
+    def galaxy(self, value):
+        """
+        Setter for the Galaxy object to use for simulation of sky spectra.
+        
+        value: a Galaxy instance
+        """
+        if isinstance(value, Galaxy):
+            self._galaxy = value
+        else:
+            raise TypeError("galaxy was set to a non-Galaxy object.")
     
     @property
     def tint(self):
@@ -827,14 +779,13 @@ class RawObservation(object):
         RawObservation object. Attributes which are kept through the
         flush are:
         
-        nside, verbose, polarized, include_moon, galaxy_map
-        galaxy, inverse_calibration_equation
+        nside, verbose, polarized, include_moon, galaxy,
+        inverse_calibration_equation
         
         All other attributes are deleted.
         """
         del self._true_calibration_parameters
         del self._moon_temp
-        del self._galaxy_map
         del self._pointing
         del self._moon_blocking_fraction
         del self._foreground_kwargs

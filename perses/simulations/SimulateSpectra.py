@@ -1,5 +1,5 @@
 def map_function(frequency, galaxy=None, moon_blocking_fraction=None,\
-    moon_temp=None, verbose=True):
+    moon_temp=None):
     """
     Function to pass to get_spectrum which finds the Moon-occulted galaxy map
     at the given frequency
@@ -9,12 +9,11 @@ def map_function(frequency, galaxy=None, moon_blocking_fraction=None,\
     moon_blocking_fraction the map of the fraction of time that the Moon
                            occults each pixel
     moon_temp the temperature characterizing thermal emission from the Moon
-    verbose
     
     returns total power emitted as a function of pixel
     """
     return galaxy.get_moon_blocked_map(frequency, moon_blocking_fraction,\
-        moon_temp, verbose=verbose)
+        moon_temp)
 
 
 def _get_spectrum_with_polarization(frequencies, pointing, psi, beam, galaxy,\
@@ -34,9 +33,8 @@ def _get_spectrum_with_polarization(frequencies, pointing, psi, beam, galaxy,\
     returns numpy.ndarray of shape (4, len(frequencies)) containing all 4
             Stokes parameters pre-uncalibration (i.e. with exact calibration)
     """
-    map_function_pars = {'galaxy': galaxy,\
-                         'moon_blocking_fraction': moon_blocking_fraction,\
-                         'moon_temp': moon_temp, 'verbose': verbose}
+    map_function_pars = {'galaxy': galaxy, 'moon_temp': moon_temp,\
+        'moon_blocking_fraction': moon_blocking_fraction}
     return beam.convolve(frequencies, pointing, psi, map_function,\
         unpol_pars=map_function_pars, verbose=verbose, **kwargs)
 
@@ -58,9 +56,8 @@ def _get_spectrum_no_polarization(frequencies, pointing, psi, beam, galaxy,\
     returns numpy.ndarray of shape (len(frequencies),) containing all antenna
             temperatures pre-uncalibration (i.e. with exact calibration).
     """
-    map_function_pars = {'galaxy': galaxy,\
-                         'moon_blocking_fraction': moon_blocking_fraction,\
-                         'moon_temp': moon_temp, 'verbose': verbose}
+    map_function_pars = {'galaxy': galaxy, 'moon_temp': moon_temp,\
+        'moon_blocking_fraction': moon_blocking_fraction}
     return beam.convolve(frequencies, pointing, psi, map_function,\
         func_pars=map_function_pars, verbose=verbose, **kwargs)
 

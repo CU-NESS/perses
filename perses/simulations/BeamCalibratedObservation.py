@@ -19,7 +19,7 @@ except:
     basestring = str
 
 class BeamCalibratedObservation(ReceiverCalibratedObservation):
-    def __init__(self, known_beam=None, known_galaxy_map=None,\
+    def __init__(self, known_beam=None, known_galaxy=None,\
         known_pointing=None, known_psi=None,\
         known_moon_blocking_fraction=None, known_moon_temp=None,\
         knowledge_usage=None, fit_function=None, fit_function_kwargs=None,\
@@ -29,8 +29,8 @@ class BeamCalibratedObservation(ReceiverCalibratedObservation):
         given argument, the default is used for that argument.
         
         known_beam known beam, may be different than True beam
-        known_galaxy_map known galaxy_map, may be different than true
-                         galaxy_map
+        known_galaxy known galaxy, may be different than true
+                         galaxy
         known_pointing known pointing direction, may be different than true
                        pointing
         known_psi known value of psi, may be different than true value
@@ -50,8 +50,7 @@ class BeamCalibratedObservation(ReceiverCalibratedObservation):
                BeamCalibratedObservation. The allowed and expected keys are:
                polarized
                verbose
-               galaxy_map
-               nside
+               galaxy
                include_moon
                calibration_equation
                inverse_calibration_equation
@@ -71,7 +70,7 @@ class BeamCalibratedObservation(ReceiverCalibratedObservation):
         """
         ReceiverCalibratedObservation.__init__(self, **kwargs)
         self.known_beam = known_beam
-        self.known_galaxy_map = known_galaxy_map
+        self.known_galaxy = known_galaxy
         self.known_pointing = known_pointing
         self.known_psi = known_psi
         self.known_moon_blocking_fraction = known_moon_blocking_fraction
@@ -220,31 +219,6 @@ class BeamCalibratedObservation(ReceiverCalibratedObservation):
             return
         self._check_beam_type(value)
         self._known_beam = value
-
-    @property
-    def known_galaxy_map(self):
-        if not hasattr(self, '_known_galaxy_map'):
-            if self.verbose:
-                print("WARNING: No known_galaxy_map was given to the " +\
-                    "BeamCalibratedObservation so the true galaxy_map is " +\
-                    "assumed.")
-            self.known_galaxy_map = self.galaxy_map
-        return self._known_galaxy_map
-    
-    @known_galaxy_map.setter
-    def known_galaxy_map(self, value):
-        """
-        Allows the user to set the Galaxy map.
-        
-        value must be one of: 'gsm', 'haslam1982', or 'extrapolated_Guzman'
-        """
-        acceptable_maps = ['gsm', 'haslam1982', 'extrapolated_Guzman']
-        if value in acceptable_maps:
-            self._known_galaxy_map = value
-        elif value is not None:
-            raise ValueError(("The known_galaxy_map given to " +\
-                "BeamCalibratedObservation was not one of the " +\
-                "acceptable_maps, which are {!s}.").format(acceptable_maps))
     
     @property
     def known_galaxy(self):
@@ -253,8 +227,21 @@ class BeamCalibratedObservation(ReceiverCalibratedObservation):
         from the model.
         """
         if not hasattr(self, '_known_galaxy'):
-            self._known_galaxy = Galaxy(galaxy_map=self.known_galaxy_map)
+            raise AttributeError("known_galaxy was referenced before it " +\
+                "was set.")
         return self._known_galaxy
+    
+    @known_galaxy.setter
+    def known_galaxy(self, value):
+        """
+        Setter for the galaxy to use for beam calibration.
+        
+        value: a Galaxy instance
+        """
+        if isinstance(value, Galaxy):
+            self._known_galaxy = value
+        else:
+            raise TypeError("known_galaxy was set to a non-Galaxy object.")
     
     @property
     def known_pointing(self):
@@ -452,7 +439,6 @@ class BeamCalibratedObservation(ReceiverCalibratedObservation):
         del self._known_moon_temp
         del self._known_moon_blocking_fraction
         del self._known_galaxy
-        del self._known_galaxy_map
         del self._known_beam
         del self._known_rotation_angles
         if hasattr(self, '_known_beam_weighted_moon_blocking_fraction'):

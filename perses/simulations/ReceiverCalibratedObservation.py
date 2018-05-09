@@ -33,8 +33,7 @@ class ReceiverCalibratedObservation(RawObservation):
                The allowed keys are:
                polarized
                verbose
-               galaxy_map
-               nside
+               galaxy
                include_moon
                inverse_calibration_equation
                frequencies
