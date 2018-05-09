@@ -44,7 +44,7 @@ class DriftscanExtractor(Extractor):
         verbose: True or False. default True
         """
         foreground_training_sets =\
-            driftscan_set.form_training_sets(combine_times=combine_times)
+            driftscan_set.form_training_set(combine_times=combine_times)
         foreground_term_possibilities = 1 + np.arange(max_num_foreground_terms)
         if combine_times:
             foreground_names = ['foreground']

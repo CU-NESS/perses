@@ -41,6 +41,13 @@ class HaslamGalaxy(SpatialPowerLawGalaxy):
         self.thermal_background = thermal_background
     
     @property
+    def map(self):
+        """
+        Returns 'haslam'
+        """
+        return 'haslam'
+    
+    @property
     def haslam_map_408(self):
         """
         Property storing the Haslam map at 408 MHz in Galactic coordinates at
