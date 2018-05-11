@@ -9,12 +9,25 @@ Description: A file with a class which acts as a model wrapper of the
 """
 import numpy as np
 from ares.simulations.Global21cm import Global21cm
-from .BaseSignalModel import BaseSignalModel
+from .BaseModel import BaseModel
 
 def z_to_mhz(z):
     return 1420.405751 / (1 + z)
 
-class AresSignalModel(BaseSignalModel):
+class AresSignalModel(BaseModel):
+    @property
+    def blank_blob(self):
+        if not hasattr(self, '_blank_blob'):
+            raise NotImplementedError("The signal model cannot operate " +\
+                                      "without being given a blank blob " +\
+                                      "to return in the event of no blobs " +\
+                                      "being generated.")
+        return self._blank_blob
+    
+    @blank_blob.setter
+    def blank_blob(self, value):
+        self._blank_blob = value
+
     @property
     def signals(self):
         """

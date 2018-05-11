@@ -166,7 +166,7 @@ class _PolarizedBeam(_Beam):
     
 
     def plot_map(self, title, frequency, nside, pointing, psi, map_kwargs={},\
-        plot_kwargs={}, show=False):
+        mollview_kwargs={}, fontsize=20, show=False):
         """
         Plots the map of this _Beam at the given frequency where the beam is
         pointing in the given direction.
@@ -177,8 +177,8 @@ class _PolarizedBeam(_Beam):
         pointing the pointing direction (in latitude and (longitude)
         psi the angle through which the beam is rotated about its axis
         map_kwargs extra keyword arguments to pass to self.get_map
-        plot_kwargs additional keyword arguments to pass to healpy.mollview
-                    (other than title)
+        mollview_kwargs additional keyword arguments to pass to healpy.mollview
+                        (other than title)
         
         returns map of this beam in a 1D numpy.ndarray healpy map
         """
@@ -187,8 +187,9 @@ class _PolarizedBeam(_Beam):
         beams = (beams / (4 * np.pi * np.mean(beams[0])))
         beam_comps = ['I', 'Q', 'U', 'V']
         for ibeam_comp in range(4):
-            hp.mollview(beams[ibeam_comp], **plot_kwargs)
-            pl.title(title + ' ' + beam_comps[ibeam_comp] + ' beam')
+            hp.mollview(beams[ibeam_comp], **mollview_kwargs)
+            pl.title('{0!s} {1!s} beam'.format(title, beam_comps[ibeam_comp]),\
+                size=fontsize)
         if show:
             pl.show()
         return beams

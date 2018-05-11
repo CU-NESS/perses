@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 
-def read_polarized_beam(file_names, frequencies, ntheta=181, nphi=360):
+def read_polarized_beam(file_names, frequencies, ntheta=181, nphi=360,\
+    take_sqrt=True):
     """
     Reads in a polarized beam
     
@@ -10,6 +11,9 @@ def read_polarized_beam(file_names, frequencies, ntheta=181, nphi=360):
                the antenna (X or Y)
     frequencies the frequencies at which the beam applies
     ntheta, nphi number of theta and phi coordinates, respectively
+    take_sqrt: if True, it is assumed that Abs(phi) and Abs(theta) are the
+               squared magnitudes of the Jones matrix, not the magnitudes
+               themselves.
     
     returns a numpy.ndarray of shape (4, nfreq, ntheta, nphi)
     """
