@@ -1,14 +1,14 @@
 """
-File: perses/models/TanhModel.py
+File: perses/models/Tanh21cmModel.py
 Author: Keith Tauscher, Jordan Mirocha
 Date: 10 May 2018
 
-Description: File containing TanhModel class as an extension of pylinex's Model
-             class
+Description: File containing Tanh21cmModel class as an extension of pylinex's
+             Model class
 """
 import numpy as np
 from scipy.misc import derivative
-from pylinex import Model, get_hdf5_value
+from pylinex import LoadableModel, get_hdf5_value
 from ares.util import ParameterFile
 from ares.physics import Hydrogen, Cosmology, RateCoefficients
 from ares.physics.Constants import k_B, J21_num, nu_0_mhz
@@ -23,7 +23,7 @@ def tanh_generic(z, zref, dz):
     """
     return 0.5 * (np.tanh((zref - z) / dz) + 1.)
 
-class TanhModel(Model):
+class Tanh21cmModel(LoadableModel):
     """
     Class extending pylinex's Model class to model global 21-cm signals using
     the TanhModel of ares.
