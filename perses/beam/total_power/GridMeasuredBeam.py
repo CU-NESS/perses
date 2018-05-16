@@ -1,3 +1,4 @@
+from __future__ import division
 from types import FunctionType
 import time
 import numpy as np
@@ -36,6 +37,44 @@ class GridMeasuredBeam(_TotalPowerBeam):
         self.thetas = thetas
         self.phis = phis
         self.grids = beams
+    
+    def scale_frequency_space(self, scale_factor):
+        """
+        Scales this beam in frequency space. This is equivalent to a real space
+        scaling by the reciprocal of scale_factor.
+        
+        scale_factor: factor by which to multiply the frequencies of this beam
+                      to yield the frequencies of the returned beam
+        
+        returns: a new GridMeasuredBeam which applies at frequencies scaled by
+                 the given factor
+        """
+        return GridMeasuredBeam(self.frequencies / scale_factor, self.thetas,\
+            self.phis, self.grids)
+    
+    def scale_minimum_frequency(self, new_minimum_frequency):
+        """
+        Scales this beam in frequency space using scale_frequency_space so that
+        the new minimum frequency is the given one.
+        
+        new_minimum_frequency: the minimum frequency after scaling
+        
+        returns: new GridMeasuredBeam which has been scaled in frequency space
+        """
+        scale_factor = new_minimum_frequency / np.min(self.frequencies)
+        return self.scale_frequency_space(scale_factor)
+    
+    def scale_maximum_frequency(self, new_maximum_frequency):
+        """
+        Scales this beam in frequency space using scale_frequency_space so that
+        the new maximum frequency is the given one.
+        
+        new_maximum_frequency: the maximum frequency after scaling
+        
+        returns: new GridMeasuredBeam which has been scaled in frequency space
+        """
+        scale_factor = new_maximum_frequency / np.max(self.frequencies)
+        return self.scale_frequency_space(scale_factor)
     
     def interpolate_frequency_space(self, new_frequencies,\
         polynomial_order=10):
