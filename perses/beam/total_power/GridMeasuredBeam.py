@@ -36,7 +36,47 @@ class GridMeasuredBeam(_TotalPowerBeam):
         self.thetas = thetas
         self.phis = phis
         self.grids = beams
-
+    
+    def interpolate_frequency_space(self, new_frequencies,\
+        polynomial_order=10):
+        """
+        Interpolates this GridMeasuredBeam in frequency space and yields a new
+        one.
+        
+        new_frequencies: the frequencies to which to interpolate
+        polynomial_order: the polynomial order to use for interpolation,
+                          default min(10, len(self.frequencies)-1)
+        
+        returns: new GridMeasuredBeam which applies at the given frequencies
+        """
+        num_frequencies = len(self.frequencies)
+        if polynomial_order >= len(self.frequencies):
+            polynomial_order = len(self.frequencies) - 1
+        grid_coefficients = np.reshape(self.grids, (num_frequencies, -1))
+        min_frequency = np.min(self.frequencies)
+        max_frequency = np.max(self.frequencies)
+        center_frequency = (max_frequency + min_frequency) / 2.
+        half_bandwidth = (max_frequency - min_frequency) / 2.
+        normed_frequencies =\
+            (self.frequencies - center_frequency) / half_bandwidth
+        normed_new_frequencies =\
+            (new_frequencies - center_frequency) / half_bandwidth
+        grid_coefficients =\
+            np.polyfit(normed_frequencies, grid_coefficients, polynomial_order)
+        num_new_frequencies = len(new_frequencies)
+        (num_thetas, num_phis) = (len(self.thetas), len(self.phis))
+        new_grids = np.ndarray((num_new_frequencies, num_thetas, num_phis),\
+            dtype=complex)
+        for itheta in range(len(self.thetas)):
+            for iphi in range(len(self.phis)):
+                flattened_index = np.ravel_multi_index(\
+                    (itheta, iphi), (num_thetas, num_phis))
+                coefficients = grid_coefficients[:,flattened_index]
+                new_grids[:,itheta,iphi] =\
+                    np.polyval(coefficients, normed_new_frequencies)
+        return GridMeasuredBeam(new_frequencies, self.thetas, self.phis,\
+            new_grids)
+    
     @property
     def frequencies(self):
         if not hasattr(self, '_frequencies'):

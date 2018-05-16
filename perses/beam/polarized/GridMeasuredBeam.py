@@ -8,6 +8,8 @@ from ..BeamUtilities import rotate_map, rotate_maps, integrate_grids,\
     symmetrize_grid, maps_from_grids, stokes_beams_from_Jones_matrix,\
     spin_grids, smear_grids
 from ..BaseBeam import DummyPool
+from ..total_power.GridMeasuredBeam\
+    import GridMeasuredBeam as TotalPowerGridMeasuredBeam
 from .BasePolarizedBeam import _PolarizedBeam
 
 try:
@@ -42,6 +44,59 @@ class GridMeasuredBeam(_PolarizedBeam):
         self.thetas = thetas
         self.phis = phis
         self.grids = np.stack([JthetaX, JthetaY, JphiX, JphiY])
+    
+    @property
+    def total_power_equivalent(self):
+        """
+        Property which yields the a total_power GridMeasuredBeam which contains
+        the same Stokes I beam as this one.
+        """
+        new_grids =\
+            np.sum(np.real(self.grids) ** 2 + np.imag(self.grids) ** 2, axis=0)
+        return TotalPowerGridMeasuredBeam(self.frequencies, self.thetas,\
+            self.phis, new_grids)
+    
+    def interpolate_frequency_space(self, new_frequencies,\
+        polynomial_order=10):
+        """
+        Interpolates this GridMeasuredBeam in frequency space and yields a new
+        one.
+        
+        new_frequencies: the frequencies to which to interpolate
+        polynomial_order: the polynomial order to use for interpolation,
+                          default min(10, len(self.frequencies)-1)
+        
+        returns: new GridMeasuredBeam which applies at the given frequencies
+        """
+        num_frequencies = len(self.frequencies)
+        if polynomial_order >= num_frequencies:
+            polynomial_order = num_frequencies - 1
+        grid_coefficients =\
+            np.reshape(np.swapaxes(self.grids, 0, 1), (num_frequencies, -1))
+        min_frequency = np.min(self.frequencies)
+        max_frequency = np.max(self.frequencies)
+        center_frequency = (max_frequency + min_frequency) / 2.
+        half_bandwidth = (max_frequency - min_frequency) / 2.
+        normed_frequencies =\
+            (self.frequencies - center_frequency) / half_bandwidth
+        normed_new_frequencies =\
+            (new_frequencies - center_frequency) / half_bandwidth
+        grid_coefficients =\
+            np.polyfit(normed_frequencies, grid_coefficients, polynomial_order)
+        num_new_frequencies = len(new_frequencies)
+        (num_thetas, num_phis) = (len(self.thetas), len(self.phis))
+        new_grids = np.ndarray((4, num_new_frequencies, num_thetas, num_phis),\
+            dtype=complex)
+        for igrid in range(4):
+            for (itheta, theta) in enumerate(self.thetas):
+                for (iphi, phi) in enumerate(self.phis):
+                    flattened_index = np.ravel_multi_index(\
+                        (igrid, itheta, iphi), (4, num_thetas, num_phis))
+                    coefficients = grid_coefficients[:,flattened_index]
+                    new_grids[igrid,:,itheta,iphi] =\
+                        np.polyval(coefficients, normed_new_frequencies)
+        return GridMeasuredBeam(new_frequencies, self.thetas, self.phis,\
+            *new_grids)
 
     @property
     def frequencies(self):

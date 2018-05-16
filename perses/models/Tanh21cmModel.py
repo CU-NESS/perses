@@ -222,7 +222,7 @@ class Tanh21cmModel(LoadableModel):
     
     def __call__(self, parameters):
         """
-        Evaluates this TanhModel at the given parameter values.
+        Evaluates this Tanh21cmModel at the given parameter values.
         
         parameters: array of length 9, containing J0, Jz0, Jdz, T0, Tz0, Tdz,
                     x0, xz0, xdz
@@ -265,7 +265,8 @@ class Tanh21cmModel(LoadableModel):
     def gradient_computable(self):
         """
         Property storing a boolean describing whether the gradient of this
-        model is computable. Since the TanhModel is complicated, it cannot be.
+        model is computable. Since the Tanh21cmModel is complicated, it cannot
+        be.
         """
         return False
     
@@ -273,7 +274,7 @@ class Tanh21cmModel(LoadableModel):
     def hessian_computable(self):
         """
         Property storing a boolean describing whether the hessian of this model
-        is computable. Since the TanhModel is complicated, it cannot be.
+        is computable. Since the Tanh21cmModel is complicated, it cannot be.
         """
         return False
     
@@ -283,8 +284,9 @@ class Tanh21cmModel(LoadableModel):
         
         group: hdf5 file group to fill with information about this model
         """
-        group.attrs['class'] = 'TanhModel'
-        group.attrs['import_string'] = 'from perses.models import TanhModel'
+        group.attrs['class'] = 'Tanh21cmModel'
+        group.attrs['import_string'] =\
+            'from perses.models import Tanh21cmModel'
         group.attrs['in_Kelvin'] = self.in_Kelvin
         group.create_dataset('frequencies', data=self.frequencies)
     
@@ -300,7 +302,7 @@ class Tanh21cmModel(LoadableModel):
         """
         frequencies = get_hdf5_value(group['frequencies'])
         in_Kelvin = group.attrs['in_Kelvin']
-        return TanhModel(frequencies, in_Kelvin=in_Kelvin)
+        return Tanh21cmModel(frequencies, in_Kelvin=in_Kelvin)
     
     def __eq__(self, other):
         """
@@ -310,7 +312,7 @@ class Tanh21cmModel(LoadableModel):
         
         returns: True if other is equal to this model, False otherwise
         """
-        if isinstance(other, TanhModel):
+        if isinstance(other, Tanh21cmModel):
             return np.allclose(self.frequencies, other.frequencies, rtol=0,\
                 atol=1e-6)
         else:
