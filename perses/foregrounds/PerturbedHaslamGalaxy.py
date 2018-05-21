@@ -15,7 +15,7 @@ continuum survey. II - The atlas of contour maps. A&AS. 47.
 import os, time
 import numpy as np
 import healpy as hp
-from ..util import numerical_types
+from ..util import int_types, numerical_types
 from .SpatialPowerLawGalaxy import SpatialPowerLawGalaxy
 
 class PerturbedHaslamGalaxy(SpatialPowerLawGalaxy):
