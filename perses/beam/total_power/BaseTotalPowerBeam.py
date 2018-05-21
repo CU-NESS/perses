@@ -52,7 +52,7 @@ class _TotalPowerBeam(_Beam):
             return False
         return self.pf['beam_symmetrized']
 
-    def convolve(self, frequencies, pointing, psi, sky_maps,\
+    def convolve(self, frequencies, sky_maps, pointing=(90, 0), psi=0,\
         func_pars={}, verbose=True, angles=None, degrees=True,\
         include_smearing=True, nest=False, **kwargs):
         """
@@ -64,14 +64,15 @@ class _TotalPowerBeam(_Beam):
         frequency and the sky_map at that frequency. nside is assumed constant
         across all maps.
         
-        frequencies the frequencies at which to perform the convolution
-        pointing the pointing direction of the telescope for the convolution
-        sky_maps maps of sky in 2D numpy.ndarray with shape (nfreqs, npix)
-        func_pars the keyword arguments to pass to sky_maps (only needed if
-                  sky_maps has function type)
-        **kwargs extra arguments to pass to get_maps
+        frequencies: the frequencies at which to perform the convolution
+        sky_maps: maps of sky in 2D numpy.ndarray with shape (nfreqs, npix)
+        pointing: the pointing direction of the telescope for the convolution
+        psi: starting rotation angle, default 0
+        func_pars: the keyword arguments to pass to sky_maps (only needed if
+                   sky_maps has function type)
+        **kwargs: extra arguments to pass to get_maps
 
-        returns convolved spectrum: a 1D numpy.ndarray with shape (numfreqs)
+        returns: convolved spectrum, a 1D numpy.ndarray with shape (numfreqs,)
         """
         if angles is None:
             angles = np.zeros(1)

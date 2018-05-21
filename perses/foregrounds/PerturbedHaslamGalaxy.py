@@ -25,7 +25,7 @@ class PerturbedHaslamGalaxy(SpatialPowerLawGalaxy):
     """
     def __init__(self, nside=128, spectral_index=-2.5,\
         thermal_background=2.725, multiplicative_error_level=0.1,\
-        additive_error_level=3., seed=None):
+        additive_error_level=4., additive_noise_level=2., seed=None):
         """
         Galaxy objects should not be directly instantiated. Only its subclasses
         should be instantiated.
@@ -36,15 +36,18 @@ class PerturbedHaslamGalaxy(SpatialPowerLawGalaxy):
         thermal_background: level (in K) of the thermal background (e.g. CMB)
                             to exclude from power law extrapolation.
                             Default: 2.725 (CMB temperature)
-        multiplicative_error_level: level of error as a fraction of the map.
-                                    Default, 10%
-        additive_error_level: level of absolute error in map (applied after
-                              multiplicative error), Default: 3 K
+        multiplicative_error_level: level of error as a fraction of the map
+                                    (applied across pixels). Default, 10%
+        additive_error_level: level of absolute error in map (applied across
+                              pixels after multiplicative error), Default: 4 K
+        additive_noise_level: level of noise in the map (applied pixel by
+                              pixel). Default: 2K
         seed: seed for random number generator for replicability. Default, None
         """
         self.seed = seed
         self.multiplicative_error_level = multiplicative_error_level
         self.additive_error_level = additive_error_level
+        self.additive_noise_level = additive_noise_level
         self.nside = nside
         self.reference_frequency = 408.
         self.thermal_background = thermal_background
@@ -130,6 +133,32 @@ class PerturbedHaslamGalaxy(SpatialPowerLawGalaxy):
             raise TypeError("additive_error_level was set to a non-number.")
     
     @property
+    def additive_noise_level(self):
+        """
+        Property storing the additive noise level of the data (e.g. 2 K).
+        """
+        if not hasattr(self, '_additive_noise_level'):
+            raise AttributeError("additive_noise_level was " +\
+                "referenced before it was set.")
+        return self._additive_noise_level
+    
+    @additive_noise_level.setter
+    def additive_noise_level(self, value):
+        """
+        Setter of the additive noise.
+        
+        value: non-negative number representing noise level
+        """
+        if (type(value) in numerical_types):
+            if value >= 0:
+                self._additive_noise_level = value
+            else:
+                raise ValueError("additive_noise_level was set to a " +\
+                    "negative number.")
+        else:
+            raise TypeError("additive_noise_level was set to a non-number.")
+    
+    @property
     def perturbed_haslam_map_408(self):
         """
         Property storing the perturbed Haslam map associated with this Galaxy's
@@ -137,10 +166,12 @@ class PerturbedHaslamGalaxy(SpatialPowerLawGalaxy):
         """
         if not hasattr(self, '_perturbed_haslam_map_408'):
             np.random.seed(seed=self.seed)
-            multiplicative_perturbation = np.random.normal(1,\
-                self.multiplicative_error_level, size=self.npix)
+            multiplicative_perturbation =\
+                np.random.normal(1, self.multiplicative_error_level)
             additive_perturbation =\
                 self.additive_error_level * np.random.normal(0, 1)
+            noise_level = self.additive_noise_level *\
+                np.random.normal(0, 1, size=self.npix)
             self._perturbed_haslam_map_408 = (multiplicative_perturbation *\
                 self.haslam_map_408) + additive_perturbation
         return self._perturbed_haslam_map_408

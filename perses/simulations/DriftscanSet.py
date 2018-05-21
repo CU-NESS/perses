@@ -380,6 +380,25 @@ class DriftscanSet(Savable, Loadable):
             raise TypeError("DriftscanSet objects can only be added to " +\
                 "other DriftscanSet objects.")
     
+    @staticmethod
+    def sum(*driftscan_sets):
+        """
+        Combines all of the given DriftscanSet objects into a single
+        DriftscanSet object. For this function to work, the __add__ method
+        above must be implemented correctly.
+        
+        driftscan_sets: DriftscanSet objects with commensurable frequencies
+                        and times
+        
+        returns: DriftscanSet object which contains the curves from all of the
+                 input DriftscanSet objects
+        """
+        if driftscan_sets:
+            return sum(driftscan_sets[1:], driftscan_sets[0])
+        else:
+            raise ValueError("Cannot sum an empty list of DriftscanSet " +\
+                "objects. At least one DriftscanSet must be provided.")
+    
     def __getitem__(self, curve_index):
         """
         Gets the curve(s) associated with the given index.

@@ -315,9 +315,9 @@ class GridMeasuredBeam(_PolarizedBeam):
             return _Beam.get_grids(self, frequencies, theta_res,\
                 phi_res, pointing, psi, normed=normed)
 
-    def convolve(self, frequencies, pointing, psi, unpol_int, unpol_pars={},\
-        Eintheta=None, Eintheta_pars={}, Einphi=None, Einphi_pars={},\
-        verbose=True, angles=None, degrees=True,\
+    def convolve(self, frequencies, unpol_int, pointing=(90, 0), psi=0,\
+        unpol_pars={}, Eintheta=None, Eintheta_pars={}, Einphi=None,\
+        Einphi_pars={}, verbose=True, angles=None, degrees=True,\
         include_smearing=True, **kwargs):
         if angles is None:
             angles = [0]

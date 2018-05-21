@@ -283,8 +283,9 @@ class GridMeasuredBeam(_TotalPowerBeam):
                 self._inverse_self_freqs[key] = ifreq
         return self._inverse_self_freqs
 
-    def convolve(self, frequencies, pointing, psi, sky_maps, func_pars={},\
-        verbose=False, angles=None, degrees=True, include_smearing=True):
+    def convolve(self, frequencies, sky_maps, pointing=(90, 0), psi=0,\
+        func_pars={}, verbose=False, angles=None, degrees=True,\
+        include_smearing=True):
         """
         Convolves this beam with the given sky maps by taking the product of
         the beam maps and the sky maps and integrating over the entire solid
@@ -293,13 +294,15 @@ class GridMeasuredBeam(_TotalPowerBeam):
         sum over all pixels of the product of the beam pattern at a given
         frequency and the sky_map at that frequency.
 
-        frequencies the frequencies at which to perform the convolution
-        pointing the pointing direction of the telescope for the convolution
-        sky_maps maps of sky in 2D numpy.ndarray with shape (nfreqs, npix)
-        func_pars the keyword arguments to pass to sky_maps (only needed if
-                  sky_maps has function type)
+        frequencies: the frequencies at which to perform the convolution
+        sky_maps: maps of sky in 2D numpy.ndarray with shape (nfreqs, npix)
+        pointing: the pointing direction of the telescope for the convolution,
+                  default: current north pole.
+        psi: starting rotation angle (i.e. the 0 of angles array if it exists)
+        func_pars: the keyword arguments to pass to sky_maps (only needed if
+                   sky_maps has function type)
 
-        returns convolved spectrum: a 1D numpy.ndarray with shape (numfreqs)
+        returns: convolved spectrum, a 1D numpy.ndarray with shape (numfreqs,)
         """
         if angles is None:
             angles = [0.]
@@ -356,24 +359,25 @@ class GridMeasuredBeam(_TotalPowerBeam):
         return spectrum
 
     # try not to use function below.
-    def convolve_assumed_power_law(self, frequencies, pointing, psi, sky_map,\
-        map_freq, spectral_index=-2.5, verbose=True):
+    def convolve_assumed_power_law(self, frequencies, sky_map, map_freq,\
+        pointing=(90, 0), psi=0, spectral_index=-2.5, verbose=True):
         """
         Convolved this beam with the given sky map assuming that the frequency
         dependence of the sky is a power law with the given spectral index. If
         the type of this beam is a measured beam, then provide nside.
         
-        frequencies frequencies at which to convolve the beam
-        pointing the pointing direction of the antenna
-        sky_map the map to use for the spatial structure of the sky
-        map_freq the frequency at which the map is valid
-        spectral_index spectral index to assume for sky frequency dependence.
-                       It could be a constant number (if the same spectral
-                       index is used for all pixels) or a healpy map of the
-                       same shape as sky_map (if the assumed spectral index is
-                       pointing dependent)
+        frequencies: frequencies at which to convolve the beam
+        sky_map: the map to use for the spatial structure of the sky
+        map_freq: the frequency at which the map is valid
+        pointing: the pointing direction of the antenna
+        psi: 
+        spectral_index: spectral index to assume for sky frequency dependence.
+                        It could be a constant number (if the same spectral
+                        index is used for all pixels) or a healpy map of the
+                        same shape as sky_map (if the assumed spectral index is
+                        pointing dependent)
         
-        returns numpy.ndarray spectrum with same length as frequencies
+        returns: numpy.ndarray spectrum with same length as frequencies
         """
         t1 = time.time()
         numfreqs = len(frequencies)
