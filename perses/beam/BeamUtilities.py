@@ -70,7 +70,8 @@ def smear_grids(grids, start_angle, end_angle, degrees=True, phi_axis=-1):
 def spin_grids(grids, angle, degrees=True, phi_axis=-1):
     """
     Rotates the given grids by angle about the North pole (right hand rule
-    followed).
+    followed). If the angle is less then 1000th of the width of one azimuthal
+    pixel, then grids is simply returned.
     
     grids the grids to rotate about the north pole
     angle the angle by which to rotate about the north pole
@@ -86,12 +87,14 @@ def spin_grids(grids, angle, degrees=True, phi_axis=-1):
         else:
             angle = angle - 360.
     numphis = grids.shape[phi_axis]
-    phi_res = 360. // numphis
-    phi_steps = angle // phi_res
+    phi_res = 360. / numphis
+    if angle / phi_res < 1e3:
+        return grids
+    phi_steps = angle / phi_res
     int_part = int(np.floor(phi_steps))
     float_part = phi_steps - int_part # always positive 
-    high = np.roll(grids, -(int_part + 1), axis=phi_axis)
-    low = np.roll(grids, -int_part, axis=phi_axis)
+    high = np.roll(grids, int_part + 1, axis=phi_axis)
+    low = np.roll(grids, int_part, axis=phi_axis)
     return (high * float_part) + (low * (1 - float_part))
 
 def spin_maps(maps, angle, degrees=True, pixel_axis=-1, nest=False,\

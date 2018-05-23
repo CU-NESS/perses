@@ -43,7 +43,22 @@ class GridMeasuredBeam(_PolarizedBeam):
         self.frequencies = frequencies
         self.thetas = thetas
         self.phis = phis
-        self.grids = np.stack([JthetaX, JthetaY, JphiX, JphiY])
+        self.grids = np.stack([JthetaX, JthetaY, JphiX, JphiY], axis=0)
+    
+    def spin(self, angle, degrees=True):
+        """
+        Spins the beam by the given angle and returns a new GridMeasuredBeam
+        object.
+        
+        angle: the angle by which to spin the beam counterclockwise with
+               respect to this beam's zenith.
+        degrees: if True (default), angle is interpreted in degrees
+                 if False, angle is interpreted in radians
+        
+        returns: new GridMeasuredBeam object
+        """
+        return GridMeasuredBeam(self.frequencies, self.thetas, self.phis,\
+            spin_grids(self.grids, angle, degrees=degrees, phi_axis=-1))
     
     def scale_frequency_space(self, scale_factor):
         """
