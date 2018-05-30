@@ -8,6 +8,7 @@ Description: File containing a utility function which creates a foreground
 """
 from .LogLogPolynomialModel import LogLogPolynomialModel
 from .PowerLawTimesPolynomialModel import PowerLawTimesPolynomialModel
+from .PowerLawTimesLogPolynomialModel import PowerLawTimesLogPolynomialModel
 
 def make_foreground_model(model_name, frequencies, num_terms=5,\
     spectral_index=-2.5, expander=None):
@@ -28,6 +29,9 @@ def make_foreground_model(model_name, frequencies, num_terms=5,\
         return LogLogPolynomialModel(frequencies, num_terms, expander=expander)
     elif model_name == 'power_law_times_polynomial':
         return PowerLawTimesPolynomialModel(frequencies, num_terms,\
+            spectral_index=spectral_index, expander=expander)
+    elif model_name == 'power_law_times_log_polynomial':
+        return PowerLawTimesLogPolynomialModel(frequencies, num_terms,\
             spectral_index=spectral_index, expander=expander)
     else:
         raise ValueError(("The given model_name, '{!s}', was not " +\
