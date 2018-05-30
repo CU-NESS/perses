@@ -9,7 +9,7 @@ import healpy as hp
 
 default_weight_function = (lambda theta: np.ones_like(theta))
 
-def decompose_weight_legendre(weight_function=default_weight_function,\
+def decompose_polar_function_legendre(weight_function=default_weight_function,\
     lmax=1000, npoints=None):
     """
     Decomposes the (theta dependent) weight function in l-space using Legendre
@@ -29,6 +29,30 @@ def decompose_weight_legendre(weight_function=default_weight_function,\
     thetas = np.arccos(cos_thetas)
     weights = weight_function(thetas)
     return legfit(cos_thetas, weights, lmax)
+
+def spherical_harmonic_fit(to_fit, lmax=None, pixel_axis=-1):
+    """
+    Fits the given map(s) using spherical harmonics.
+    
+    to_fit: a 1D or 2D array of map data
+    lmax: the maximum l to fit spherical harmonics default: None, lmax=3nside-1
+    pixel_axis: axis of array representing pixels. Only used if to_fit is 2D.
+                Default: -1
+    
+    returns: complex array of same ndim as to_fit with the pixel axis replaced
+             by an lm axis
+    """
+    ndim = to_fit.ndim
+    pixel_axis = (pixel_axis % ndim)
+    if ndim == 1:
+        return hp.sphtfunc.map2alm(to_fit, lmax=lmax)
+    elif ndim == 2:
+        if pixel_axis == 1:
+            return hp.sphtfunc.map2alm(to_fit, lmax=lmax, pol=False)
+        else:
+            return hp.sphtfunc.map2alm(to_fit.T, lmax=lmax, pol=False).T
+    else:
+        raise ValueError("to_fit must be either 1D or 2D.")
 
 def polar_weighted_spherical_harmonic_fit(to_fit,\
     weight_function=default_weight_function, lmax=None,\
@@ -58,7 +82,7 @@ def polar_weighted_spherical_harmonic_fit(to_fit,\
     dimension_expander = ((np.newaxis,) * dims_to_add) + (slice(None),)
     (thetas, phis) = hp.pixelfunc.pix2ang(nside, np.arange(npix))
     if wigner_3j_method:
-        weight_coefficients = decompose_weight_legendre(\
+        weight_coefficients = decompose_polar_function_legendre(\
             weight_function=weight_function, lmax=2*lmax)
     weights = weight_function(thetas)
     weights_slice = ((np.newaxis,) * dims_to_add) + (slice(None),)
@@ -117,13 +141,12 @@ def reorganize_spherical_harmonic_coefficients(coefficients, lmax,\
     """
     Reorganizes the coefficients by grouping them by l or m (default m).
     
-    coefficients: 1D or 2D array whose last axis represents lm coefficients
+    coefficients: nD array whose last axis represents lm coefficients
     lmax: the maximum l value included in the given coefficients
     group_by_l: if True, indices in return value indicate l value
                 if False (default), indices in return value indicate m value
     
-    returns: list of 1D arrays (or 2D if coefficients is 2D) of complex
-             coefficients
+    returns: list of (n-1)D arrays of complex coefficients
     """
     return_value = []
     if group_by_l:

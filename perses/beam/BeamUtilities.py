@@ -306,9 +306,8 @@ def convolve_grids(grids, thetas, phis, sky_maps, theta_axis=-2, phi_axis=-1,\
         raise ValueError("sky_maps post pixel index is not the same shape " +\
                          "as grids post angle_axes")
     (numthetas, numphis) = (grids.shape[theta_axis], grids.shape[phi_axis])
-    (theta_res, phi_res) = (180 // (numthetas - 1), 360 // numphis)
-    interpolated_maps = grids_from_maps(sky_maps, theta_res=theta_res,\
-        phi_res=phi_res, nest=nest, pixel_axis=min_axis)
+    interpolated_maps = grids_from_maps(sky_maps, num_thetas=numthetas,\
+        num_phis=numphis, nest=nest, pixel_axis=min_axis)
     integral = integrate_grids(interpolated_maps * grids,\
         theta_axis=theta_axis, phi_axis=phi_axis,)
     if normed:
@@ -454,22 +453,28 @@ def call_rotator(rotator, thetas, phis):
     return (thetas.reshape(orig_shape), phis.reshape(orig_shape))
 
 def symmetrize_grid(grids, phi_axis=-1):
-    return smear_grids(grids, 0., 360., degrees=True, phi_axis=phi_axis)
+    ndim = grids.ndim
+    phi_axis = phi_axis % ndim
+    num_phis = grids.shape[phi_axis]
+    shape = ((1,) * phi_axis) + (num_phis,) + ((1,) * (ndim - phi_axis - 1))
+    return np.mean(grids, axis=phi_axis, keepdims=True) * np.ones(shape)
 
-def grids_from_maps(maps, theta_res=1, phi_res=1, nest=False, pixel_axis=-1):
+def grids_from_maps(maps, num_thetas=181, num_phis=360, nest=False,\
+    pixel_axis=-1):
     """
     A function which creates a theta-phi grid from healpy maps.
     
     maps maps upon which to make grid
-    theta_res resolution of the angle theta
-    phi_res resolution of the anlge phi
+    num_thetas number of theta angles to include in grid (0 to 180, inclusive)
+    num_phis number of phi angles to include in grid (0 to 360, singly
+             inclusive)
     nest True (False) if maps in NESTED (RING) format, default False
     pixel_axis the index of the axis which represents healpy pixel space
     """
     pixel_axis = (pixel_axis % maps.ndim)
     nside = hp.pixelfunc.npix2nside(maps.shape[pixel_axis])
-    thetas_1d = np.arange(0., 180. + theta_res, theta_res)
-    phis_1d = np.arange(0, 360, phi_res)
+    thetas_1d = np.linspace(0, 180, num_thetas)
+    phis_1d = np.linspace(0, 360, num_phis + 1)[:-1]
     thetas = thetas_1d[:,np.newaxis] * np.ones_like(phis_1d)[np.newaxis,:]
     phis = phis_1d[np.newaxis,:] * np.ones_like(thetas_1d)[:,np.newaxis]
     return interpolate_maps(maps, thetas, phis, axis=pixel_axis, degrees=True)
@@ -1012,7 +1017,8 @@ def integrate_grids(grids, theta_axis=-2, phi_axis=-1, keepdims=False):
         ((np.newaxis,) * (max_axis - min_axis - 1)) + (slice(None),) +\
         ((np.newaxis,) * (ndim - max_axis - 1))
     sin_theta = sin_theta[sin_theta_reshaping_index]
-    return np.sum(sin_theta * grids, axis=(theta_axis, phi_axis)) * dtheta_dphi
+    return dtheta_dphi * np.sum(sin_theta * grids,\
+        axis=(theta_axis, phi_axis), keepdims=keepdims)
 
 
 def normalize_grids(grids, theta_axis=-2, phi_axis=-1):

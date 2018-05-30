@@ -1,7 +1,7 @@
 """
-File: perses/models/PowerLawTimesPolynomialModel.py
+File: perses/models/PowerLawTimesLogPolynomialModel.py
 Author: Keith Tauscher
-Date: 13 May 2018
+Date: 30 May 2018
 
 Description: File containing a class representing a model consisting of a
              polynomial multiplied by a -2.5 spectral index power law.
@@ -11,13 +11,13 @@ from pylinex import Basis, BasisModel, Fitter
 from ..util import numerical_types
 from .ForegroundModel import ForegroundModel
 
-class PowerLawTimesPolynomialModel(BasisModel, ForegroundModel):
+class PowerLawTimesLogPolynomialModel(BasisModel, ForegroundModel):
     """
     Class representing a model consisting of a polynomial multiplied by a -2.5
     spectral index power law.
     """
     def __init__(self, x_values, num_terms, spectral_index=-2.5,\
-        expander=None, reference_x=None, reference_span=None):
+        expander=None, reference_x=None, reference_log_span=None):
         """
         Initializes a new power law times polynomial model using the given
         x_values, reference_x, spectral index, and number of terms.
@@ -30,18 +30,17 @@ class PowerLawTimesPolynomialModel(BasisModel, ForegroundModel):
                   polynomial basis to the desired space, default None
         reference_x: x value to use in normalizing x_values. If None, defaults
                      to the arithmetic mean of min and max of x_values.
-        reference_span: double the value with which to normalize
-                        (x_values-reference_x). If None, defaults to difference
-                        between min and max of x_values
+        reference_log_span: double the value with which to normalize
+                            ln(x_values/reference_x). If None, defaults to
+                            difference between ln(min) and ln(max) of x_values
         """
         self.x_values = x_values
         self.spectral_index = spectral_index
         self.reference_x = reference_x
-        self.reference_span = reference_span
-        power_law_part =\
-            ((self.x_values / self.reference_x) ** self.spectral_index)
+        self.reference_log_span = reference_log_span
+        power_law_part = (self.normed_x_values ** self.spectral_index)
         polynomial_x_values =\
-            ((self.x_values - self.reference_x) / (self.reference_span / 2.))
+            (np.log(self.normed_x_values) / (self.reference_log_span / 2.))
         powers = np.arange(num_terms)
         polynomial_basis =\
             polynomial_x_values[np.newaxis,:] ** powers[:,np.newaxis]
@@ -99,30 +98,42 @@ class PowerLawTimesPolynomialModel(BasisModel, ForegroundModel):
             raise TypeError("reference_x was neither a number nor None.")
     
     @property
-    def reference_span(self):
+    def normed_x_values(self):
+        """
+        Property storing the x_values normed through division by the
+        reference_x value.
+        """
+        if not hasattr(self, '_normed_x_values'):
+            self._normed_x_values = self.x_values / self.reference_x
+        return self._normed_x_values
+    
+    @property
+    def reference_log_span(self):
         """
         Property storing double the value used in normalizing
-        (x_values-reference_x). Defaults to the difference between the min and
-        max x values.
+        np.log(x_values/reference_x). Defaults to the difference between the
+        logs of the min and max x values.
         """
-        if not hasattr(self, '_reference_span'):
-            self._reference_span =\
-                np.max(self.x_values) - np.min(self.x_values)
-        return self._reference_span
+        if not hasattr(self, '_reference_log_span'):
+            self._reference_log_span =\
+                np.log(np.max(self.x_values)) - np.log(np.min(self.x_values))
+        return self._reference_log_span
     
-    @reference_span.setter
-    def reference_span(self, value):
+    @reference_log_span.setter
+    def reference_log_span(self, value):
         """
-        Setter for double the value used in normalizing (x_values-reference_x).
+        Setter for double the value used in normalizing
+        ln(x_values/reference_x).
         
-        value: single number with which to normalize x values
+        value: single number with which to normalize x values, or None
         """
         if value is None:
             pass
         elif type(value) in numerical_types:
-            self._reference_span = value
+            self._reference_log_span = value
         else:
-            raise TypeError("reference_span was neither a number nor None.")
+            raise TypeError("reference_log_span was neither a number nor " +\
+                "None.")
     
     @property
     def spectral_index(self):
@@ -158,8 +169,8 @@ class PowerLawTimesPolynomialModel(BasisModel, ForegroundModel):
                  same things as the parameters of this model but returns values
                  at new_x_values
         """
-        return PowerLawTimesPolynomialModel(new_x_values,\
+        return PowerLawTimesLogPolynomialModel(new_x_values,\
             self.basis.num_basis_vectors, spectral_index=self.spectral_index,\
             expander=self.basis.expander, reference_x=self.reference_x,\
-            reference_span=self.reference_span)
+            reference_log_span=self.reference_log_span)
 

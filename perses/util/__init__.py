@@ -1,11 +1,10 @@
-from perses.util import TypeCategories
 from perses.util.Aesthetics import labels
 from perses.util.PrintInfo import print_fit
 from perses.util.Misc import generate_galaxy_pars
 from perses.util.ParameterFile import ParameterFile
 from perses.util.Sites import sites as observing_sites
-from perses.util.WeightedSphericalHarmonicFitting import\
-    decompose_weight_legendre, polar_weighted_spherical_harmonic_fit,\
+from perses.util.SphericalHarmonics import decompose_polar_function_legendre,\
+    spherical_harmonic_fit, polar_weighted_spherical_harmonic_fit,\
     reorganize_spherical_harmonic_coefficients
 
 try:

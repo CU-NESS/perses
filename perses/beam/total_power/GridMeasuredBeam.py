@@ -3,9 +3,10 @@ from types import FunctionType
 import time
 import numpy as np
 import matplotlib.pyplot as pl
-from ...util import ParameterFile, real_numerical_types, sequence_types
+from ...util import ParameterFile, real_numerical_types, sequence_types,\
+    spherical_harmonic_fit, reorganize_spherical_harmonic_coefficients
 from ..BeamUtilities import rotate_map, rotate_maps, convolve_grid,\
-    convolve_grids, normalize_grids, normalize_maps,\
+    convolve_grids, normalize_grids, normalize_maps, grids_from_maps,\
     symmetrize_grid, maps_from_grids, spin_grids, smear_grids
 from ..BaseBeam import DummyPool
 from .BaseTotalPowerBeam import _TotalPowerBeam
@@ -88,10 +89,9 @@ class GridMeasuredBeam(_TotalPowerBeam):
         
         returns: new GridMeasuredBeam which applies at the given frequencies
         """
-        num_frequencies = len(self.frequencies)
-        if polynomial_order >= len(self.frequencies):
-            polynomial_order = len(self.frequencies) - 1
-        grid_coefficients = np.reshape(self.grids, (num_frequencies, -1))
+        if polynomial_order >= self.num_frequencies:
+            polynomial_order = self.num_frequencies - 1
+        grid_coefficients = np.reshape(self.grids, (self.num_frequencies, -1))
         min_frequency = np.min(self.frequencies)
         max_frequency = np.max(self.frequencies)
         center_frequency = (max_frequency + min_frequency) / 2.
@@ -103,13 +103,12 @@ class GridMeasuredBeam(_TotalPowerBeam):
         grid_coefficients =\
             np.polyfit(normed_frequencies, grid_coefficients, polynomial_order)
         num_new_frequencies = len(new_frequencies)
-        (num_thetas, num_phis) = (len(self.thetas), len(self.phis))
-        new_grids = np.ndarray((num_new_frequencies, num_thetas, num_phis),\
-            dtype=complex)
-        for itheta in range(len(self.thetas)):
-            for iphi in range(len(self.phis)):
+        new_grids =\
+            np.ndarray((num_new_frequencies, self.num_thetas, self.num_phis))
+        for itheta in range(self.num_thetas):
+            for iphi in range(self.num_phis):
                 flattened_index = np.ravel_multi_index(\
-                    (itheta, iphi), (num_thetas, num_phis))
+                    (itheta, iphi), (self.num_thetas, self.num_phis))
                 coefficients = grid_coefficients[:,flattened_index]
                 new_grids[:,itheta,iphi] =\
                     np.polyval(coefficients, normed_new_frequencies)
@@ -142,6 +141,16 @@ class GridMeasuredBeam(_TotalPowerBeam):
         if type(value) not in sequence_types:
             raise ValueError('frequencies was not a recognized 1D sequence.')
         self._frequencies = value
+    
+    @property
+    def num_frequencies(self):
+        """
+        Property storing the integer number of frequencies at which this beam
+        is defined.
+        """
+        if not hasattr(self, '_num_frequencies'):
+            self._num_frequencies = len(self.frequencies)
+        return self._num_frequencies
 
     @property
     def thetas(self):
@@ -152,6 +161,16 @@ class GridMeasuredBeam(_TotalPowerBeam):
         if type(value) not in sequence_types:
             raise ValueError('thetas was not of the expected type.')
         self._thetas = value
+    
+    @property
+    def num_thetas(self):
+        """
+        Property storing the integer number of theta angles used in the grid
+        for this beam.
+        """
+        if not hasattr(self, '_num_thetas'):
+            self._num_thetas = len(self.thetas)
+        return self._num_thetas
 
     @property
     def phis(self):
@@ -162,6 +181,16 @@ class GridMeasuredBeam(_TotalPowerBeam):
         if type(value) not in sequence_types:
             raise ValueError('phis was not of the expected type.')
         self._phis = value
+    
+    @property
+    def num_phis(self):
+        """
+        Property storing the integer number of phi angles used in the grid
+        for this beam.
+        """
+        if not hasattr(self, '_num_phis'):
+            self._num_phis = len(self.phis)
+        return self._num_phis
 
     @property
     def expected_shape(self):
@@ -220,14 +249,55 @@ class GridMeasuredBeam(_TotalPowerBeam):
                 maps_from_grids(self.grids[internal_ifreq,:,:], nside,\
                 theta_axis=-2, phi_axis=-1)
             if not np.allclose(pointing, (90., 0.), atol=1e-5, rtol=0.):
-                maps[ifreq,:] = rotate_map(maps[ifreq,:],\
-                    p_theta, p_phi, psi)
+                maps[ifreq,:] = rotate_map(maps[ifreq,:], p_theta, p_phi, psi)
         if normed:
             maps = normalize_maps(maps)
         if multi_frequency:
             return maps[:,:]
         else:
             return maps[0,:]
+    
+    def decompose_spherical_harmonics(self, nside, lmax=None, group=True):
+        """
+        Decomposes map(s) into spherical harmonics.
+        
+        nside: healpy resolution parameter
+        lmax: if None (default), max l value is 3nside-1. Otherwise specify int
+        group: if True (default), coefficients are grouped into l bins
+        
+        returns: an array of the spherical harmonic coefficients describing 
+        """
+        (pointing, psi) = ((90, 0), 0)
+        beam_maps =\
+            self.get_maps(self.frequencies, nside, pointing, psi, normed=False)
+        if lmax is None:
+            lmax = (3 * nside - 1)
+        coefficients = spherical_harmonic_fit(beam_maps, lmax=lmax)
+        if group:
+            return reorganize_spherical_harmonic_coefficients(coefficients,\
+                lmax, group_by_l=True)
+        else:
+            return coefficients
+    
+    def truncate_spherical_harmonics(self, nside, lmax):
+        """
+        Truncates spherical harmonics above the given l value and returns a
+        beam without them.
+        
+        nside: healpy resolution parameter
+        lmax: the maximum l value to retain
+        
+        returns: a new GridMeasuredBeam object with high order spherical
+                 harmonics truncated
+        """
+        coefficients =\
+            self.decompose_spherical_harmonics(nside, lmax=lmax, group=False)
+        new_maps =\
+            np.array(hp.sphtfunc.alm2map(coefficients, nside, pol=False))
+        new_grids = grids_from_maps(new_maps, num_thetas=self.num_thetas,\
+            num_phis=self.num_phis, pixel_axis=-1)
+        return GridMeasuredBeam(self.frequencies, self.thetas, self.phis,\
+            new_grids)
 
     def _should_use_raw_data(self, theta_res, phi_res, pointing, psi):
         #

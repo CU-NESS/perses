@@ -273,8 +273,7 @@ class AresSignalModel(LoadableModel):
         
         returns: array of size (num_channels,)
         """
-        for (name, value) in zip(self.parameters, parameters):
-            self.ares_kwargs[name] = value
+        self.ares_kwargs.update(dict(zip(self.parameters, parameters)))
         simulation = Global21cm(**self.ares_kwargs)
         simulation.run()
         signal = np.interp(self.frequencies, simulation.history['nu'],\
