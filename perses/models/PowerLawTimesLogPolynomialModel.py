@@ -173,4 +173,17 @@ class PowerLawTimesLogPolynomialModel(BasisModel, ForegroundModel):
             self.basis.num_basis_vectors, spectral_index=self.spectral_index,\
             expander=self.basis.expander, reference_x=self.reference_x,\
             reference_log_span=self.reference_log_span)
+    
+    def to_string(self, no_whitespace=True):
+        """
+        Creates and returns a string version/summary of this model.
+        
+        no_whitespace: if True, all words are separated by '_' instead of ' '
+                       in returned string
+        
+        returns: string summary of this model (suitable for e.g. a file prefix)
+        """
+        words = ('power law times log polynomial {:d} terms'.format(\
+            self.basis.num_basis_vectors)).split(' ')
+        return ('_' if no_whitespace else ' ').join(words)
 

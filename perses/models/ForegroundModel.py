@@ -30,4 +30,16 @@ class ForegroundModel(object):
         """
         raise NotImplementedError("equivalent_model must be implemented by " +\
             "all subclasses of ForegroundModel.")
+    
+    def to_string(self, **kwargs):
+        """
+        Creates and returns a string version/summary of this model.
+        
+        **kwargs: any keyword arguments required by the specific subclass of
+                  ForegroundModel.
+        
+        returns: string summary of this model (suitable for e.g. a file prefix)
+        """
+        raise NotImplementedError("to_string must be implemented by all " +\
+            "subclasses of ForegroundModel.")
 

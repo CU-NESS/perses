@@ -152,4 +152,17 @@ class LogLogPolynomialModel(TransformedModel, ForegroundModel):
         return LogLogPolynomialModel(new_x_values, num_terms,\
             expander=expander, reference_x=self.reference_x,\
             reference_dynamic_range=self.reference_dynamic_range)
+    
+    def to_string(self, no_whitespace=True):
+        """
+        Creates and returns a string version/summary of this model.
+        
+        no_whitespace: if True, all words are separated by '_' instead of ' '
+                       in returned string
+        
+        returns: string summary of this model (suitable for e.g. a file prefix)
+        """
+        words = ('log log polynomial {:d} terms'.format(\
+            self.model.basis.num_basis_vectors)).split(' ')
+        return ('_' if no_whitespace else ' ').join(words)
 

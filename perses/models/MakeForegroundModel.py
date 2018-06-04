@@ -15,10 +15,12 @@ def make_foreground_model(model_name, frequencies, num_terms=5,\
     """
     Makes a foreground model of the given type.
     
-    model_name: string in ['log_log_polynomial', 'power_law_times_polynomial']
+    model_name: string in ['log_log_polynomial', 'power_law_times_polynomial',
+                'power_law_times_log_polynomial']
     frequencies: 1D array of frequencies at which foreground model should ouput
     num_terms: must be given if and only if model_name in
-               ['log_log_polynomial', 'power_law_times_polynomial'], default: 5
+               ['log_log_polynomial', 'power_law_times_polynomial',
+               'power_law_times_log_polynomial'], default: 5
     spectral_index: necessary if and only if
                     model_name == 'power_law_times_polynomial', default: -2.5
     expander: if None (default), frequency space is output space

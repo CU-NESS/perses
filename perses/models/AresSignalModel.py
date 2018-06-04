@@ -31,7 +31,7 @@ class AresSignalModel(LoadableModel):
     """
     Model subclass wrapper around the ares.simulations.Global21cm object.
     """
-    def __init__(self, frequencies, parameters, in_Kelvin=False,\
+    def __init__(self, frequencies, parameters=[], in_Kelvin=False,\
         parameter_bundle_names=default_parameter_bundle_names,\
         simple_kwargs=default_simple_kwargs,\
         synthesis_model_kwargs=default_synthesis_model_kwargs):
@@ -42,7 +42,9 @@ class AresSignalModel(LoadableModel):
         frequencies: 1D array of positive frequency values preferably monotonic
         parameters: list of names of parameters to accept as input. They must
                     be acceptable in the ares_kwargs dictionary passed to
-                    ares.simulations.Global21cm objects.
+                    ares.simulations.Global21cm objects. Default: [], leads to
+                    a model with only one output, corresponding to the default
+                    parameters.
         in_Kelvin: if True, model values given in K. Otherwise, in mK.
         parameter_bundle_names: names of parameter bundles to use in ares
                                 kwargs template. The bundles are loaded in the
