@@ -8,3 +8,5 @@ from perses.models.PowerLawTimesLogPolynomialModel import\
     PowerLawTimesLogPolynomialModel
 from perses.models.LogLogPolynomialModel import LogLogPolynomialModel
 from perses.models.MakeForegroundModel import make_foreground_model
+from perses.models.ForegroundModelIterator import ForegroundModelIterator
+

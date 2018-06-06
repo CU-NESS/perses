@@ -38,7 +38,7 @@ class PowerLawTimesLogPolynomialModel(BasisModel, ForegroundModel):
         self.spectral_index = spectral_index
         self.reference_x = reference_x
         self.reference_log_span = reference_log_span
-        power_law_part = (self.normed_x_values ** self.spectral_index)
+        power_law_part = np.power(self.normed_x_values, self.spectral_index)
         polynomial_x_values =\
             (np.log(self.normed_x_values) / (self.reference_log_span / 2.))
         powers = np.arange(num_terms)
@@ -115,8 +115,8 @@ class PowerLawTimesLogPolynomialModel(BasisModel, ForegroundModel):
         logs of the min and max x values.
         """
         if not hasattr(self, '_reference_log_span'):
-            self._reference_log_span =\
-                np.log(np.max(self.x_values)) - np.log(np.min(self.x_values))
+            self._reference_log_span = np.log(np.max(self.normed_x_values)) -\
+                np.log(np.min(self.normed_x_values))
         return self._reference_log_span
     
     @reference_log_span.setter
