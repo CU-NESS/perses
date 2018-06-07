@@ -107,7 +107,8 @@ class LogLogPolynomialModel(TransformedModel, ForegroundModel):
     @reference_dynamic_range.setter
     def reference_dynamic_range(self, value):
         """
-        Setter for the reference dynamic range used in normalizing log x values.
+        Setter for the reference dynamic range used in normalizing log x
+        values.
         
         value: single number given roughly by the quotient of max and min x
                values
@@ -137,20 +138,27 @@ class LogLogPolynomialModel(TransformedModel, ForegroundModel):
         fitter = Fitter(self.model.basis, log_data, error_on_log_data)
         return (fitter.parameter_mean, fitter.parameter_covariance)
     
-    def equivalent_model(self, new_x_values):
+    def equivalent_model(self, new_x_values=None, new_expander=None):
         """
         Creates a model with parameters equivalent to this models' parameters.
         
         new_x_values: x values at which new model should return values
+                      if None, defaults to this models x_values
+        new_expander: if None, same expander is used.
+                      otherwise, an Expander object (NOT something to cast into
+                                 one, otherwise the None would be ambiguous)
         
         returns: new LogLogPolynomial model which returns values at the given x
                  values
         """
         log_basis = self.model.basis
         num_terms = log_basis.num_basis_vectors
-        expander = log_basis.expander
+        if new_x_values is None:
+            new_x_values = self.x_values
+        if new_expander is None:
+            new_expander = log_basis.expander
         return LogLogPolynomialModel(new_x_values, num_terms,\
-            expander=expander, reference_x=self.reference_x,\
+            expander=new_expander, reference_x=self.reference_x,\
             reference_dynamic_range=self.reference_dynamic_range)
     
     def to_string(self, no_whitespace=True):

@@ -18,12 +18,15 @@ class ForegroundModel(object):
     much as possible). This class exists to create equivalent models which
     apply at different frequencies.
     """
-    def equivalent_model(self, new_x_values):
+    def equivalent_model(self, new_x_values=None, new_expander=None):
         """
         Finds an equivalent model to this one which is valid at the given x
         values
         
         new_x_values: x values at which returned model should return values
+                      if None, defaults to this model's x_values
+        new_expander: Expander object to use for this model
+                      if None, defaults to this model's expander
         
         returns: another ForegroundModel which shares parameters (but not x
                  values) with this one

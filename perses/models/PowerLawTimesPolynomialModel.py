@@ -147,20 +147,28 @@ class PowerLawTimesPolynomialModel(BasisModel, ForegroundModel):
         else:
             raise TypeError("spectral_index was neither a number nor None.")
     
-    def equivalent_model(self, new_x_values):
+    def equivalent_model(self, new_x_values=None, new_expander=None):
         """
         Finds a model with parameters equivalent to this one which returns
         values at the given x values.
         
         new_x_values: x values at which returned model should return values
+                      if None, defaults to this models x_values
+        new_expander: if None, same expander is used.
+                      otherwise, an Expander object (NOT something to cast into
+                                 one, otherwise the None would be ambiguous)
         
         returns: PowerLawTimesPolynomialModel whose parameters represent the
                  same things as the parameters of this model but returns values
                  at new_x_values
         """
+        if new_x_values is None:
+            new_x_values = self.x_values
+        if new_expander is None:
+            new_expander = self.basis.expander
         return PowerLawTimesPolynomialModel(new_x_values,\
             self.basis.num_basis_vectors, spectral_index=self.spectral_index,\
-            expander=self.basis.expander, reference_x=self.reference_x,\
+            expander=new_expander, reference_x=self.reference_x,\
             reference_span=self.reference_span)
     
     def to_string(self, no_whitespace=True):
