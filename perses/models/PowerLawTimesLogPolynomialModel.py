@@ -173,6 +173,8 @@ class PowerLawTimesLogPolynomialModel(BasisModel, ForegroundModel):
                  same things as the parameters of this model but returns values
                  at new_x_values
         """
+        if new_x_values is None:
+            new_x_values = self.x_values
         if new_expander is None:
             new_expander = self.basis.expander
         return PowerLawTimesLogPolynomialModel(new_x_values,\
