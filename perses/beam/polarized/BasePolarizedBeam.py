@@ -39,9 +39,9 @@ class _PolarizedBeam(_Beam):
     array of the shape (4, nfreq, npix) where the 4 elements (in order) are
     JthetaX, JthetaY, JphiX, and JphiY.
     """
-    def convolve(self, frequencies, pointing, psi, unpol_int, unpol_pars={},\
-        Eintheta=None, Eintheta_pars={}, Einphi=None, Einphi_pars={},\
-        verbose=True, include_smearing=True, angles=None,\
+    def convolve(self, frequencies, unpol_int, pointing=(90,0), psi=0,\
+        unpol_pars={}, Eintheta=None, Eintheta_pars={}, Einphi=None,\
+        Einphi_pars={}, verbose=True, include_smearing=True, angles=None,\
         degrees=True, nest=False, **kwargs):
         """
         Simulates the Stokes parameters induced by the sky with given
@@ -50,12 +50,14 @@ class _PolarizedBeam(_Beam):
         
         frequencies: frequencies at which to convolve this beam with the
                      sky_maps
-        pointing: the direction in which the beam is pointing (lat, lon) in deg
-        psi: angle through which beam is rotated about its axis in deg
         unpol_int: the unpolarized intensity of the sky as a function of pixel
                    number and frequency. unpol_int can either be a real
                    numpy.ndarray of shape (npix, nfreq) or a function which
                    takes frequencies and outputs maps of shape (npix,)
+        pointing: the direction in which the beam is pointing (lat, lon) in deg
+                  default (90, 0)
+        psi: angle through which beam is rotated about its axis in deg
+             default 0
         unpol_pars: if unpol_int is a function which creates sky maps, these
                    pars are passed as kwargs into it.
         Ein(alpha): the electric field in the (alpha) direction associated with

@@ -88,7 +88,7 @@ def spin_grids(grids, angle, degrees=True, phi_axis=-1):
             angle = angle - 360.
     numphis = grids.shape[phi_axis]
     phi_res = 360. / numphis
-    if angle / phi_res < 1e3:
+    if abs(angle / phi_res) < 1e-3:
         return grids
     phi_steps = angle / phi_res
     int_part = int(np.floor(phi_steps))

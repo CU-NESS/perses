@@ -7,8 +7,8 @@ try:
 except ImportError:
     from distutils.core import setup
 
-packages = ['perses.foregrounds', 'perses.simulations', 'perses.analysis',
-    'perses.instrument', 'perses.util', 'perses.inference']
+packages = ['perses.util', 'perses.models', 'perses.beam',\
+    'perses.foregrounds', 'perses.simulations']
         
 setup(name='perses',
       version='0.1',
