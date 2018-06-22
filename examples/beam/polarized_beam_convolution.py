@@ -20,8 +20,8 @@ up_beam = ConvertedBeam(UnperturbedAugustBaselineBicone())
 p_beam = ConvertedBeam(PerturbedAugustBaselineBicone(lambda mx, nu, th, ph: (-2e-5*mx)*np.cos(np.radians(th))))
 #beam = GaussianDipoleBeam(lambda nu: (115. - (0.375 * nu)))
 
-up_stokes = up_beam.convolve(frequencies, pointing, psi, gal_maps)
-p_stokes = p_beam.convolve(frequencies, pointing, psi, gal_maps)
+up_stokes = up_beam.convolve(frequencies, gal_maps, pointing=pointing, psi=psi)
+p_stokes = p_beam.convolve(frequencies, gal_maps, pointing=pointing, psi=psi)
 up_stokes_I, up_stokes_Q, up_stokes_U, up_stokes_V = up_stokes
 p_stokes_I, p_stokes_Q, p_stokes_U, p_stokes_V = p_stokes
 

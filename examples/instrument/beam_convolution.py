@@ -39,8 +39,8 @@ t0 = time.time()
 cone_fwhm = (lambda nu : 115. - 0.375 * nu)
 cone_beam = IdealBeam(beam_type='cone', beam_fwhm=cone_fwhm)
 
-convolved_spec = cone_beam.convolve(frequencies, (90., 0.), 0., synthetic_sky,\
-    nthreads=4, verbose=False)
+convolved_spec =\
+    cone_beam.convolve(frequencies, synthetic_sky, nthreads=4, verbose=False)
 
 theoretical_num = (lambda nu : (1-np.cos(np.radians(cone_fwhm(nu)))))
 theoretical_den = (lambda nu:(4.*(1-np.cos(np.radians(cone_fwhm(nu)/2.)))))
@@ -66,8 +66,8 @@ phis = np.arange(0, 360, deg_res)
 
 cone_grids = grids_from_function(func, frequencies, deg_res, deg_res)
 cone_grid_beam = GridMeasuredBeam(frequencies, thetas, phis, cone_grids)
-convolved_spec_grid = cone_grid_beam.convolve(frequencies, (90., 0.), 0.,\
-    synthetic_sky, nthreads=4, verbose=False)
+convolved_spec_grid = cone_grid_beam.convolve(frequencies, synthetic_sky,\
+    nthreads=4, verbose=False)
 
 print(('Convolving spectrum for 81 frequencies with {0} degree resolution ' +\
     ' took {1:.3f} s.').format(deg_res, time.time() - t0))

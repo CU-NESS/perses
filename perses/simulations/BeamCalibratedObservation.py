@@ -409,8 +409,8 @@ class BeamCalibratedObservation(ReceiverCalibratedObservation):
             if self.include_moon:
                 self._known_beam_weighted_moon_blocking_fraction =\
                     self.known_beam.convolve(self.frequencies,\
-                    self.known_pointing, self.known_psi,\
                     self.known_moon_blocking_fraction[np.newaxis],\
+                    pointing=self.known_pointing, psi=self.known_psi,\
                     verbose=self.verbose, angles=self.known_rotation_angles,\
                     degrees=True, **self.foreground_kwargs)
                 if self.polarized:

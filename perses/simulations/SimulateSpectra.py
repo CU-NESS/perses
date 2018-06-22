@@ -35,8 +35,8 @@ def _get_spectrum_with_polarization(frequencies, pointing, psi, beam, galaxy,\
     """
     map_function_pars = {'galaxy': galaxy, 'moon_temp': moon_temp,\
         'moon_blocking_fraction': moon_blocking_fraction}
-    return beam.convolve(frequencies, pointing, psi, map_function,\
-        unpol_pars=map_function_pars, verbose=verbose, **kwargs)
+    return beam.convolve(frequencies, map_function, pointing=pointing,\
+        psi=psi, unpol_pars=map_function_pars, verbose=verbose, **kwargs)
 
 
 def _get_spectrum_no_polarization(frequencies, pointing, psi, beam, galaxy,\
@@ -58,8 +58,8 @@ def _get_spectrum_no_polarization(frequencies, pointing, psi, beam, galaxy,\
     """
     map_function_pars = {'galaxy': galaxy, 'moon_temp': moon_temp,\
         'moon_blocking_fraction': moon_blocking_fraction}
-    return beam.convolve(frequencies, pointing, psi, map_function,\
-        func_pars=map_function_pars, verbose=verbose, **kwargs)
+    return beam.convolve(frequencies, map_function, pointing=pointing,\
+        psi=psi, func_pars=map_function_pars, verbose=verbose, **kwargs)
 
 
 def get_spectrum(polarized, frequencies, pointing, psi, beam, galaxy,\

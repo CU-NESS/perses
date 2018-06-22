@@ -240,6 +240,8 @@ class DriftscanSetCreator(object):
     @property
     def num_driftscans(self):
         """
+        Property storing the integer number of driftscans this object will
+        create.
         """
         if not hasattr(self, '_num_driftscans'):
             self._num_driftscans = self.nbeams * self.nmaps
@@ -325,7 +327,8 @@ class DriftscanSetCreator(object):
                             time.ctime()))
         except KeyboardInterrupt:
             if self.verbose:
-                print("Stopping convolutions at {!s}.".format(time.ctime()))
+                print(("Stopping convolutions due to KeyboardInterrupt at " +\
+                    "{!s}.").format(time.ctime()))
     
     @property
     def file(self):
@@ -378,8 +381,8 @@ class DriftscanSetCreator(object):
         group = self.file['temperatures']
         for ibeam in range(self.nbeams):
             for imaps in range(self.nmaps):
-                 dataset_name = 'beam_{0:d}_maps_{1:d}'.format(ibeam, imaps)
-                 training_set[ibeam,imaps,:,:] = group[dataset_name].value
+                dataset_name = 'beam_{0:d}_maps_{1:d}'.format(ibeam, imaps)
+                training_set[ibeam,imaps,:,:] = group[dataset_name].value
         self.close()
         if flatten_identifiers:
             training_set =\

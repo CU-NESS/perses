@@ -754,8 +754,9 @@ class RawObservation(object):
         if not hasattr(self, '_beam_weighted_moon_blocking_fraction'):
             if self.include_moon:
                 self._beam_weighted_moon_blocking_fraction =\
-                    self.beam.convolve(self.frequencies, self.pointing,\
-                    self.psi, self.moon_blocking_fraction[np.newaxis],\
+                    self.beam.convolve(self.frequencies,\
+                    self.moon_blocking_fraction[np.newaxis],\
+                    pointing=self.pointing, psi=self.psi,\
                     verbose=self.verbose, angles=self.rotation_angles,\
                     degrees=True, **self.foreground_kwargs)
             else:
