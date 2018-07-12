@@ -8,6 +8,7 @@ import numpy as np
 import healpy as hp
 from ...util import real_numerical_types
 from .BaseTotalPowerBeam import _TotalPowerBeam
+from ..BeamUtilities import rotate_maps
 
 class IdealBeam(_TotalPowerBeam):
     def __init__(self, beam_function=None):

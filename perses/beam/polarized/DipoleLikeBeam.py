@@ -8,6 +8,7 @@ import numpy as np
 import healpy as hp
 from ...util import real_numerical_types
 from .BasePolarizedBeam import _PolarizedBeam
+from ..BeamUtilities import rotate_maps
 
 class DipoleLikeBeam(_PolarizedBeam):
     def __init__(self, modulating_function=None):
