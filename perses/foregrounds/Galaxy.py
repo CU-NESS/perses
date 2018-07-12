@@ -114,13 +114,13 @@ class Galaxy(object):
         else:
             return hp.pixelfunc.ud_grade(to_fix, nside_out=self.nside)
 
-    def plot(self, freq, **kwargs):
+    def plot(self, frequency, **kwargs):
         """
         Plot galactic emission at input frequency (in MHz).
         
         Parameters
         ----------
-        freq : int, float
+        frequency : int, float
             Plot GSM at this frequency in MHz
         beam : tuple
             Three-tuple consisting of the beam (FWHM, lat, lon), where lat 
