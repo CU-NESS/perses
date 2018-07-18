@@ -1,4 +1,11 @@
-import os, re, urllib, sys, tarfile
+import os, re, sys, tarfile
+
+# the try-except below allows urlretrieve to be used whether this is being
+# called from Python2 or Python3.
+try:
+    from urllib import urlretrieve
+except:
+    from urllib.request import urlretrieve
 
 options = sys.argv[1:]
          
@@ -77,7 +84,7 @@ for i, direc in enumerate(to_download):
             continue
     
         print("Downloading {0!s}/{1!s}...".format(web, fn))
-        urllib.urlretrieve('{0!s}/{1!s}'.format(web, fn), fn)
+        urlretrieve('{0!s}/{1!s}'.format(web, fn), fn)
         
         # If it's not a tarball, move on
         if not re.search('tar', fn):
