@@ -175,4 +175,15 @@ class LRCResonanceModel(LoadableModel):
         if not np.allclose(self.frequencies, other.frequencies):
             return False
         return True
+    
+    @property
+    def bounds(self):
+        """
+        Property storing a dictionary of parameter bounds of the form
+        (min, max) indexed by parameter name.
+        """
+        if not hasattr(self, '_bounds'):
+            self._bounds = {'amplitude': (None, None), 'center': (None, None),\
+                'Q_factor': (0,  None)}
+        return self._bounds
 

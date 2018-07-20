@@ -339,4 +339,14 @@ class FlattenedGaussianModel(LoadableModel):
             return np.allclose(self.frequencies, other.frequencies, rtol=0,\
                 atol=1e-9)
         return False
+    
+    @property
+    def bounds(self):
+        """
+        Property storing a dictionary with all of the natural parameter bounds.
+        """
+        if not hasattr(self, '_bounds'):
+            self._bounds = {'amplitude': (None, None), 'center': (None, None),\
+                'flattening': (0, None), 'fwhm': (0, None)}
+        return self._bounds
 

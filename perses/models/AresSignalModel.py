@@ -415,4 +415,13 @@ class AresSignalModel(LoadableModel):
             for key in self.synthesis_model_kwargs]):
             return False
         return True
+    
+    #@property
+    #def bounds(self):
+    #    """
+    #    Property storing the bounds of the parameters.
+    #    """
+    #    if not hasattr(self, '_bounds'):
+    #        # TODO
+    #    return self._bounds
 

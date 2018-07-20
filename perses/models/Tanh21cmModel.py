@@ -317,4 +317,17 @@ class Tanh21cmModel(LoadableModel):
                 atol=1e-6)
         else:
             return False
+    
+    @property
+    def bounds(self):
+        """
+        Property storing natural parameter bounds in a dictionary.
+        """
+        if not hasattr(self, '_bounds'):
+            self._bounds = {'tanh_J0': (0, None), 'tanh_Jz0': (0, None),\
+                'tanh_Jdz': (0, None), 'tanh_T0': (0, None),\
+                'tanh_Tz0': (0, None), 'tanh_Tdz': (0, None),\
+                'tanh_x0': (0, 1), 'tanh_xz0': (0, None),\
+                'tanh_xdz': (0, None)}
+        return self._bounds
 
