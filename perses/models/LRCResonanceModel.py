@@ -183,7 +183,7 @@ class LRCResonanceModel(LoadableModel):
         (min, max) indexed by parameter name.
         """
         if not hasattr(self, '_bounds'):
-            self._bounds = {'amplitude': (None, None), 'center': (None, None),\
+            self._bounds = {'amplitude': (None, None), 'center': (0, None),\
                 'Q_factor': (0,  None)}
         return self._bounds
 
