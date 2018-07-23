@@ -83,8 +83,9 @@ class FlattenedGaussianModel(LoadableModel):
         """
         (amplitude, center, flattening, fwhm) = parameters
         if (flattening < 0) or (fwhm <= 0):
-            raise ValueError("Flattening must be non-negative and fwhm " +\
-                "must be positive.")
+            raise ValueError(("Flattening (given: {0:.4g}) must be " +\
+                "non-negative and fwhm (given: {1:.4g}) must be " +\
+                "positive.").format(flattening, fwhm))
         exponent = self.exponent(parameters)
         if flattening == 0:
             return amplitude * np.exp(exponent)
