@@ -22,8 +22,8 @@ except:
     basestring = str
 
 default_parameter_bundle_names = ['mirocha2016:dpl', 'mirocha2016:flex']
-default_simple_kwargs =\
-    {'tau_redshift_bins': 1000, 'final_redshift': 5, 'initial_redshift': 60}
+default_simple_kwargs = {'tau_redshift_bins': 1000, 'final_redshift': 5,\
+    'initial_redshift': 60, 'verbose': False}
 default_synthesis_model_kwargs =\
     {'source_sed': 'eldridge2009', 'source_Z': 0.0245, 'interp_Z': 'linear'}
 
