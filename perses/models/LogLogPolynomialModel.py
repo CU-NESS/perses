@@ -8,11 +8,12 @@ Description: File containing a class representing a foreground model which
              log-frequency space.
 """
 import numpy as np
-from pylinex import Basis, BasisModel, TransformedModel, Fitter
+from pylinex import load_expander_from_hdf5_group, Basis, LoadableModel,\
+    BasisModel, TransformedModel, Fitter
 from ..util import numerical_types
 from .ForegroundModel import ForegroundModel
 
-class LogLogPolynomialModel(TransformedModel, ForegroundModel):
+class LogLogPolynomialModel(LoadableModel, TransformedModel, ForegroundModel):
     """
     Class representing a foreground model which describes the log of the
     foreground temperature as a polynomial in log-frequency space.
@@ -138,6 +139,13 @@ class LogLogPolynomialModel(TransformedModel, ForegroundModel):
         fitter = Fitter(self.model.basis, log_data, error_on_log_data)
         return (fitter.parameter_mean, fitter.parameter_covariance)
     
+    @property
+    def expander(self):
+        """
+        Property storing the expander in use in this model.
+        """
+        return self.model.basis.expander
+    
     def equivalent_model(self, new_x_values=None, new_expander=None):
         """
         Creates a model with parameters equivalent to this models' parameters.
@@ -173,4 +181,39 @@ class LogLogPolynomialModel(TransformedModel, ForegroundModel):
         words = ('log log polynomial {:d} terms'.format(\
             self.model.basis.num_basis_vectors)).split(' ')
         return ('_' if no_whitespace else ' ').join(words)
+    
+    def fill_hdf5_group(self, group):
+        """
+        Fills an hdf5 file group with information about this model so it can be
+        loaded from disk later.
+        
+        group: hdf5 file group with which to fill with information about this
+               model
+        """
+        group.attrs['class'] = 'LogLogPolynomialModel'
+        group.attrs['import_string'] =\
+            'from perses.models import LogLogPolynomialModel'
+        group.create_dataset('x_values', data=self.x_values)
+        group.attrs['reference_x'] = self.reference_x
+        group.attrs['reference_dynamic_range'] = self.reference_dynamic_range
+        group.attrs['num_terms'] = self.model.basis.num_basis_vectors
+        self.expander.fill_hdf5_group(group.create_group('expander'))
+    
+    @staticmethod
+    def load_from_hdf5_group(group):
+        """
+        Loads a LogLogPolynomialModel object with the information in group.
+        
+        group: hdf5 file group from which to load LogLogPolynomialModel object
+        
+        returns: LogLogPolynomialModel object which was previously saved
+        """
+        x_values = group['x_values'].value
+        reference_x = group.attrs['reference_x']
+        reference_dynamic_range = group.attrs['reference_dynamic_range']
+        num_terms = group.attrs['num_terms']
+        expander = load_expander_from_hdf5_group(group['expander'])
+        return LogLogPolynomialModel(x_values, num_terms, expander=expander,\
+            reference_x=reference_x,\
+            reference_dynamic_range=reference_dynamic_range)
 

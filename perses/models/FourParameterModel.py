@@ -99,6 +99,7 @@ class FourParameterModel(LoadableModel):
             tau = sim.medium.field.solver.tau
             self._ares_kwargs =\
             {\
+                'verbose': False,\
                 'tau_instance': sim.medium.field.solver.tau_solver,\
                 'hmf_instance': sim.pops[0].halos,\
                 'kill_redshift': (1420.4 / (np.max(self.frequencies) + 1)) - 1\
