@@ -4,6 +4,7 @@ from perses.models.Tanh21cmModel import Tanh21cmModel
 from perses.models.FourParameterModel import FourParameterModel
 from perses.models.AresSignalModel import AresSignalModel
 from perses.models.ForegroundModel import ForegroundModel
+from perses.models.PowerLawModel import PowerLawModel
 from perses.models.PowerLawTimesPolynomialModel import\
     PowerLawTimesPolynomialModel
 from perses.models.PowerLawTimesLogPolynomialModel import\

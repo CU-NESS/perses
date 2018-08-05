@@ -6,6 +6,7 @@ Date: 13 May 2018
 Description: File containing a utility function which creates a foreground
              model of the given type at the given frequencies.
 """
+from .PowerLawModel import PowerLawModel
 from .LogLogPolynomialModel import LogLogPolynomialModel
 from .PowerLawTimesPolynomialModel import PowerLawTimesPolynomialModel
 from .PowerLawTimesLogPolynomialModel import PowerLawTimesLogPolynomialModel
@@ -15,8 +16,8 @@ def make_foreground_model(model_name, frequencies, num_terms=5,\
     """
     Makes a foreground model of the given type.
     
-    model_name: string in ['log_log_polynomial', 'power_law_times_polynomial',
-                'power_law_times_log_polynomial']
+    model_name: string in ['power_law', 'log_log_polynomial',
+                'power_law_times_polynomial', 'power_law_times_log_polynomial']
     frequencies: 1D array of frequencies at which foreground model should ouput
     num_terms: must be given if and only if model_name in
                ['log_log_polynomial', 'power_law_times_polynomial',
@@ -27,6 +28,8 @@ def make_foreground_model(model_name, frequencies, num_terms=5,\
               otherwise, expander must be an Expander which expands frequency
                          space to the output space
     """
+    if model_name == 'power_law':
+        return PowerLawModel(frequencies, expander=expander)
     if model_name == 'log_log_polynomial':
         return LogLogPolynomialModel(frequencies, num_terms, expander=expander)
     elif model_name == 'power_law_times_polynomial':

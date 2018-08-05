@@ -13,7 +13,7 @@ from pylinex import load_expander_from_hdf5_group, Basis, LoadableModel,\
 from ..util import numerical_types
 from .ForegroundModel import ForegroundModel
 
-class LogLogPolynomialModel(LoadableModel, TransformedModel, ForegroundModel):
+class LogLogPolynomialModel(TransformedModel, LoadableModel, ForegroundModel):
     """
     Class representing a foreground model which describes the log of the
     foreground temperature as a polynomial in log-frequency space.
@@ -121,23 +121,6 @@ class LogLogPolynomialModel(LoadableModel, TransformedModel, ForegroundModel):
         else:
             raise TypeError("reference_dynamic_range was neither a number " +\
                 "nor None.")
-    
-    def quick_fit(self, data, error=None):
-        """
-        Performs a quick fit to the given data.
-        
-        data: curve to fit with the model
-        error: noise level in the data
-        
-        returns: (parameter_mean, parameter_covariance)
-        """
-        log_data = np.log(data)
-        if error is None:
-            error_on_log_data = None
-        else:
-            error_on_log_data = error / data
-        fitter = Fitter(self.model.basis, log_data, error_on_log_data)
-        return (fitter.parameter_mean, fitter.parameter_covariance)
     
     @property
     def expander(self):
