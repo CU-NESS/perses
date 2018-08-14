@@ -257,6 +257,29 @@ class DriftscanSet(Savable, Loadable):
             delattr(self, '_mean_curve')
         self.temperatures = self.temperatures[:,key,:]
     
+    def spectrum_average(self, weights=None):
+        """
+        Averages all of the spectra in this DriftscanSet (optionally with
+        weights).
+        
+        weights: if given, the weights of the spectra can be different. By
+                 default, this is None, which means all spectra are equally
+                 weighted
+        """
+        if weights is None:
+            weights = np.ones_like(self.times)
+        weight_sum = np.sum(weights)
+        self.times = np.array([np.sum(self.times * weights) / weight_sum])
+        if hasattr(self, '_num_times'):
+            delattr(self, '_num_times')
+        if hasattr(self, '_num_channels'):
+            delattr(self, '_num_channels')
+        if hasattr(self, '_mean_curve'):
+            delattr(self, '_mean_curve')
+        self.temperatures = np.mean(self.temperatures *\
+            weights[np.newaxis,:,np.newaxis], axis=1, keepdims=True) /\
+            weight_sum
+    
     def frequency_slice(self, key):
         """
         Cuts out data from this dataset. User determines what is kept with key.

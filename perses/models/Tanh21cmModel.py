@@ -324,10 +324,10 @@ class Tanh21cmModel(LoadableModel):
         Property storing natural parameter bounds in a dictionary.
         """
         if not hasattr(self, '_bounds'):
-            self._bounds = {'tanh_J0': (0, None), 'tanh_Jz0': (0, None),\
-                'tanh_Jdz': (0, None), 'tanh_T0': (0, None),\
-                'tanh_Tz0': (0, None), 'tanh_Tdz': (0, None),\
-                'tanh_x0': (0, 1), 'tanh_xz0': (0, None),\
-                'tanh_xdz': (0, None)}
+            self._bounds = {'tanh_J0': (0, 1e8), 'tanh_Jz0': (0, 100),\
+                'tanh_Jdz': (0, 100), 'tanh_T0': (0, 1e8),\
+                'tanh_Tz0': (0, 100), 'tanh_Tdz': (0, 100),\
+                'tanh_x0': (0, 1), 'tanh_xz0': (0, 100),\
+                'tanh_xdz': (0, 100)}
         return self._bounds
 
