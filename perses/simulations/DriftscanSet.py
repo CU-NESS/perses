@@ -295,6 +295,16 @@ class DriftscanSet(Savable, Loadable):
             delattr(self, '_mean_curve')
         self.temperatures = self.temperatures[:,:,key]
     
+    def frequency_thin(self, stride, offset=0):
+        """
+        Thins the frequencies in this DriftscanSet. This might be done to data
+        for the purpose of discounting correlations in residuals.
+        
+        stride: the factor by which to thin
+        offset: the first index to include in the thinned slice. Default, 0
+        """
+        self.frequency_slice(slice(offset, None, stride))
+    
     def fill_hdf5_group(self, group):
         """
         Fills the given hdf5 file group with information about this
