@@ -11,7 +11,8 @@ Description: File containing class which brings all simulations together to
 import os, h5py
 from types import FunctionType
 import numpy as np
-from ..util import int_types, real_numerical_types, sequence_types
+from ..util import int_types, real_numerical_types, sequence_types,\
+    read_encrypted_signal
 from ..foregrounds import Galaxy, HaslamGalaxy
 from ..beam.total_power.BaseTotalPowerBeam import _TotalPowerBeam
 from ..beam.polarized.BasePolarizedBeam import _PolarizedBeam
@@ -1026,11 +1027,14 @@ class Database(object):
         Setter for data necessary to create signal.
         
         value: if ares is to be used, value should be an ares_kwargs dict
+               else if value is a string, it is a file with "encrypted signal"
                else: value should be a length-2 tuple of the form
                      (frequencies, signal)
         """
         if isinstance(value, dict):
             self._signal_data = value
+        elif isinstance(value, basestring):
+            self._signal_data = read_encrypted_signal(value, in_Kelvin=False)
         elif type(value) in sequence_types:
             value = np.array(value)
             if value.ndim == 2:

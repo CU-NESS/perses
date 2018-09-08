@@ -1,3 +1,4 @@
+from perses.util.ReadEncryptedSignal import read_encrypted_signal
 from perses.util.Aesthetics import labels
 from perses.util.PrintInfo import print_fit
 from perses.util.Misc import generate_galaxy_pars
