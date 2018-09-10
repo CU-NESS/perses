@@ -1034,21 +1034,22 @@ class Database(object):
         if isinstance(value, dict):
             self._signal_data = value
         elif isinstance(value, basestring):
-            self._signal_data = read_encrypted_signal(value, in_Kelvin=False)
+            self._signal_data = (self.frequencies, np.interp(self.frequencies,\
+                *read_encrypted_signal(value, in_Kelvin=False)))
         elif type(value) in sequence_types:
             value = np.array(value)
             if value.ndim == 2:
                 if len(value[0]) == self.num_frequencies:
                     self._signal_data = np.array(value)
                 else:
-                    raise ValueError("signal_data was set to a 1D array " +\
+                    raise ValueError("signal_data was set to a 2D array " +\
                                      "of the wrong length.")
             else:
                 raise ValueError("signal_data was set to a numpy.ndarray " +\
-                                 "which is not 1D.")
+                                 "which is not 2D.")
         elif value is not None:
             raise TypeError("signal_data given to Database was " +\
-                            "neither a dictionary or a 1D sequence.")
+                            "neither a dictionary or a 2D sequence.")
     
     @property
     def using_ares(self):
