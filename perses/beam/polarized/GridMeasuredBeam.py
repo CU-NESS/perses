@@ -122,6 +122,11 @@ class GridMeasuredBeam(_PolarizedBeam):
         
         returns: new GridMeasuredBeam which applies at the given frequencies
         """
+        if np.all(np.isin(new_frequencies, self.frequencies)):
+            indices = np.argmax(\
+                new_frequencies[None,:] == self.frequencies[:,None], axis=0)
+            return GridMeasuredBeam(new_frequencies, self.thetas, self.phis,\
+                self.grids[:,indices,:,:])
         num_frequencies = len(self.frequencies)
         if polynomial_order >= num_frequencies:
             polynomial_order = num_frequencies - 1

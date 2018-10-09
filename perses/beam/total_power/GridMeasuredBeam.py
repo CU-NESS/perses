@@ -89,6 +89,11 @@ class GridMeasuredBeam(_TotalPowerBeam):
         
         returns: new GridMeasuredBeam which applies at the given frequencies
         """
+        if np.all(np.isin(new_frequencies, self.frequencies)):
+            indices = np.argmax(\
+                new_frequencies[None,:] == self.frequencies[:,None], axis=0)
+            return GridMeasuredBeam(new_frequencies, self.thetas, self.phis,\
+                self.grids[indices,:,:])
         if polynomial_order >= self.num_frequencies:
             polynomial_order = self.num_frequencies - 1
         grid_coefficients = np.reshape(self.grids, (self.num_frequencies, -1))
