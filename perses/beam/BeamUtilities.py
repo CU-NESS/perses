@@ -378,7 +378,21 @@ def conical_beam_function(p_theta, p_phi, resolution, fwhm, is_grid=False):
 
 def spherical_rotator(theta, phi, psi, deg=True):
     """
-    theta, phi, and psi given in degrees!!
+    Generates a healpy-based Rotator object which rotates points such that the
+    zenith direction before rotation becomes the (lat,lon)=(90-theta,phi)
+    direction after rotation.
+    
+    theta: the colatitude (units determined by deg argument) of the direction
+           to which zenith (before rotation) should be rotated
+    phi: the longitude (units determined by deg argument) of the direction to
+         which zenith (before rotation) should be rotated
+    psi: angle (units determined by deg argument) through which sphere should
+         be rotated after zenith is rotated to (theta, phi)
+    deg: if True (default), angles should be given in degrees
+    
+    returns: healpy.rotator.Rotator object capable of performing rotation which
+             puts the zenith to (theta, phi) and applies a rotation of psi
+             about that direction
     """
     rot_zprime = hp.rotator.Rotator(rot=(-phi, 0, 0), deg=deg, eulertype='y')
     rot_yprime = hp.rotator.Rotator(rot=(0, theta, 0), deg=deg, eulertype='y')
@@ -866,7 +880,7 @@ def rotate_vector_maps(theta_comp, phi_comp, theta, phi, psi,\
         # prefix 'o' stands for 'original'
         otheta, ophi = rotator(rotated_angles)
         Eotheta, Eophi = interpolate_maps(np.stack([theta_comp, phi_comp]),\
-            otheta, ophi, nest=nest, axis=axis)
+            otheta, ophi, nest=nest, axis=axis+1)
         sin_ophi = np.sin(ophi)
         cos_ophi = np.cos(ophi)
         cos_otheta = np.cos(otheta)
