@@ -133,7 +133,7 @@ class _Beam(object):
         nside = nside_from_angular_resolution(numthetas, numphis)
         maps = self.get_maps(frequencies, nside, pointing, psi, normed=False,\
             **kwargs)
-        grids = grids_from_maps(maps, theta_res=theta_res, phi_res=phi_res,\
+        grids = grids_from_maps(maps, numthetas, numphis,\
             pixel_axis=-1)
         if normed:
             return normalize_grids(grids) # theta_axis and phi_axis = defaults
