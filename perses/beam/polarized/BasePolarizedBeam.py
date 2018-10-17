@@ -108,22 +108,20 @@ class _PolarizedBeam(_Beam):
         JtX, JtY, JpX, JpY = transpose(self.get_maps(frequencies, nside,\
             (90., 0.), 0., normed=False, **kwargs))
         if polarized:
-            raise NotImplementedError("polarized emmission not yet " +\
-                                      "implemented in BasePolarizedBeam.")
-            #Jones_matrix = Jones_matrix_from_components(JtX, JtY, JpX, JpY)
-            #JEin = dot(Jones_matrix, Ein)
-            #del Jones_matrix, Ein ; gc.collect()
-            #JEinH = hermitian_conjugate(JEin)
-            #MI = np.array([[1.+0.j, 0.+0.j], [0.+0.j, 1.+0.j]])
-            #MQ = np.array([[1.+0.j, 0.+0.j], [0.+0.j, -1.+0.j]])
-            #MU = np.array([[0.+0.j, 1.+0.j], [1.+0.j, 0.+0.j]])
-            #MV = np.array([[0.+0.j, 0.-1.j], [0.+1.j, 0.+0.j]])
-            #polarized_stokes = np.stack([
-            #    np.real(dot(dot(JEinH, MI), JEin)[...,0,0]),\
-            #    np.real(dot(dot(JEinH, MQ), JEin)[...,0,0]),\
-            #    np.real(dot(dot(JEinH, MU), JEin)[...,0,0]),\
-            #    np.real(dot(dot(JEinH, MV), JEin)[...,0,0])], axis=0)
-            #del JEin, JEinH ; gc.collect()
+            Jones_matrix = Jones_matrix_from_components(JtX, JtY, JpX, JpY)
+            JEin = dot(Jones_matrix, Ein)
+            del Jones_matrix, Ein ; gc.collect()
+            JEinH = hermitian_conjugate(JEin)
+            MI = np.array([[1.+0.j, 0.+0.j], [0.+0.j, 1.+0.j]])
+            MQ = np.array([[1.+0.j, 0.+0.j], [0.+0.j, -1.+0.j]])
+            MU = np.array([[0.+0.j, 1.+0.j], [1.+0.j, 0.+0.j]])
+            MV = np.array([[0.+0.j, 0.-1.j], [0.+1.j, 0.+0.j]])
+            polarized_stokes = np.stack([
+                np.real(dot(dot(JEinH, MI), JEin)[...,0,0]),\
+                np.real(dot(dot(JEinH, MQ), JEin)[...,0,0]),\
+                np.real(dot(dot(JEinH, MU), JEin)[...,0,0]),\
+                np.real(dot(dot(JEinH, MV), JEin)[...,0,0])], axis=0)
+            del JEin, JEinH ; gc.collect()
         stokes = stokes_beams_from_Jones_matrix(JtX, JtY, JpX, JpY)
         norm = np.sum(stokes[0], axis=0)[np.newaxis,...]
         if len(angles) != 1:
