@@ -7,7 +7,7 @@ from ...util import ParameterFile, sequence_types, real_numerical_types
 from ..BeamUtilities import rotate_map, rotate_maps, integrate_grids,\
     convolve_grid, convolve_grids, normalize_grids, normalize_maps,\
     symmetrize_grid, maps_from_grids, stokes_beams_from_Jones_matrix,\
-    spin_grids, smear_grids
+    spin_grids, smear_grids, rotate_vector_maps
 from ..BaseBeam import DummyPool
 from ..total_power.GridMeasuredBeam\
     import GridMeasuredBeam as TotalPowerGridMeasuredBeam
