@@ -692,7 +692,6 @@ def interpolate_maps(maps, thetas, phis, nest=False, axis=-1, degrees=False):
     else:
         thetas = np.array(thetas)
         phis = np.array(phis)
-    
     if thetas.shape == phis.shape:
         shape = thetas.shape
     else:
@@ -714,9 +713,12 @@ def interpolate_maps(maps, thetas, phis, nest=False, axis=-1, degrees=False):
     weight_reshaping_index = pre_pixel_newaxis +\
         (slice(None),) * (len(shape) + 1) + post_pixel_newaxis
     weights = weights[weight_reshaping_index]
-    
     map_slice = pre_pixel_slice + (pixels,) + post_pixel_slice
-    return np.sum(maps[map_slice] * weights, axis=axis)
+    interpolated = np.sum(maps[map_slice] * weights, axis=axis)
+    if theta_real:
+        return interpolated[pre_pixel_slice + (0,) + post_pixel_slice]
+    else:
+        return interpolated
 
 
 def rotate_maps(omaps, theta, phi, psi, use_inverse=False, nest=False,\

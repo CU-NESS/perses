@@ -96,9 +96,13 @@ class _PolarizedBeam(_Beam):
                 Eintheta =\
                     [Eintheta(freq, **Eintheta_pars) for freq in frequencies]
                 Eintheta = np.stack(Eintheta, axis=-1)
+            else:
+                Eintheta = Eintheta.T
             if type(Einphi) is FunctionType:
                 Einphi = [Einphi(freq, **Einphi_pars) for freq in frequencies]
                 Einphi = np.stack(Einphi, axis=-1)
+            else:
+                Einphi = Einphi.T
             (Eintheta, Einphi) = rotate_vector_maps(Eintheta, Einphi, theta,\
                 phi, psi, use_inverse=True, nest=False, axis=0)
             Ein = Ein_from_components(Eintheta, Einphi)
@@ -122,6 +126,7 @@ class _PolarizedBeam(_Beam):
                 np.real(dot(dot(JEinH, MU), JEin)[...,0,0]),\
                 np.real(dot(dot(JEinH, MV), JEin)[...,0,0])], axis=0)
             del JEin, JEinH ; gc.collect()
+            polarized_stokes = np.sum(polarized_stokes, axis=1)
         stokes = stokes_beams_from_Jones_matrix(JtX, JtY, JpX, JpY)
         norm = np.sum(stokes[0], axis=0)[np.newaxis,...]
         if len(angles) != 1:
