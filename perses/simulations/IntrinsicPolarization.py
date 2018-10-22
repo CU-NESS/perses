@@ -1,7 +1,16 @@
+"""
+File: perses/simulations/IntrinsicPolarization.py
+Author: Neil Bassett
+Date: 19 Oct 2018
+
+Description: File containing a function which performs the following tasks:
+             1) runs cora to simulate a polarized Stokes foreground map
+             2) transforms Stokes parameters to antenna electric field values
+             3) rotates field vector map from celestial to Galactic coordinates
+"""
 import numpy as np
-import h5py
-import os
-from .ObservationUtilities import earths_celestial_north_pole
+import os, h5py
+from .ObservationUtilities import earths_celestial_north_pole as NCP
 from ..beam.BeamUtilities import rotate_vector_maps
 
 def cora_stokes_map_to_E_gal(freq_low, freq_high, num_freq, nside=64,\
@@ -9,7 +18,9 @@ def cora_stokes_map_to_E_gal(freq_low, freq_high, num_freq, nside=64,\
     """
     Creates a map of intrinsic polarization and converts the stokes
     parameters given by cora (in celestial coordinates) to theta and phi
-    components of the electric field in galactic coordinates.
+    components of the electric field in galactic coordinates. Note: this
+    function will almost certainly fail on a non-UNIX OS as it uses the
+    os.system command and depends on the UNIX-dependent cora software. 
 
     freq_low, freq_high: Define the frequency band passed to cora
                          to create the map.
@@ -41,7 +52,6 @@ def cora_stokes_map_to_E_gal(freq_low, freq_high, num_freq, nside=64,\
     E_y = (U + (1j * V)) / (2 * E_x)
     E_theta_cel = E_x
     E_phi_cel = E_y
-    NCP = earths_celestial_north_pole
     (E_theta_gal, E_phi_gal) = rotate_vector_maps(theta_comp=E_theta_cel,\
         phi_comp=E_phi_cel, theta=90-NCP[0], phi=NCP[1], psi=13.01888,\
         use_inverse=True)
@@ -51,3 +61,4 @@ def cora_stokes_map_to_E_gal(freq_low, freq_high, num_freq, nside=64,\
         save_file.create_dataset('E_phi_gal', data=E_phi_gal)
         save_file.close()
     return E_theta_gal, E_phi_gal
+
