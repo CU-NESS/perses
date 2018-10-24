@@ -4,7 +4,8 @@ import time
 import numpy as np
 import matplotlib.pyplot as pl
 from ...util import ParameterFile, real_numerical_types, sequence_types,\
-    spherical_harmonic_fit, reorganize_spherical_harmonic_coefficients
+    spherical_harmonic_fit, reorganize_spherical_harmonic_coefficients,\
+    quintic_spline_real
 from ..BeamUtilities import rotate_map, rotate_maps, convolve_grid,\
     convolve_grids, normalize_grids, normalize_maps, grids_from_maps,\
     symmetrize_grid, maps_from_grids, spin_grids, smear_grids
@@ -77,15 +78,12 @@ class GridMeasuredBeam(_TotalPowerBeam):
         scale_factor = new_maximum_frequency / np.max(self.frequencies)
         return self.scale_frequency_space(scale_factor)
     
-    def interpolate_frequency_space(self, new_frequencies,\
-        polynomial_order=10):
+    def interpolate_frequency_space(self, new_frequencies):
         """
         Interpolates this GridMeasuredBeam in frequency space and yields a new
         one.
         
         new_frequencies: the frequencies to which to interpolate
-        polynomial_order: the polynomial order to use for interpolation,
-                          default min(10, len(self.frequencies)-1)
         
         returns: new GridMeasuredBeam which applies at the given frequencies
         """
@@ -94,29 +92,14 @@ class GridMeasuredBeam(_TotalPowerBeam):
                 new_frequencies[None,:] == self.frequencies[:,None], axis=0)
             return GridMeasuredBeam(new_frequencies, self.thetas, self.phis,\
                 self.grids[indices,:,:])
-        if polynomial_order >= self.num_frequencies:
-            polynomial_order = self.num_frequencies - 1
-        grid_coefficients = np.reshape(self.grids, (self.num_frequencies, -1))
-        min_frequency = np.min(self.frequencies)
-        max_frequency = np.max(self.frequencies)
-        center_frequency = (max_frequency + min_frequency) / 2.
-        half_bandwidth = (max_frequency - min_frequency) / 2.
-        normed_frequencies =\
-            (self.frequencies - center_frequency) / half_bandwidth
-        normed_new_frequencies =\
-            (new_frequencies - center_frequency) / half_bandwidth
-        grid_coefficients =\
-            np.polyfit(normed_frequencies, grid_coefficients, polynomial_order)
         num_new_frequencies = len(new_frequencies)
         new_grids =\
             np.ndarray((num_new_frequencies, self.num_thetas, self.num_phis))
         for itheta in range(self.num_thetas):
             for iphi in range(self.num_phis):
-                flattened_index = np.ravel_multi_index(\
-                    (itheta, iphi), (self.num_thetas, self.num_phis))
-                coefficients = grid_coefficients[:,flattened_index]
-                new_grids[:,itheta,iphi] =\
-                    np.polyval(coefficients, normed_new_frequencies)
+                new_grids[:,itheta,iphi] = quintic_spline_real(\
+                    new_frequencies, self.frequencies,\
+                    self.grids[:,itheta,iphi])
         return GridMeasuredBeam(new_frequencies, self.thetas, self.phis,\
             new_grids)
     

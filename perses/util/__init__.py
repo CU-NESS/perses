@@ -7,6 +7,8 @@ from perses.util.Sites import sites as observing_sites
 from perses.util.SphericalHarmonics import decompose_polar_function_legendre,\
     spherical_harmonic_fit, polar_weighted_spherical_harmonic_fit,\
     reorganize_spherical_harmonic_coefficients
+from perses.util.Spline import cubic_spline_real, cubic_spline_complex,\
+    quintic_spline_real, quintic_spline_complex
 
 try:
     from ares.util import ProgressBar

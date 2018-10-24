@@ -3,7 +3,8 @@ from types import FunctionType
 import time
 import numpy as np
 import matplotlib.pyplot as pl
-from ...util import ParameterFile, sequence_types, real_numerical_types
+from ...util import ParameterFile, sequence_types, real_numerical_types,\
+    quintic_spline_complex
 from ..BeamUtilities import rotate_map, rotate_maps, integrate_grids,\
     convolve_grid, convolve_grids, normalize_grids, normalize_maps,\
     symmetrize_grid, maps_from_grids, stokes_beams_from_Jones_matrix,\
@@ -110,15 +111,30 @@ class GridMeasuredBeam(_PolarizedBeam):
         return TotalPowerGridMeasuredBeam(self.frequencies, self.thetas,\
             self.phis, new_grids)
     
-    def interpolate_frequency_space(self, new_frequencies,\
-        polynomial_order=10):
+    @property
+    def num_thetas(self):
+        """
+        Property storing the number of polar angles to store.
+        """
+        if not hasattr(self, '_num_thetas'):
+            self._num_thetas = len(self.thetas)
+        return self._num_thetas
+    
+    @property
+    def num_phis(self):
+        """
+        Property storing the number of azimuthal angles to store.
+        """
+        if not hasattr(self, '_num_phis'):
+            self._num_phis = len(self.phis)
+        return self._num_phis
+    
+    def interpolate_frequency_space(self, new_frequencies):
         """
         Interpolates this GridMeasuredBeam in frequency space and yields a new
         one.
         
         new_frequencies: the frequencies to which to interpolate
-        polynomial_order: the polynomial order to use for interpolation,
-                          default min(10, len(self.frequencies)-1)
         
         returns: new GridMeasuredBeam which applies at the given frequencies
         """
@@ -127,33 +143,15 @@ class GridMeasuredBeam(_PolarizedBeam):
                 new_frequencies[None,:] == self.frequencies[:,None], axis=0)
             return GridMeasuredBeam(new_frequencies, self.thetas, self.phis,\
                 self.grids[:,indices,:,:])
-        num_frequencies = len(self.frequencies)
-        if polynomial_order >= num_frequencies:
-            polynomial_order = num_frequencies - 1
-        grid_coefficients =\
-            np.reshape(np.swapaxes(self.grids, 0, 1), (num_frequencies, -1))
-        min_frequency = np.min(self.frequencies)
-        max_frequency = np.max(self.frequencies)
-        center_frequency = (max_frequency + min_frequency) / 2.
-        half_bandwidth = (max_frequency - min_frequency) / 2.
-        normed_frequencies =\
-            (self.frequencies - center_frequency) / half_bandwidth
-        normed_new_frequencies =\
-            (new_frequencies - center_frequency) / half_bandwidth
-        grid_coefficients =\
-            np.polyfit(normed_frequencies, grid_coefficients, polynomial_order)
         num_new_frequencies = len(new_frequencies)
-        (num_thetas, num_phis) = (len(self.thetas), len(self.phis))
-        new_grids = np.ndarray((4, num_new_frequencies, num_thetas, num_phis),\
-            dtype=complex)
+        new_grids = np.ndarray((4, num_new_frequencies, self.num_thetas,\
+            self.num_phis), dtype=complex)
         for igrid in range(4):
-            for (itheta, theta) in enumerate(self.thetas):
-                for (iphi, phi) in enumerate(self.phis):
-                    flattened_index = np.ravel_multi_index(\
-                        (igrid, itheta, iphi), (4, num_thetas, num_phis))
-                    coefficients = grid_coefficients[:,flattened_index]
-                    new_grids[igrid,:,itheta,iphi] =\
-                        np.polyval(coefficients, normed_new_frequencies)
+            for itheta in range(self.num_thetas):
+                for iphi in range(self.num_phis):
+                    new_grids[igrid,:,itheta,iphi] = quintic_spline_complex(\
+                        new_frequencies, self.frequencies,\
+                        self.grids[igrid,:,itheta,iphi])
         return GridMeasuredBeam(new_frequencies, self.thetas, self.phis,\
             *new_grids)
 
