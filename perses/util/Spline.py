@@ -21,7 +21,7 @@ def cubic_spline_real(unknown_x_values, known_x_values, known_y_values):
     returns: unknown_y_values, same shape as unknown_x_values
     """
     spline = create_spline(known_x_values, known_y_values,\
-        xb=unknown_x_values[0], xe=unknown_x_values[-1], k=3)
+        xb=known_x_values[0], xe=known_x_values[-1], k=3)
     return evaluate_spline(unknown_x_values, spline)
 
 def cubic_spline_complex(unknown_x_values, known_x_values, known_y_values):
@@ -53,7 +53,7 @@ def quintic_spline_real(unknown_x_values, known_x_values, known_y_values):
     returns: unknown_y_values, same shape as unknown_x_values
     """
     spline = create_spline(known_x_values, known_y_values,\
-        xb=unknown_x_values[0], xe=unknown_x_values[-1], k=5)
+        xb=known_x_values[0], xe=known_x_values[-1], k=5)
     return evaluate_spline(unknown_x_values, spline)
 
 def quintic_spline_complex(unknown_x_values, known_x_values, known_y_values):
