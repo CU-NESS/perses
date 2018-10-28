@@ -1,3 +1,6 @@
+from perses.models.DipoleImpedanceModel import DipoleImpedanceModel
+from perses.models.DipoleReflectionCoefficientModel import\
+    DipoleReflectionCoefficientModel
 from perses.models.FlattenedGaussianModel import FlattenedGaussianModel
 from perses.models.LRCResonanceModel import LRCResonanceModel
 from perses.models.Tanh21cmModel import Tanh21cmModel

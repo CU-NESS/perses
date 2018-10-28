@@ -1,22 +1,29 @@
 """
-Name: perses/models/LRCResonanceModel.py
+Name: perses/models/DipoleImpedanceModel.py
 Author: Keith Tauscher
-Date: 18 Jul 2018
+Date: 26 Oct 2018
 
-Description: A file with a class which models LRC resonances in frequency
-             space.
+Description: A file with a class which models the radiation impedance of a
+             simple dipole antenna.
 """
+from __future__ import division
 import numpy as np
 from pylinex import LoadableModel
 from ..util import sequence_types
+from mpmath import euler as euler_mascheroni_constant
+from scipy.special import sici as trigonometric_integrals
 
-class LRCResonanceModel(LoadableModel):
+free_space_impedance = 376.73031346177 # Ohms
+euler_gamma = float(euler_mascheroni_constant)
+
+class DipoleImpedanceModel(LoadableModel):
     """
-    Model subclass implementing the spectral form of an LRC resonance.
+    Model subclass implementing the spectral dependence of a simple dipole's
+    impedance.
     """
     def __init__(self, frequencies):
         """
-        Initializes a new LRCResonanceModel at the given frequencies.
+        Initializes a new DipoleImpedanceModel at the given frequencies.
         
         frequencies: 1D array of positive frequency values preferably monotonic
         """
@@ -46,8 +53,8 @@ class LRCResonanceModel(LoadableModel):
                 self._frequencies = value
             else:
                 raise ValueError("At least one frequency given to the " +\
-                    "LRCResonanceModel is not positive, and that doesn't " +\
-                    "make sense.")
+                    "DipoleImpedanceModel is not positive, and that " +\
+                    "doesn't make sense.")
         else:
             raise TypeError("frequencies was set to a non-sequence.")
     
@@ -62,12 +69,22 @@ class LRCResonanceModel(LoadableModel):
         return self._num_frequencies
     
     @property
+    def wavenumbers(self):
+        """
+        Property storing the wavenumbers, k, associated with the frequencies of
+        this model.
+        """
+        if not hasattr(self, '_wavenumbers'):
+            self._wavenumbers = (2 * np.pi / 299.792458) * self.frequencies
+        return self._wavenumbers
+    
+    @property
     def parameters(self):
         """
         Property storing a list of strings associated with the parameters
         necessitated by this model.
         """
-        return ['amplitude', 'center', 'Q_factor']
+        return ['length', 'diameter']
     
     def __call__(self, parameters):
         """
@@ -77,10 +94,25 @@ class LRCResonanceModel(LoadableModel):
         
         returns: array of size (num_channels,)
         """
-        (amplitude, center, Q_factor) = parameters
-        reciprocal_normalized_frequencies = center / self.frequencies
-        return (amplitude * reciprocal_normalized_frequencies) / (1 +\
-            ((Q_factor * (1 - (reciprocal_normalized_frequencies ** 2))) ** 2))
+        (length, diameter) = parameters
+        kL = self.wavenumbers * length
+        kD = self.wavenumbers * diameter
+        sin2kLo2 = (np.sin(kL / 2) ** 2)
+        sinkL = np.sin(kL)
+        coskL = np.cos(kL)
+        (SikL, CikL) = trigonometric_integrals(kL)
+        (Si2kL, Ci2kL) = trigonometric_integrals(2 * kL)
+        lnkL = np.log(kL)
+        lnkLo2 = lnkL - np.log(2)
+        CikD2o2kL = trigonometric_integrals((kD ** 2) / (2 * kL))[1]
+        resistance = euler_gamma + lnkL - CikL +\
+            (sinkL * ((Si2kL / 2) - SikL)) +\
+            ((coskL / 2) * (Ci2kL - (2 * CikL) + euler_gamma + lnkLo2))
+        reactance = SikL +\
+            (coskL * (SikL - (Si2kL / 2))) +\
+            ((sinkL / 2) * (Ci2kL - (2 * CikL) + CikD2o2kL))
+        return (resistance + (1j * reactance)) *\
+            (free_space_impedance / (2 * np.pi * sin2kLo2))
     
     @property
     def gradient_computable(self):
@@ -88,7 +120,7 @@ class LRCResonanceModel(LoadableModel):
         Property storing a boolean describing whether the gradient of this
         model is computable.
         """
-        return True
+        return False
     
     def gradient(self, parameters):
         """
@@ -98,25 +130,9 @@ class LRCResonanceModel(LoadableModel):
         
         returns: array of shape (num_channels, num_parameters)
         """
-        (amplitude, center, Q_factor) = parameters
-        value = self(parameters)
-        if amplitude == 0:
-            amplitude_part = reciprocal_normalized_frequencies /\
-                (1 + ((Q_factor * (1 -\
-                (reciprocal_normalized_frequencies ** 2))) ** 2))
-        else:
-            amplitude_part = value / amplitude
-        squared_normalized_frequencies = ((self.frequencies / center) ** 2)
-        squared_normalized_frequencies_less_one =\
-            squared_normalized_frequencies - 1
-        common_denominator = ((squared_normalized_frequencies ** 2) +\
-            ((Q_factor * squared_normalized_frequencies_less_one) ** 2))
-        center_part = (value / center) * (1 + ((4 * (Q_factor ** 2) *\
-            squared_normalized_frequencies_less_one) / common_denominator))
-        Q_factor_part = (-2. * value * Q_factor *\
-            (squared_normalized_frequencies_less_one ** 2)) /\
-            common_denominator
-        return np.stack([amplitude_part, center_part, Q_factor_part], axis=1)
+        raise NotImplementedError("The gradient of the " +\
+            "DipoleImpedanceModel is not implemented right now, but it may " +\
+            "be in the future.")
     
     @property
     def hessian_computable(self):
@@ -134,32 +150,33 @@ class LRCResonanceModel(LoadableModel):
         
         returns: array of shape (num_channels, num_parameters, num_parameters)
         """
-        raise NotImplementedError("The hessian of the LRCResonanceModel is " +\
-            "not implemented right now, but it may be in the future.")
+        raise NotImplementedError("The hessian of the DipoleImpedanceModel " +\
+            "is not implemented right now, but it may be in the future.")
     
     def fill_hdf5_group(self, group):
         """
-        Fills the given hdf5 file group with data about this LRCResonanceModel
-        so that it can be loaded later.
+        Fills the given hdf5 file group with data about this
+        DipoleImpedanceModel so that it can be loaded later.
         
         group: the hdf5 file group to fill with information about this model
         """
-        group.attrs['class'] = 'LRCResonanceModel'
+        group.attrs['class'] = 'DipoleImpedanceModel'
         group.attrs['import_string'] =\
-            'from perses.models import LRCResonanceModel'
+            'from perses.models import DipoleImpedanceModel'
         group.create_dataset('frequencies', data=self.frequencies)
     
     @staticmethod
     def load_from_hdf5_group(group):
         """
-        Loads an LRCResonanceModel from the given hdf5 file group.
+        Loads a DipoleImpedanceModel from the given hdf5 file group.
         
         group: hdf5 file group which has previously been filled with
-               information about this LRCResonanceModel
+               information about this DipoleImpedanceModel
         
-        returns: LRCResonanceModel created from the information saved in group
+        returns: DipoleImpedanceModel created from the information saved in
+                 group
         """
-        return LRCResonanceModel(group['frequencies'].value)
+        return DipoleImpedanceModel(group['frequencies'].value)
     
     def __eq__(self, other):
         """
@@ -169,7 +186,7 @@ class LRCResonanceModel(LoadableModel):
         
         returns: True if other is equal to this mode, False otherwise
         """
-        if not isinstance(other, LRCResonanceModel):
+        if not isinstance(other, DipoleImpedanceModel):
             return False
         if not np.allclose(self.frequencies, other.frequencies):
             return False
@@ -182,7 +199,6 @@ class LRCResonanceModel(LoadableModel):
         (min, max) indexed by parameter name.
         """
         if not hasattr(self, '_bounds'):
-            self._bounds = {'amplitude': (None, None), 'center': (0, None),\
-                'Q_factor': (0,  None)}
+            self._bounds = {'length': (0, None), 'diameter': (0, None)}
         return self._bounds
 

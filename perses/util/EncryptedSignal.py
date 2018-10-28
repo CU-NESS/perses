@@ -1,5 +1,5 @@
 """
-File: perses/util/ReadEncryptedSignal.py
+File: perses/util/EncryptedSignal.py
 Author: Keith Tauscher
 Date: 7 Sep 2018
 
@@ -30,4 +30,26 @@ def read_encrypted_signal(file_name, in_Kelvin=False):
     if in_Kelvin:
         ungarbled_signal /= 1e3
     return (frequencies, ungarbled_signal)
+
+def write_encrypted_signal(frequencies, signal_in_mK, file_name,\
+    noise_magnitude=10000, seed=None):
+    """
+    Writes an "encrypted" signal to a .txt file.
+    
+    frequencies: the frequencies at which given signal values apply
+    signal_in_mK: values of the signal in mK
+    file_name: name of file to which to write signal
+    noise_magnitude: magnitude of the noise added to signal to garble it
+    seed: if None (default), random seed is generated and saved in the file
+    """
+    if seed is None:
+        seed = np.random.randint(2 ** 32)
+    random = np.random.RandomState(seed=seed)
+    noise = random.normal(0, 1, size=signal_in_mK.shape) * noise_magnitude
+    garbled_signal = signal_in_mK + noise
+    with open(file_name, 'w') as output_file:
+        output_file.write('# {0} {1:d}\n'.format(noise_magnitude, seed))
+        for (frequency, brightness) in zip(frequencies, garbled_signal):
+            output_file.write('{0:.20g} {1:.20g}\n'.format(frequency,\
+                brightness))
 
