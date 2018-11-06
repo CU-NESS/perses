@@ -10,6 +10,7 @@ from perses.util.SphericalHarmonics import decompose_polar_function_legendre,\
     reorganize_spherical_harmonic_coefficients
 from perses.util.Spline import cubic_spline_real, cubic_spline_complex,\
     quintic_spline_real, quintic_spline_complex
+from perses.util.MakeVideo import make_video
 
 try:
     from ares.util import ProgressBar

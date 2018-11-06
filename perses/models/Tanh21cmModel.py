@@ -8,20 +8,16 @@ Description: File containing Tanh21cmModel class as an extension of pylinex's
 """
 import numpy as np
 from scipy.misc import derivative
-from pylinex import LoadableModel, get_hdf5_value
+from distpy import AffineTransform, TransformList
 from ares.util import ParameterFile
 from ares.physics import Hydrogen, Cosmology, RateCoefficients
 from ares.physics.Constants import k_B, J21_num, nu_0_mhz
+from pylinex import LoadableModel, FixedModel, DistortedModel, SumModel,\
+    RenamedModel, TanhModel, get_hdf5_value
 from ..util import sequence_types, bool_types
 
 alpha_A =\
     RateCoefficients(recombination='A').RadiativeRecombinationRate(0, 1e4)
-
-def tanh_generic(z, zref, dz):
-    """
-    Function representing a generic redshift dependent tanh function.
-    """
-    return 0.5 * (np.tanh((zref - z) / dz) + 1.)
 
 class Tanh21cmModel(LoadableModel):
     """
@@ -133,7 +129,8 @@ class Tanh21cmModel(LoadableModel):
     @property
     def Tgas(self):
         """
-        Property storing the 
+        Property storing the gas temperature (not including heating from
+        stars/black holes).
         """
         if not hasattr(self, '_Tgas'):
             self._Tgas = self.cosmology.Tgas(self.redshifts)
@@ -157,31 +154,64 @@ class Tanh21cmModel(LoadableModel):
             self._nH = self.cosmology.nH(self.redshifts)
         return self._nH
     
-    def temperature(self, Tref, zref, dz):
+    @property
+    def temperature_model(self):
         """
-        Computes the gas temperature at this model's redshifts.
-        
-        Tref: the reference temperature (the difference between t=+-inf)
-        zref: the reference redshift (where T = Tgas)
-        dz: width of tanh
-        
-        returns: 1D array of temperature values
-        """
-        return\
-            (Tref * tanh_generic(self.redshifts, zref=zref, dz=dz)) + self.Tgas
-    
-    def ionized_fraction(self, xref, zref, dz):
-        """
-        Computes the ionized fraction as a function of the redshifts of this
+        Property storing a Model object which, when evaluated with the three
+        parameters ['tanh_T0', 'tanh_Tz0', and 'tanh_Tdz'], yields the gas
+        temperature at the redshifts corresponding to the frequencies of this
         model.
-        
-        xref: the difference between x at t=+-inf
-        zref: the redshift at which x=xref/2
-        dz: width of tanh
-        
-        returns: 1D array of ionization_fraction values
         """
-        return xref * tanh_generic(self.redshifts, zref=zref, dz=dz)
+        if not hasattr(self, '_temperature_model'):
+            fixed_part = FixedModel(self.Tgas)
+            tanh_part =\
+                DistortedModel(TanhModel(self.redshifts, zero_minimum=True),\
+                TransformList(None, None, AffineTransform(-1, 0)))
+            sum_model = SumModel(['fixed', 'tanh'], [fixed_part, tanh_part])
+            new_parameters =\
+                ['tanh_T{!s}'.format(extra) for extra in ['0', 'z0', 'dz']]
+            self._temperature_model = RenamedModel(sum_model, new_parameters)
+        return self._temperature_model
+    
+    @property
+    def ionized_fraction_model(self):
+        """
+        Property storing a Model object which, when evaluated with the three
+        parameters ['tanh_x0', 'tanh_xz0', and 'tanh_xdz'], yields the fraction
+        of ionized hydrogen at the redshifts corresponding to the frequencies
+        of this model.
+        """
+        if not hasattr(self, '_ionized_fraction_model'):
+            self._ionized_fraction_model =\
+                TanhModel(self.redshifts, zero_minimum=True)
+            transform_list = TransformList(None, None, AffineTransform(-1, 0))
+            self._ionized_fraction_model =\
+                DistortedModel(self._ionized_fraction_model, transform_list)
+            new_parameters =\
+                ['tanh_x{!s}'.format(extra) for extra in ['0', 'z0', 'dz']]
+            self._ionized_fraction_model = RenamedModel(\
+                self._ionized_fraction_model, new_parameters)
+        return self._ionized_fraction_model
+    
+    @property
+    def lyman_alpha_model(self):
+        """
+        Property storing a Model object which, when evaluated with the three
+        parameters ['tanh_J0', 'tanh_Jz0', and 'tanh_Jdz'], yields the
+        Lyman-alpha strength.
+        """
+        if not hasattr(self, '_lyman_alpha_model'):
+            self._lyman_alpha_model =\
+                TanhModel(self.redshifts, zero_minimum=True)
+            transform_list = TransformList(\
+                AffineTransform(J21_num, 0), None, AffineTransform(-1, 0))
+            self._lyman_alpha_model =\
+                DistortedModel(self._lyman_alpha_model, transform_list)
+            new_parameters =\
+                ['tanh_J{!s}'.format(extra) for extra in ['0', 'z0', 'dz']]
+            self._lyman_alpha_model =\
+                RenamedModel(self._lyman_alpha_model, new_parameters)
+        return self._lyman_alpha_model
     
     def heating_rate(self, Tref, zref, dz):
         """
@@ -194,7 +224,7 @@ class Tanh21cmModel(LoadableModel):
         
         returns: 1D array of heating rate values
         """
-        Tk = self.temperature(self.redshifts, Tref, zref, dz)
+        Tk = self.temperature_model(np.array([Tref, zref, dz]))
         dTkdz =\
             (0.5 * Tref * (1. - np.tanh((zref - self.redshifts) / dz)**2) / dz)
         dTkdt = dTkdz / self.dtdz
@@ -213,7 +243,7 @@ class Tanh21cmModel(LoadableModel):
         
         returns: 1D array of ionization_rate values
         """
-        xi = self.ionized_fraction(self.redshifts, xref, zref, dz)
+        xi = self.ionized_fraction_model(np.array([xref, zref, dz]))
         dxdz =\
             0.5 * xref * (1. - np.tanh((zref - self.redshifts) / dz)**2) / dz
         dxdt = dxdz / self.dtdz
@@ -229,18 +259,11 @@ class Tanh21cmModel(LoadableModel):
         
         returns: tanh model evaluated at the given parameters
         """
-        # Unpack parameters
-        Jref, zref_J, dz_J, Tref, zref_T, dz_T, xref, zref_x, dz_x = parameters
-        Jref *= J21_num
-        # Assumes z < zdec
-        Ja = Jref * tanh_generic(self.redshifts, zref=zref_J, dz=dz_J)
-        Tk = Tref * tanh_generic(self.redshifts, zref=zref_T, dz=dz_T) +\
-            self.Tgas
-        xi = xref * tanh_generic(self.redshifts, zref=zref_x, dz=dz_x)
-        # Spin temperature
+        Ja = self.lyman_alpha_model(parameters[0:3])
+        Tk = self.temperature_model(parameters[3:6])
+        xi = self.ionized_fraction_model(parameters[6:9])
         spin_temperature = self.hydrogen.SpinTemperature(self.redshifts, Tk,\
             Ja, 0.0, self.electron_density)
-        # Brightness temperature
         signal_in_mK = self.hydrogen.DifferentialBrightnessTemperature(\
             self.redshifts, xi, spin_temperature)
         if self.in_Kelvin:

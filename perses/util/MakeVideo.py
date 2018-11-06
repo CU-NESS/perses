@@ -70,7 +70,7 @@ def make_video(video_file_name, frame_rate, frame_prefix, frame_indices,\
         frame_suffix, frame_suffix)
     video_command_components =\
     [\
-        'avconv',\
+        'ffmpeg',\
         '-r ' + str(frame_rate),\
         '-i ' + frame_prefix + '%d' + frame_suffix,\
         '-b:v 1000k',\
