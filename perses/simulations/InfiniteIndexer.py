@@ -17,7 +17,7 @@ class InfiniteIndexer(object):
     def __len__(self):
         return 1
     def __iter__(self):
-        return InfiniteIndexIterator(self)
+        return InfiniteIndexerIterator(self)
 
 class DoubleInfiniteIndexer(InfiniteIndexer):
     def __init__(self, value):
