@@ -21,7 +21,7 @@ except:
     # this try/except allows for python 2/3 compatible string type checking
     basestring = str
 
-default_parameter_bundle_names = ['mirocha2016:dpl', 'mirocha2016:flex']
+default_parameter_bundle_names = ['mirocha2017:dpl', 'mirocha2017:flex']
 default_simple_kwargs = {'tau_redshift_bins': 1000, 'final_redshift': 5,\
     'initial_redshift': 60, 'verbose': False}
 default_synthesis_model_kwargs =\

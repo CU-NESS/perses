@@ -15,4 +15,5 @@ from perses.models.PowerLawTimesLogPolynomialModel import\
 from perses.models.LogLogPolynomialModel import LogLogPolynomialModel
 from perses.models.MakeForegroundModel import make_foreground_model
 from perses.models.ForegroundModelIterator import ForegroundModelIterator
+from perses.models.ThroughReceiverModel import ThroughReceiverModel
 
