@@ -7,6 +7,7 @@ Description: A file with a class which acts as a model wrapper of the
              ares.util.simulations.Global21cm class which keeps pylinex's Model
              class structure.
 """
+import time
 import numpy as np
 from pylinex import LoadableModel
 from ares.util import ParameterBundle
@@ -34,7 +35,7 @@ class AresSignalModel(LoadableModel):
     def __init__(self, frequencies, parameters=[], in_Kelvin=False,\
         parameter_bundle_names=default_parameter_bundle_names,\
         simple_kwargs=default_simple_kwargs,\
-        synthesis_model_kwargs=default_synthesis_model_kwargs):
+        synthesis_model_kwargs=default_synthesis_model_kwargs, debug=False):
         """
         Initializes a new AresSignalModel at the given frequencies. See
         $PERSES/perses/models/AresSignalModel.py for information on defaults
@@ -59,6 +60,29 @@ class AresSignalModel(LoadableModel):
         self.parameter_bundle_names = parameter_bundle_names
         self.simple_kwargs = simple_kwargs
         self.synthesis_model_kwargs = synthesis_model_kwargs
+        self.debug = debug
+    
+    @property
+    def debug(self):
+        """
+        Property storing the boolean determining whether things should be
+        printed.
+        """
+        if not hasattr(self, '_debug'):
+            raise AttributeError("debug was referenced before it was set.")
+        return self._debug
+    
+    @debug.setter
+    def debug(self, value):
+        """
+        Setter for the boolean debug property.
+        
+        value: True or False
+        """
+        if type(value) in bool_types:
+            self._debug = value
+        else:
+            raise TypeError("debug was set to a non-bool.")
     
     @property
     def frequencies(self):
@@ -267,6 +291,21 @@ class AresSignalModel(LoadableModel):
                 (1420.4 / (np.max(self.frequencies) + 1)) - 1
         return self._ares_kwargs
     
+    @property
+    def index(self):
+        """
+        Property storing the index of the current model call.
+        """
+        if not hasattr(self, '_index'):
+            self._index = 0
+        return self._index
+    
+    def increment(self):
+        """
+        Increments the index of this model.
+        """
+        self._index = self.index + 1
+    
     def __call__(self, parameters):
         """
         Evaluates the model at the given parameters.
@@ -275,6 +314,10 @@ class AresSignalModel(LoadableModel):
         
         returns: array of size (num_channels,)
         """
+        if self.debug:
+            print("Evaluation #{0:d}: {1!s}".format(self.index + 1,\
+                time.ctime()))
+        self.increment()
         self.ares_kwargs.update(dict(zip(self.parameters, parameters)))
         simulation = Global21cm(**self.ares_kwargs)
         simulation.run()
