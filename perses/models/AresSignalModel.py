@@ -22,6 +22,7 @@ except:
     # this try/except allows for python 2/3 compatible string type checking
     basestring = str
 
+redshift_buffer = 0.1
 default_parameter_bundle_names = ['mirocha2017:dpl', 'mirocha2017:flex']
 default_simple_kwargs = {'tau_redshift_bins': 1000, 'final_redshift': 5,\
     'initial_redshift': 60, 'verbose': False}
@@ -221,6 +222,10 @@ class AresSignalModel(LoadableModel):
         elif isinstance(value, dict):
             if all([isinstance(key, basestring) for key in value]):
                 self._simple_kwargs = value
+                self._simple_kwargs['initial_redshift'] =\
+                    (1420.4 / np.min(self.frequencies)) - 1 + redshift_buffer
+                self._simple_kwargs['final_redshift'] =\
+                    (1420.4 / np.max(self.frequencies)) - 1 - redshift_buffer
             else:
                 raise TypeError("simple_kwargs dictionary keys were not " +\
                     "all strings.")
@@ -277,6 +282,7 @@ class AresSignalModel(LoadableModel):
             else:
                 self._ares_kwargs = {}
             self._ares_kwargs.update(self.simple_kwargs)
+            self._ares_kwargs['output_frequencies'] = self.frequencies
             if self.synthesis_model_kwargs is not None:
                 pop = SynthesisModel(**self.synthesis_model_kwargs)
                 junk = pop.L1600_per_sfr
@@ -287,8 +293,8 @@ class AresSignalModel(LoadableModel):
             self._ares_kwargs['tau_instance'] =\
                 sim.medium.field.solver.tau_solver
             self._ares_kwargs['hmf_instance'] = sim.pops[0].halos
-            self._ares_kwargs['kill_redshift'] =\
-                (1420.4 / (np.max(self.frequencies) + 1)) - 1
+            self._ares_kwargs['kill_redshift'] = max(0, ((1420.4 /\
+                (np.max(self.frequencies) + 1)) - 1) - redshift_buffer)
         return self._ares_kwargs
     
     @property
