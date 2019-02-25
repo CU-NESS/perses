@@ -24,8 +24,8 @@ except:
 
 redshift_buffer = 0.1
 default_parameter_bundle_names = ['mirocha2017:dpl', 'mirocha2017:flex']
-default_simple_kwargs = {'tau_redshift_bins': 1000, 'final_redshift': 5,\
-    'initial_redshift': 60, 'verbose': False}
+default_simple_kwargs = {'tau_redshift_bins': 1000, 'initial_redshift': 60,\
+    'verbose': False}
 default_synthesis_model_kwargs =\
     {'source_sed': 'eldridge2009', 'source_Z': 0.0245, 'interp_Z': 'linear'}
 
@@ -224,8 +224,7 @@ class AresSignalModel(LoadableModel):
                 self._simple_kwargs = value
                 self._simple_kwargs['initial_redshift'] =\
                     (1420.4 / np.min(self.frequencies)) - 1 + redshift_buffer
-                self._simple_kwargs['final_redshift'] =\
-                    (1420.4 / np.max(self.frequencies)) - 1 - redshift_buffer
+                self._simple_kwargs['final_redshift'] = 5
             else:
                 raise TypeError("simple_kwargs dictionary keys were not " +\
                     "all strings.")
@@ -293,7 +292,7 @@ class AresSignalModel(LoadableModel):
             self._ares_kwargs['tau_instance'] =\
                 sim.medium.field.solver.tau_solver
             self._ares_kwargs['hmf_instance'] = sim.pops[0].halos
-            self._ares_kwargs['kill_redshift'] = max(0, ((1420.4 /\
+            self._ares_kwargs['kill_redshift'] = max(5, ((1420.4 /\
                 (np.max(self.frequencies) + 1)) - 1) - redshift_buffer)
         return self._ares_kwargs
     
@@ -327,8 +326,11 @@ class AresSignalModel(LoadableModel):
         self.ares_kwargs.update(dict(zip(self.parameters, parameters)))
         simulation = Global21cm(**self.ares_kwargs)
         simulation.run()
-        signal = np.interp(self.frequencies, simulation.history['nu'],\
-            simulation.history['dTb'])
+        simulation_nu = simulation.history['nu']
+        to_keep = (simulation_nu > (max(np.min(self.frequencies) - 1, 2)))
+        simulation_nu = simulation_nu[to_keep]
+        simulation_signal = simulation.history['dTb'][to_keep].astype(float)
+        signal = np.interp(self.frequencies, simulation_nu, simulation_signal)
         if self.in_Kelvin:
             return signal / 1e3
         else:
