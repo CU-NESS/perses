@@ -24,8 +24,7 @@ except:
 
 redshift_buffer = 0.1
 default_parameter_bundle_names = ['mirocha2017:dpl', 'mirocha2017:flex']
-default_simple_kwargs = {'tau_redshift_bins': 1000, 'initial_redshift': 60,\
-    'verbose': False}
+default_simple_kwargs = {'tau_redshift_bins': 1000, 'verbose': False}
 default_synthesis_model_kwargs =\
     {'source_sed': 'eldridge2009', 'source_Z': 0.0245, 'interp_Z': 'linear'}
 
@@ -221,10 +220,25 @@ class AresSignalModel(LoadableModel):
             self._simple_kwargs = {}
         elif isinstance(value, dict):
             if all([isinstance(key, basestring) for key in value]):
-                self._simple_kwargs = value
+                self._simple_kwargs = value 
+                redshift_output = (1420.4 / self.frequencies) - 1
+                min_redshift_output = np.min(redshift_output)
+                max_redshift_output = np.max(redshift_output)
+                default_initial_redshift = 150
+                default_final_redshift = 5
+                if max_redshift_output > default_initial_redshift:
+                    raise ValueError(("The minimum output frequency " +\
+                        "corresponds to a higher redshift than the default " +\
+                        "'initial_redshift' ares keyword argument, " +\
+                        "{:.6g}.").format(default_initial_redshift))
+                if min_redshift_output < default_final_redshift:
+                    raise ValueError(("The maximum output frequency " +\
+                        "corresponds to a lower redshift than the default " +\
+                        "'final_redshift' ares keyword argument, " +\
+                        "{:.6g}.").format(default_final_redshift))
                 self._simple_kwargs['initial_redshift'] =\
-                    (1420.4 / np.min(self.frequencies)) - 1 + redshift_buffer
-                self._simple_kwargs['final_redshift'] = 5
+                    default_initial_redshift
+                self._simple_kwargs['final_redshift'] = default_final_redshift
             else:
                 raise TypeError("simple_kwargs dictionary keys were not " +\
                     "all strings.")
