@@ -11,6 +11,7 @@ from perses.util.SphericalHarmonics import decompose_polar_function_legendre,\
 from perses.util.Spline import cubic_spline_real, cubic_spline_complex,\
     quintic_spline_real, quintic_spline_complex
 from perses.util.MakeVideo import make_video
+from perses.util.ReadPolarizedBeam import read_polarized_beam
 
 try:
     from ares.util import ProgressBar
@@ -19,4 +20,3 @@ except ImportError:
 from perses.util.TypeCategories import bool_types, int_types, float_types,\
     real_numerical_types, complex_numerical_types, numerical_types,\
     sequence_types
-from perses.util.AresSignal import ares_signal, combine_dicts

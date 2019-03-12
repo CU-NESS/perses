@@ -5,13 +5,12 @@ import healpy as hp
 from perses.beam.total_power.GaussianBeam import GaussianBeam
 from perses.beam.polarized.GaussianDipoleBeam import GaussianDipoleBeam
 from perses.beam.polarized.GridMeasuredBeam import GridMeasuredBeam
-from dare.beams.AugustBaselineBicone import UnperturbedAugustBaselineBicone,\
-    PerturbedAugustBaselineBicone
-from dare.beams.CTPSleevedDipole import CTPSleevedDipole
 from perses.beam.polarized.BasePolarizedBeam import _PolarizedBeam
 from perses.simulations.Database import Database
 from perses.simulations.ObservationUtilities import\
     earths_celestial_north_pole, full_blockage_opposite_pointing
+from dare import CTPSleevedDipole, UnperturbedAugustBaselineBicone,\
+    PerturbedAugustBaselineBicone
 
 def calibration_equation(powers):
     I = powers[0] + powers[1]

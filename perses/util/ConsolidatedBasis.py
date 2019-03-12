@@ -9,9 +9,7 @@ from perses.beam.polarized.GridMeasuredBeam import GridMeasuredBeam
 from perses.foregrounds import Galaxy
 from perses.util.SVDBasis import SVD_basis, SVD_coeff
 from perses.simulations import Database
-from dare.beams.DARESleevedDipole import DARESleevedDipole
-from dare.util.ProposalModels import get_popII_lowZ_signal
-from dare.util.ReadReceiver import get_realizations
+from dare import DARESleevedDipole
 
 
 def training_database(beams, all_known_calibration_parameters,\
@@ -95,8 +93,8 @@ training_kwargs['all_fit_function_kwargs'] = None
 
 npointings = 8
 
-icase = 11
-ireal = 10
+icase = None
+ireal = 0
 
 fstep = 1
 frequencies = np.linspace(40, 120, 1 + (80 // fstep))

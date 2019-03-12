@@ -1,10 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as pl
 import healpy as hp
-from perses.foregrounds.Galaxy import Galaxy
-from dare.beams.AugustBaselineBicone import UnperturbedAugustBaselineBicone, PerturbedAugustBaselineBicone
+from perses.foregrounds import Galaxy
 from perses.beam.polarized.GaussianDipoleBeam import GaussianDipoleBeam
 from perses.beam.polarized.ConvertedBeam import ConvertedBeam
+from dare import UnperturbedAugustBaselineBicone, PerturbedAugustBaselineBicone
 
 deg = 2
 frequencies = np.arange(40, 121)
@@ -17,7 +17,8 @@ psi = 0.
 gal = Galaxy(galaxy_map='extrapolated_Guzman')
 gal_maps = gal.get_map(frequencies, nside=nside) # shape (npix,nfreq)
 up_beam = ConvertedBeam(UnperturbedAugustBaselineBicone())
-p_beam = ConvertedBeam(PerturbedAugustBaselineBicone(lambda mx, nu, th, ph: (-2e-5*mx)*np.cos(np.radians(th))))
+p_beam = ConvertedBeam(PerturbedAugustBaselineBicone(lambda mx, nu, th, ph:\
+    (-2e-5*mx)*np.cos(np.radians(th))))
 #beam = GaussianDipoleBeam(lambda nu: (115. - (0.375 * nu)))
 
 up_stokes = up_beam.convolve(frequencies, gal_maps, pointing=pointing, psi=psi)
@@ -26,8 +27,10 @@ up_stokes_I, up_stokes_Q, up_stokes_U, up_stokes_V = up_stokes
 p_stokes_I, p_stokes_Q, p_stokes_U, p_stokes_V = p_stokes
 
 
-up_stokes_I_fit_coeff = np.polyfit(np.log(frequencies), np.log(up_stokes_I), deg)
-up_stokes_I_fit = np.exp(np.polyval(up_stokes_I_fit_coeff, np.log(frequencies)))
+up_stokes_I_fit_coeff =\
+    np.polyfit(np.log(frequencies), np.log(up_stokes_I), deg)
+up_stokes_I_fit =\
+    np.exp(np.polyval(up_stokes_I_fit_coeff, np.log(frequencies)))
 up_stokes_I_RMS = np.sqrt(np.mean(np.power(up_stokes_I - up_stokes_I_fit, 2)))
 
 p_stokes_I_fit_coeff = np.polyfit(np.log(frequencies), np.log(p_stokes_I), deg)

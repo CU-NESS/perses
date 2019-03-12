@@ -490,3 +490,20 @@ class AresSignalModel(LoadableModel):
     #        # TODO
     #    return self._bounds
 
+def ares_signal(frequencies, in_Kelvin=False, **kwargs):
+    """
+    Computes a signal from the ares.simulations.Global21cm class. This function
+    should not be called many times as it actually takes about twice as long as
+    the average amount of time needed to run an AresSignalModel iteration, so
+    use the AresSignalModel class if you want to repeatedly compute the signal
+    with a common parameterization.
+    
+    frequencies: 1D array of frequency values in MHz
+    in_Kelvin: if True, units are K. if False (default), units are mK
+    **kwargs: arguments to pass onto a ares.simulations.Global21cm object
+    
+    returns: 1D array (of same shape as frequencies) of temperature values
+    """
+    return AresSignalModel(frequencies, in_Kelvin=in_Kelvin,\
+        simple_kwargs=kwargs)(np.array([]))
+

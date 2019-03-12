@@ -9,6 +9,8 @@ Description: File containing a class representing a flattened Gaussian-like
 import numpy as np
 from pylinex import LoadableModel, create_hdf5_dataset, get_hdf5_value
 
+bowman_2018_parameters = np.array([-520., 78.3, 6.5, 20.7])
+
 class FlattenedGaussianModel(LoadableModel):
     """
     A class representing a flattened Gaussian-like model.
