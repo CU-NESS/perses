@@ -341,10 +341,13 @@ class AresSignalModel(LoadableModel):
         simulation = Global21cm(**self.ares_kwargs)
         simulation.run()
         simulation_nu = simulation.history['nu']
-        to_keep = (simulation_nu > (max(np.min(self.frequencies) - 1, 2)))
-        simulation_nu = simulation_nu[to_keep]
-        simulation_signal = simulation.history['dTb'][to_keep].astype(float)
-        signal = np.interp(self.frequencies, simulation_nu, simulation_signal)
+        simulation_signal = simulation.history['dTb'].astype(float)
+        if simulation.is_phenom:
+            signal = simulation_signal
+        else:
+            to_keep = (simulation_nu > (max(np.min(self.frequencies) - 1, 2)))
+            signal = np.interp(self.frequencies, simulation_nu[to_keep],\
+                simulation_signal[to_keep])
         if self.in_Kelvin:
             return signal / 1e3
         else:
