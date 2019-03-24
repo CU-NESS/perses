@@ -29,6 +29,7 @@ class Tanh21cmModel(LoadableModel):
         Initializes a new TanhModel applying to the given frequencies.
         
         frequencies: 1D (monotonically increasing) array of values in MHz
+        in_Kelvin: if True, units are K; if False (default), units are mK
         """
         self.frequencies = frequencies
         self.in_Kelvin = in_Kelvin
@@ -122,9 +123,11 @@ class Tanh21cmModel(LoadableModel):
         """
         Property storing the electron density as a function of redshifts.
         """
-        return np.interp(self.redshifts, self.cosmology.thermal_history['z'], 
-            self.cosmology.thermal_history['xe']) *\
-            self.cosmology.nH(self.redshifts)
+        if not hasattr(self, '_electron_density'):
+            self._electron_density  = self.nH * np.interp(self.redshifts,\
+                self.cosmology.thermal_history['z'], 
+                self.cosmology.thermal_history['xe'])
+        return self._electron_density
     
     @property
     def Tgas(self):
@@ -225,8 +228,8 @@ class Tanh21cmModel(LoadableModel):
         returns: 1D array of heating rate values
         """
         Tk = self.temperature_model(np.array([Tref, zref, dz]))
-        dTkdz =\
-            (0.5 * Tref * (1. - np.tanh((zref - self.redshifts) / dz)**2) / dz)
+        dTkdz = (0.5 * Tref *\
+            (1 - np.tanh((zref - self.redshifts) / dz) ** 2) / dz)
         dTkdt = dTkdz / self.dtdz
         #dTgas_dt = self.dTgas_dz(z) / self.dtdz
         return 1.5 * k_B * dTkdt
@@ -335,11 +338,12 @@ class Tanh21cmModel(LoadableModel):
         
         returns: True if other is equal to this model, False otherwise
         """
-        if isinstance(other, Tanh21cmModel):
-            return np.allclose(self.frequencies, other.frequencies, rtol=0,\
-                atol=1e-6)
-        else:
+        if not isinstance(other, Tanh21cmModel):
             return False
+        if self.in_Kelvin != other.in_Kelvin:
+            return False
+        return\
+            np.allclose(self.frequencies, other.frequencies, rtol=0, atol=1e-6)
     
     @property
     def bounds(self):
