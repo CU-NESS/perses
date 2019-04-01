@@ -196,16 +196,13 @@ class DarkAgesCoolingModel(LoadableModel):
         return\
             np.allclose(self.frequencies, other.frequencies, rtol=0, atol=1e-6)
     
-#    @property
-#    def bounds(self):
-#        """
-#        Property storing natural parameter bounds in a dictionary.
-#        """
-#        if not hasattr(self, '_bounds'):
-#            self._bounds = {'tanh_J0': (0, 1e8), 'tanh_Jz0': (0, 100),\
-#                'tanh_Jdz': (0, 100), 'tanh_T0': (0, 1e8),\
-#                'tanh_Tz0': (0, 100), 'tanh_Tdz': (0, 100),\
-#                'tanh_x0': (0, 1), 'tanh_xz0': (0, 100),\
-#                'tanh_xdz': (0, 100)}
-#        return self._bounds
+    @property
+    def bounds(self):
+        """
+        Property storing natural parameter bounds in a dictionary.
+        """
+        if not hasattr(self, '_bounds'):
+            self._bounds =\
+                {'alpha': (None, 0), 'beta': (0, None), 'zdec': (0, None)}
+        return self._bounds
 

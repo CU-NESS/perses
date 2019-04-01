@@ -11,7 +11,6 @@ from perses.util.SphericalHarmonics import decompose_polar_function_legendre,\
 from perses.util.Spline import cubic_spline_real, cubic_spline_complex,\
     quintic_spline_real, quintic_spline_complex
 from perses.util.MakeVideo import make_video
-from perses.util.ReadPolarizedBeam import read_polarized_beam
 from perses.util.SignalExpander import ideal_signal_expander,\
     make_signal_expander
 

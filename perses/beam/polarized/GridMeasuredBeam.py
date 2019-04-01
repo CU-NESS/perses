@@ -76,6 +76,17 @@ class GridMeasuredBeam(_PolarizedBeam):
         return GridMeasuredBeam(self.frequencies * scale_factor, self.thetas,\
             self.phis, *self.grids)
     
+    def scale_physical_space(self, scale_factor):
+        """
+        Scales thisbeam in physical space. This is equivalent to a frequency
+        space scaling by the reciprocal of scale_factor.
+        
+        scale_factor: factor by which to multiply the scale of the antenna
+        
+        returns: a new GridMeasuredBeam which applies to scaled frequencies
+        """
+        return self.scale_frequency_space(1 / scale_factor)
+    
     def scale_minimum_frequency(self, new_minimum_frequency):
         """
         Scales this beam in frequency space using scale_frequency_space so that
@@ -142,7 +153,7 @@ class GridMeasuredBeam(_PolarizedBeam):
             indices = np.argmax(\
                 new_frequencies[None,:] == self.frequencies[:,None], axis=0)
             return GridMeasuredBeam(new_frequencies, self.thetas, self.phis,\
-                self.grids[:,indices,:,:])
+                *self.grids[:,indices,:,:])
         num_new_frequencies = len(new_frequencies)
         new_grids = np.ndarray((4, num_new_frequencies, self.num_thetas,\
             self.num_phis), dtype=complex)

@@ -51,8 +51,19 @@ class GridMeasuredBeam(_TotalPowerBeam):
         returns: a new GridMeasuredBeam which applies at frequencies scaled by
                  the given factor
         """
-        return GridMeasuredBeam(self.frequencies / scale_factor, self.thetas,\
+        return GridMeasuredBeam(self.frequencies * scale_factor, self.thetas,\
             self.phis, self.grids)
+    
+    def scale_physical_space(self, scale_factor):
+        """
+        Scales thisbeam in physical space. This is equivalent to a frequency
+        space scaling by the reciprocal of scale_factor.
+        
+        scale_factor: factor by which to multiply the scale of the antenna
+        
+        returns: a new GridMeasuredBeam which applies to scaled frequencies
+        """
+        return self.scale_frequency_space(1 / scale_factor)
     
     def scale_minimum_frequency(self, new_minimum_frequency):
         """

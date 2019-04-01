@@ -24,7 +24,8 @@ except:
 
 redshift_buffer = 0.1
 default_parameter_bundle_names = ['mirocha2017:dpl', 'mirocha2017:flex']
-default_simple_kwargs = {'tau_redshift_bins': 1000, 'verbose': False}
+default_simple_kwargs =\
+    {'tau_redshift_bins': 1000, 'verbose': False, 'progress_bar': False}
 default_synthesis_model_kwargs =\
     {'source_sed': 'eldridge2009', 'source_Z': 0.0245, 'interp_Z': 'linear'}
 

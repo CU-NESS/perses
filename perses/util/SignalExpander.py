@@ -3,8 +3,9 @@ File: perses/util/SignalExpander.py
 Author: Keith Tauscher
 Date: 18 Mar 2019
 
-Description: File containing 
+Description: File containing functions which generate signal expanders.
 """
+import numpy as np
 from pylinex import RepeatExpander, PadExpander, CompositeExpander,\
     ModulationExpander
 
