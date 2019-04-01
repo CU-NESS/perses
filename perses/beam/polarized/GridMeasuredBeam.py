@@ -154,6 +154,11 @@ class GridMeasuredBeam(_PolarizedBeam):
                 new_frequencies[None,:] == self.frequencies[:,None], axis=0)
             return GridMeasuredBeam(new_frequencies, self.thetas, self.phis,\
                 *self.grids[:,indices,:,:])
+        if np.any(np.logical_or(new_frequencies < np.min(self.frequencies),\
+            new_frequencies > np.max(self.frequencies))):
+            raise ValueError("Cannot interpolate to all given frequencies " +\
+                "because at least one was outside the range where data is " +\
+                "available.")
         num_new_frequencies = len(new_frequencies)
         new_grids = np.ndarray((4, num_new_frequencies, self.num_thetas,\
             self.num_phis), dtype=complex)
