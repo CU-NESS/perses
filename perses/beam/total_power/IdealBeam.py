@@ -23,7 +23,7 @@ class IdealBeam(_TotalPowerBeam):
     
     @beam_function.setter
     def beam_function(self, value):
-        if value is None:
+        if type(value) is type(None):
             self._beam_function = None
         elif type(value) is FunctionType:
             self._beam_function = value
@@ -51,7 +51,7 @@ class IdealBeam(_TotalPowerBeam):
             frequencies = np.array([frequencies])
         numfreqs = len(frequencies)
         npix = hp.pixelfunc.nside2npix(nside)
-        if self.beam_function is None:
+        if type(self.beam_function) is type(None):
             pattern = np.ones((numfreqs, npix))
         else:
             theta_map, phi_map = hp.pixelfunc.pix2ang(nside, np.arange(npix))

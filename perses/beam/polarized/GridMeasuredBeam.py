@@ -291,7 +291,7 @@ class GridMeasuredBeam(_PolarizedBeam):
         tol = min(t_tol, p_tol)
         pointing_close = np.allclose(pointing, (90., 0.), atol=tol, rtol=0.)
         psi_close = np.isclose(psi, 0., atol=p_tol, rtol=0)
-        if theta_res is None:
+        if type(theta_res) is type(None):
             theta_res_close = True
         else:
             try:
@@ -299,7 +299,7 @@ class GridMeasuredBeam(_PolarizedBeam):
                     np.isclose(self.theta_res, theta_res, rtol=0, atol=1e-12)
             except:
                 return False
-        if phi_res is None:
+        if type(phi_res) is type(None):
             phi_res_close = True
         else:
             try:
@@ -354,7 +354,7 @@ class GridMeasuredBeam(_PolarizedBeam):
         unpol_pars={}, Eintheta=None, Eintheta_pars={}, Einphi=None,\
         Einphi_pars={}, verbose=True, angles=None, degrees=True,\
         include_smearing=True, **kwargs):
-        if angles is None:
+        if type(angles) is type(None):
             angles = [0]
         elif type(angles) in real_numerical_types:
             angles = [angles]
@@ -370,9 +370,10 @@ class GridMeasuredBeam(_PolarizedBeam):
         unpol_int = rotate_maps(unpol_int, theta, phi, psi, use_inverse=True,\
             nest=False, axis=0)[np.newaxis,...] # extra axis for I,Q,U,V axis
         nside = hp.pixelfunc.npix2nside(unpol_int.shape[1])
-        if (Eintheta is None) or (Einphi is None):
+        if (type(Eintheta) is type(None)) or (type(Einphi) is type(None)):
             polarized = False
-        elif (Eintheta is not None) and (Einphi is not None):
+        elif (type(Eintheta) is not type(None)) and\
+            (type(Einphi) is not type(None)):
             polarized = True
             if type(Eintheta) is FunctionType:
                 Eintheta =\

@@ -74,7 +74,7 @@ def curve_plot_from_data(freq, curves, plot_band, subtract_mean, ax, xlabel,\
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     pl.draw()
-    if save_file is not None:
+    if type(save_file) is not type(None):
         pl.savefig(save_file)
     return plotted_curves, (mincurve, maxcurve)
 
@@ -93,7 +93,7 @@ def curve_plot_with_plot_band_option(freq, curves, plot_band, subtract_mean,\
         raise TypeError("The type of plot_band was not recognized.")
     curves = impose_curve_confidence_interval(curves, contour,\
         subtract_mean, sort_by_rms)
-    if (include_curve is not None) and force_include:
+    if (type(include_curve) is not type(None)) and force_include:
         curves = np.concatenate([curves, include_curve[np.newaxis]], axis=0)
     min_curve = np.min(curves, axis=0)
     max_curve = np.max(curves, axis=0)

@@ -87,7 +87,7 @@ class LogLogPolynomialModel(TransformedModel, LoadableModel, ForegroundModel):
         
         value: single number with which to normalize x values
         """
-        if value is None:
+        if type(value) is type(None):
             pass
         elif type(value) in numerical_types:
             self._reference_x = value
@@ -114,7 +114,7 @@ class LogLogPolynomialModel(TransformedModel, LoadableModel, ForegroundModel):
         value: single number given roughly by the quotient of max and min x
                values
         """
-        if value is None:
+        if type(value) is type(None):
             pass
         elif type(value) in numerical_types:
             self._reference_dynamic_range = value
@@ -144,9 +144,9 @@ class LogLogPolynomialModel(TransformedModel, LoadableModel, ForegroundModel):
         """
         log_basis = self.model.basis
         num_terms = log_basis.num_basis_vectors
-        if new_x_values is None:
+        if type(new_x_values) is type(None):
             new_x_values = self.x_values
-        if new_expander is None:
+        if type(new_expander) is type(None):
             new_expander = log_basis.expander
         return LogLogPolynomialModel(new_x_values, num_terms,\
             expander=new_expander, reference_x=self.reference_x,\

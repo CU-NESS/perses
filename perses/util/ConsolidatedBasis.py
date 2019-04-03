@@ -115,7 +115,7 @@ scrunched_pointings = [pointing_center] +\
 #                                            for ipointing in range(npointings)]
 scrunched_psis = [0 for ipointing in range(npointings)]
 
-if icase is None:
+if type(icase) is type(None):
     scrunched_gains = np.ones((1, nfreq))
     scrunched_offsets = np.zeros((1, nfreq))
 else:

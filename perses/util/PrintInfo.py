@@ -42,7 +42,7 @@ def print_fit(fitter):
     
     # Print out info about errors
     if fitter.loglikelihood.error[0].ndim == 1:
-        if fitter.tint is None:
+        if type(fitter.tint) is type(None):
             if np.all(np.diff(fitter.error[0]) == 0) and (fitter.Nsky == 1):
                 print(line('errors             : constant, ' +\
                     '{0:.4g} (Kelvin)'.format(fitter.error[0][0])))

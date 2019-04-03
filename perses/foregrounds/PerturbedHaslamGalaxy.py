@@ -71,7 +71,7 @@ class PerturbedHaslamGalaxy(SpatialPowerLawGalaxy):
         
         value: either None or a 32-bit unsigned integer
         """
-        if value is None:
+        if type(value) is type(None):
             self._seed = np.random.randint(2 ** 32)
         elif type(value) in int_types:
             self._seed = value

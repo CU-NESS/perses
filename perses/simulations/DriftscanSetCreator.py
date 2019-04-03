@@ -175,7 +175,7 @@ class DriftscanSetCreator(object):
         
         value: a positive integer (or None if beam_function is set to an array)
         """
-        if value is None:
+        if type(value) is type(None):
             pass
         elif isinstance(value, int):
             if value > 0:
@@ -227,7 +227,7 @@ class DriftscanSetCreator(object):
         
         value: a positive integer (or None if maps_function is set to an array)
         """
-        if value is None:
+        if type(value) is type(None):
             pass
         elif isinstance(value, int):
             if value > 0:
@@ -290,13 +290,13 @@ class DriftscanSetCreator(object):
         **kwargs: dictionary of keyword arguments to pass to
                   simulate_single_spectrum function of this class.
         """
-        if beam_args is None:
+        if type(beam_args) is type(None):
             beam_args = [[]] * self.nbeams
-        if beam_kwargs is None:
+        if type(beam_kwargs) is type(None):
             beam_kwargs = [{}] * self.nbeams
-        if maps_args is None:
+        if type(maps_args) is type(None):
             maps_args = [[]] * self.nmaps
-        if maps_kwargs is None:
+        if type(maps_kwargs) is type(None):
             maps_kwargs = [{}] * self.nmaps
         completed = self.file.attrs['next_index']
         try:
@@ -514,7 +514,7 @@ class DriftscanSetCreator(object):
         value: list of (unique) strings whose length is given by the number of
                beams in this set
         """
-        if value is None:
+        if type(value) is type(None):
             self._beam_names =\
                 ['beam_{}'.format(index) for index in range(self.nbeams)]
         elif type(value) in sequence_types:
@@ -547,7 +547,7 @@ class DriftscanSetCreator(object):
         value: list of (unique) strings whose length is given by the number of
                galaxy maps in this set
         """
-        if value is None:
+        if type(value) is type(None):
             self._map_names = ['galaxy_map_{:d}'.format(index)\
                 for index in range(self.nmaps)]
         elif type(value) in sequence_types:

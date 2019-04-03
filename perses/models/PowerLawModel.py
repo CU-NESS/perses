@@ -78,7 +78,7 @@ class PowerLawModel(RenamedModel, LoadableModel, ForegroundModel):
         
         value: single number with which to normalize x values
         """
-        if value is None:
+        if type(value) is type(None):
             pass
         elif type(value) in real_numerical_types:
             self._reference_x = value
@@ -107,9 +107,9 @@ class PowerLawModel(RenamedModel, LoadableModel, ForegroundModel):
         returns: another LinearizedPhysicalForegroundModel object which shares
                  parameters with this one.
         """
-        if new_x_values is None:
+        if type(new_x_values) is type(None):
             new_x_values = self.x_values
-        if new_expander is None:
+        if type(new_expander) is type(None):
             new_expander = self.expander
         return PowerLawModel(new_x_values, expander=new_expander,\
              reference_x=self.reference_x)

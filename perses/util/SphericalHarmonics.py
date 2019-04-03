@@ -23,7 +23,7 @@ def decompose_polar_function_legendre(weight_function=default_weight_function,\
     
     returns: 1D array of length lmax+1
     """
-    if npoints is None:
+    if type(npoints) is type(None):
         npoints = 10000 * lmax
     cos_thetas = np.linspace(-1, 1, npoints)
     thetas = np.arccos(cos_thetas)
@@ -77,7 +77,7 @@ def polar_weighted_spherical_harmonic_fit(to_fit,\
         raise ValueError("Can only fit 1D or 2D maps with this function.")
     npix = to_fit.shape[-1]
     nside = hp.pixelfunc.npix2nside(npix)
-    if lmax is None:
+    if type(lmax) is type(None):
         lmax = (3 * nside) - 1
     dimension_expander = ((np.newaxis,) * dims_to_add) + (slice(None),)
     (thetas, phis) = hp.pixelfunc.pix2ang(nside, np.arange(npix))

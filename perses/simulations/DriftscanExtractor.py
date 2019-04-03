@@ -60,7 +60,7 @@ class DriftscanExtractor(Extractor):
             foreground_expanders = [PadExpander('{:d}*'.format(itime),\
                 '{:d}*'.format(driftscan_set.num_times - itime - 1))\
                 for itime in range(driftscan_set.num_times)]
-        if signal_training_set is None:
+        if type(signal_training_set) is type(None):
             names = foreground_names
             training_sets = foreground_training_sets
             dimensions = [foreground_dimension]
@@ -71,7 +71,7 @@ class DriftscanExtractor(Extractor):
             signal_dimension = {'signal': 1 + np.arange(max_num_signal_terms)}
             dimensions = [signal_dimension, foreground_dimension]
             outer_signal_expander = RepeatExpander(driftscan_set.num_times)
-            if signal_modulation_expander is None:
+            if type(signal_modulation_expander) is type(None):
                 signal_expander = outer_signal_expander
             else:
                 signal_expander = CompositeExpander(\

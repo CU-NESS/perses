@@ -274,7 +274,7 @@ class GridMeasuredBeam(_TotalPowerBeam):
         (pointing, psi) = ((90, 0), 0)
         beam_maps =\
             self.get_maps(self.frequencies, nside, pointing, psi, normed=False)
-        if lmax is None:
+        if type(lmax) is type(None):
             lmax = (3 * nside - 1)
         coefficients = spherical_harmonic_fit(beam_maps, lmax=lmax)
         if group:
@@ -393,7 +393,7 @@ class GridMeasuredBeam(_TotalPowerBeam):
 
         returns: convolved spectrum, a 1D numpy.ndarray with shape (numfreqs,)
         """
-        if angles is None:
+        if type(angles) is type(None):
             angles = [0.]
         elif type(angles) in real_numerical_types:
             angles = [angles]

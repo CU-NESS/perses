@@ -79,7 +79,7 @@ class DriftscanForecaster(Forecaster):
             signal_dimension = {'signal': 1 + np.arange(max_num_signal_terms)}
             dimensions = [signal_dimension, foreground_dimension]
             outer_signal_expander = RepeatExpander(driftscan_set.num_times)
-            if signal_modulation_expander is None:
+            if type(signal_modulation_expander) is type(None):
                 signal_expander = outer_signal_expander
             else:
                 signal_expander = CompositeExpander(\

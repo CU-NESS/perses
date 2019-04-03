@@ -91,7 +91,7 @@ class PowerLawTimesPolynomialModel(BasisModel, ForegroundModel):
         
         value: single number with which to normalize x values
         """
-        if value is None:
+        if type(value) is type(None):
             pass
         elif type(value) in numerical_types:
             self._reference_x = value
@@ -117,7 +117,7 @@ class PowerLawTimesPolynomialModel(BasisModel, ForegroundModel):
         
         value: single number with which to normalize x values
         """
-        if value is None:
+        if type(value) is type(None):
             pass
         elif type(value) in numerical_types:
             self._reference_span = value
@@ -162,9 +162,9 @@ class PowerLawTimesPolynomialModel(BasisModel, ForegroundModel):
                  same things as the parameters of this model but returns values
                  at new_x_values
         """
-        if new_x_values is None:
+        if type(new_x_values) is type(None):
             new_x_values = self.x_values
-        if new_expander is None:
+        if type(new_expander) is type(None):
             new_expander = self.basis.expander
         return PowerLawTimesPolynomialModel(new_x_values,\
             self.basis.num_basis_vectors, spectral_index=self.spectral_index,\

@@ -73,7 +73,7 @@ class _PolarizedBeam(_Beam):
         returns Stokes parameters measured by the antennas as a function of
                 frequency in the form of a numpy.ndarray of shape (4, nfreq)
         """
-        if angles is None:
+        if type(angles) is type(None):
             angles = np.zeros(1)
         elif type(angles) in real_numerical_types:
             angles = np.ones(1) * angles
@@ -88,9 +88,10 @@ class _PolarizedBeam(_Beam):
         unpol_int = rotate_maps(unpol_int, theta, phi, psi, use_inverse=True,\
             nest=False, axis=0)
         nside = hp.pixelfunc.npix2nside(unpol_int.shape[0])
-        if (Eintheta is None) or (Einphi is None):
+        if (type(Eintheta) is type(None)) or (type(Einphi) is type(None)):
             polarized = False
-        elif (Eintheta is not None) and (Einphi is not None):
+        elif (type(Eintheta) is not type(None)) and\
+            (type(Einphi) is not type(None)):
             polarized = True
             if type(Eintheta) is FunctionType:
                 Eintheta =\

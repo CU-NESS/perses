@@ -46,7 +46,8 @@ class ThroughReceiverModel(LoadableModel):
         self.antenna_temperature_model = antenna_temperature_model
         self.gain_model = gain_model
         self.noise_model = noise_model
-        if ((second_gain_model is None) == (second_noise_model is None)):
+        if ((type(second_gain_model) is type(None)) ==\
+            (type(second_noise_model) is type(None))):
             self.second_gain_model = second_gain_model
             self.second_noise_model = second_noise_model
         else:
@@ -186,7 +187,7 @@ class ThroughReceiverModel(LoadableModel):
         value: None or a Model object which produces gains of length
                len(frequencies)
         """
-        if ((value is None) or isinstance(value, Model)):
+        if ((type(value) is type(None)) or isinstance(value, Model)):
             self._second_gain_model = value
         else:
             raise TypeError("second_gain_model was set to neither None nor " +\
@@ -213,7 +214,7 @@ class ThroughReceiverModel(LoadableModel):
         value: None or a Model object which produces noises of length
                len(frequencies)
         """
-        if ((value is None) or isinstance(value, Model)):
+        if ((type(value) is type(None)) or isinstance(value, Model)):
             self._second_noise_model = value
         else:
             raise TypeError("second_noise_model was set to neither None " +\
@@ -226,7 +227,8 @@ class ThroughReceiverModel(LoadableModel):
         and noise models. This indicates whether there are two antennas or one.
         """
         if not hasattr(self, '_has_two_models'):
-            self._has_two_models = (self.second_gain_model is not None)
+            self._has_two_models =\
+                (type(self.second_gain_model) is not type(None))
         return self._has_two_models
     
     @property

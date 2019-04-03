@@ -66,7 +66,7 @@ for i, direc in enumerate(to_download):
     
     web = aux_data[direc][0]
     
-    if files[i] is None:
+    if type(files[i]) is type(None):
         fns = aux_data[direc][1:-1]
     else:
         fns = [aux_data[direc][1:-1][files[i]]]
@@ -96,7 +96,7 @@ for i, direc in enumerate(to_download):
         tar.close()
     
     # Run a script [optional]
-    if aux_data[direc][-1] is not None:
+    if type(aux_data[direc][-1]) is not type(None):
         with open(aux_data[direc][-1]) as f:
             exec(f.read(), globals(), locals())
     

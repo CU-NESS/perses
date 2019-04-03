@@ -20,7 +20,7 @@ class ParameterFile(dict):
         
         self.defaults = SetAllDefaults()
         
-        if pf is not None:
+        if type(pf) is not type(None):
             self._kwargs = pf._kwargs
             for key in pf:
                 self[key] = pf[key]

@@ -74,7 +74,7 @@ class _TotalPowerBeam(_Beam):
 
         returns: convolved spectrum, a 1D numpy.ndarray with shape (numfreqs,)
         """
-        if angles is None:
+        if type(angles) is type(None):
             angles = np.zeros(1)
         elif type(angles) in real_numerical_types:
             angles = np.ones(1) * angles
@@ -233,7 +233,7 @@ class _TotalPowerBeam(_Beam):
         
         return the slice plotted in the form of a 1D numpy.ndarray
         """
-        if grid is None:
+        if type(grid) is type(None):
             pointing = (90., 0.)
             psi = 0.
             grid = self.get_grids(frequency, theta_res, phi_res, pointing,\
@@ -265,7 +265,7 @@ class _TotalPowerBeam(_Beam):
         pl.xlabel('$\\theta$')
         pl.ylabel(ylabel)
         pl.tick_params(width=2, length=6)
-        if ylim is not None:
+        if type(ylim) is not type(None):
             pl.ylim(ylim)
         return slc
     

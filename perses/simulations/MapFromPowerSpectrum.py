@@ -34,7 +34,7 @@ def gaussian_map_from_power_spectrum(monopole, power_spectrum, nside=None):
             index = (m * lmax) + l - ((m * (m - 1)) / 2)
             parts = np.random.normal(0, 1, (2,)) * c_l / np.sqrt(2)
             spherical_harmonics[index] = parts[0] + (parts[1] * 1.j)
-    if nside is None:
+    if type(nside) is type(None):
         nside = min(4096, ceil_pow2((lmax + 1) / np.sqrt(12)))
     return hp.sphtfunc.alm2map(spherical_harmonics, nside)
 
@@ -62,7 +62,7 @@ def power_spectrum_from_angular_peak(total_power, angular_peak, lmax=None):
     returns power contained in l in [1,lmax] as a 1D ndarray of length lmax+1
     """
     lpeak = int(np.sqrt(720. / angular_peak) - 1)
-    if lmax is None:
+    if type(lmax) is type(None):
         lmax = lpeak * 10 + 50
     ls = np.arange(1, lmax + 1)
     lognormalization =\
@@ -88,7 +88,7 @@ def gaussian_map_from_angular_peak(monopole, total_power, angular_peak,\
             angular peak scale
     """
     power_spec = power_spectrum_from_angular_peak(total_power, angular_peak)
-    if nside is None:
+    if type(nside) is type(None):
         nside = min(4096, ceil_pow2((len(power_spec) + 1) / np.sqrt(12)))
     return gaussian_map_from_power_spectrum(monopole, power_spec, nside=nside)
 
@@ -119,7 +119,7 @@ def power_spectrum_from_angular_peaks(power, angular_peaks, lmax=None):
                                   "equal the number of peaks (2 could be " +\
                                   "at some angular position).")
     min_ang_scale = min(angular_peaks)
-    if lmax is None:
+    if type(lmax) is type(None):
         lmax = 10 * (4 + int(np.sqrt(720. / min_ang_scale)))
     power_spec = 0.
     for ipk in range(len(angular_peaks)):
@@ -149,7 +149,7 @@ def gaussian_map_from_angular_peaks(monopole, power, angular_peaks,\
             the given angular peaks of the given powers.
     """
     power_spectrum = power_spectrum_from_angular_peaks(power, angular_peaks)
-    if nside is None:
+    if type(nside) is type(None):
         nside = ceil_pow2((len(power_spectrum) + 1) / np.sqrt(12))
     return\
         gaussian_map_from_power_spectrum(monopole, power_spectrum, nside=nside)

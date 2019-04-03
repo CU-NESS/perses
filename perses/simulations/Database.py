@@ -224,7 +224,7 @@ class Database(object):
                                  "because you are using relative paths " +\
                                  "instead of absolute paths or because " +\
                                  "the prefix actually doesn't exist.")
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("prefix must be set to a string.")
     
     @property
@@ -443,7 +443,7 @@ class Database(object):
         
         bool_to_check: object to check whether it is a bool
         """
-        if (bool_to_check is None) or (type(bool_to_check) is bool):
+        if (type(bool_to_check) is type(None)) or (type(bool_to_check) is bool):
             return bool_to_check
         else:
             raise TypeError("bool property was set to a non-bool.")
@@ -454,7 +454,7 @@ class Database(object):
         Setter for verbose property which controls how much is printed.
         """
         to_set = self._check_bool_to_set(value)
-        if to_set is not None:
+        if type(to_set) is not type(None):
             self._verbose = to_set
     
     @property
@@ -477,7 +477,7 @@ class Database(object):
         given beams.
         """
         to_set = self._check_bool_to_set(value)
-        if to_set is not None:
+        if type(to_set) is not type(None):
             self._polarized = to_set
     
     @property
@@ -500,7 +500,7 @@ class Database(object):
         simulation.
         """
         to_set = self._check_bool_to_set(value)
-        if to_set is not None:
+        if type(to_set) is not type(None):
             self._include_moon = to_set
     
     @property
@@ -527,7 +527,7 @@ class Database(object):
         elif type(value) in sequence_types and\
             (len(value) == self.num_regions):
             self._moon_temps = np.array(value)
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("Type of moon temperature was not numerical.")
     
     @property
@@ -555,16 +555,17 @@ class Database(object):
         pixelinfo_error = ValueError("moon_blocking_fraction didn't have " +\
                                      "the right amount of pixel information.")
         if isinstance(value, InfiniteIndexer):
-            if not ((value[0] is None) or isinstance(value[0], np.ndarray)):
+            if not ((type(value[0]) is type(None)) or\
+                isinstance(value[0], np.ndarray)):
                 self._moon_blocking_fractions = value
-        elif value is not None:
+        elif type(value) is not type(None):
             try:
                 value = np.array(value)
             except:
                 raise TypeError("moon_blocking_fractions could not be cast " +\
                                 "to np.ndarray.")
             else:
-                if all([val is None for val in value]):
+                if all([(type(val) is type(None)) for val in value]):
                     return
                 npix = hp.pixelfunc.nside2npix(self.galaxies[0].nside)
                 if value.ndim == 1:
@@ -621,7 +622,7 @@ class Database(object):
         """
         if type(value) is FunctionType:
             self._inverse_calibration_equation = value
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("The inverse calibration equation given to " +\
                             "a Database was not a function.")
     
@@ -648,7 +649,7 @@ class Database(object):
         value must be a dictionary with keys which are all strings
         """
         to_set = self._check_kwargs_to_set(value)
-        if to_set is not None:
+        if type(to_set) is not type(None):
             self._all_true_calibration_parameters = to_set
     
     @property
@@ -695,7 +696,7 @@ class Database(object):
         value _PolarizedBeam object (or list of them) if self.polarized==True
               _TotalPowerBeam object (or list of them) if self.polarized==False
         """
-        if value is not None:
+        if type(value) is not type(None):
             if type(value) in sequence_types:
                 if len(value) == self.num_regions:
                     for element in value:
@@ -765,7 +766,7 @@ class Database(object):
                 raise ValueError("Database didn't understand pointings " +\
                                  "given to Database because the array " +\
                                  "given was more than 2D.")
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("Database expected a pointings of " +\
                             "sequence type but didn't get one.")
     
@@ -804,7 +805,7 @@ class Database(object):
             else:
                 raise ValueError("psis given to Database a numpy.ndarray " +\
                                  "but it wasn't 1D.")
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("psis value given to Database was " +\
                             "not of numerical or sequence type.")
     
@@ -832,7 +833,7 @@ class Database(object):
         if isinstance(value, InfiniteIndexer):
             value = value[0]
         if type(value) in sequence_types:
-            if all([val is None for val in value]):
+            if all([(type(val) is type(None)) for val in value]):
                 return
             arrval = np.array(value)
             if arrval.ndim == 1:
@@ -844,7 +845,7 @@ class Database(object):
                                  "numpy.ndarray which wasn't 1D or 2D.")
         elif type(value) in real_numerical_types:
             self._rotation_angles = InfiniteIndexer(np.array([value]))
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("rotation_angles was set to something which " +\
                             "was neither a number or a 1D sequence of " +\
                             "numbers.")
@@ -889,7 +890,7 @@ class Database(object):
         
         value a 1D numpy.ndarray of float frequencies
         """
-        if value is not None:
+        if type(value) is not type(None):
             propval = np.array(value)
             if propval.ndim == 1:
                 self._frequencies = propval
@@ -909,7 +910,7 @@ class Database(object):
     def channel_widths(self, value):
         """
         """
-        if value is not None:
+        if type(value) is not type(None):
             if value.shape == self.frequencies.shape:
                 self._channel_widths = value
             else:
@@ -937,7 +938,7 @@ class Database(object):
         
         list_of_kwargs_dicts: must be a kwargs dict or a list of kwargs dicts
         """
-        if list_of_kwargs_dicts is None:
+        if type(list_of_kwargs_dicts) is type(None):
             return None
         else:
             def all_string_keys(dict_to_check):
@@ -989,7 +990,7 @@ class Database(object):
         perses.foregrounds.Galaxy.get_map.
         """
         to_set = self._check_kwargs_to_set(value)
-        if to_set is not None:
+        if type(to_set) is not type(None):
             if isinstance(to_set, InfiniteIndexer):
                 to_set.value['include_smearing'] = self.include_smearing
             else:
@@ -1047,7 +1048,7 @@ class Database(object):
             else:
                 raise ValueError("signal_data was set to a numpy.ndarray " +\
                                  "which is not 2D.")
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("signal_data given to Database was " +\
                             "neither a dictionary or a 2D sequence.")
     
@@ -1078,7 +1079,7 @@ class Database(object):
         value: either None (sets to HaslamGalaxy object; default), a Galaxy
                object, or a sequence of Galaxy objects
         """
-        if value is None:
+        if type(value) is type(None):
             print("galaxies was not set. So the Haslam map with a -2.5 " +\
                 "spectral index and a resolution of nside=64 is being used " +\
                 "by default.")
@@ -1124,7 +1125,7 @@ class Database(object):
                     "to Database was not one of the acceptable maps, which " +\
                     "are {!s}.").format(acceptable_maps))
             self._galaxy_maps = [galaxy_map for galaxy_map in value]
-        elif value is not None:
+        elif type(value) is not type(None):
             raise ValueError(("The galaxy_map given to Database was not " +\
                 "one of the acceptable_maps, which are {!s}.").format(\
                 acceptable_maps))
@@ -1168,7 +1169,7 @@ class Database(object):
             else:
                 raise ValueError("tint was set to numpy.ndarray which " +\
                                  "wasn't 1D.")
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("tint must be an integer or float which is " +\
                             "positive or a list of integers or floats " +\
                             "which are positive.")
@@ -1193,7 +1194,7 @@ class Database(object):
         included in the data.
         """
         to_set = self._check_bool_to_set(value)
-        if to_set is not None:
+        if type(to_set) is not type(None):
             self._include_signal = to_set
     
     @property
@@ -1217,7 +1218,7 @@ class Database(object):
         value: must be a bool
         """
         to_set = self._check_bool_to_set(value)
-        if to_set is not None:
+        if type(to_set) is not type(None):
             self._include_foreground = to_set
     
     @property
@@ -1242,7 +1243,7 @@ class Database(object):
         """
         if type(value) is bool:
             self._include_smearing = value
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("include_smearing was set to a non-bool.")
     
     @property
@@ -1261,7 +1262,7 @@ class Database(object):
         
         value: must be an indexable object containing integers or Nones
         """
-        if (value is None) or (type(value) in int_types):
+        if (type(value) is type(None)) or (type(value) in int_types):
             self._seeds = [value] * self.num_regions
         elif type(value) in sequence_types:
             value = np.array(value)
@@ -1334,7 +1335,7 @@ class Database(object):
         """
         if type(value) is FunctionType:
             self._calibration_equation = value
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("The calibration equation given to a " +\
                             "Database was not a function.")
 
@@ -1362,7 +1363,7 @@ class Database(object):
         value must be a dictionary with keys which are all strings
         """
         to_set = self._check_kwargs_to_set(value)
-        if to_set is not None:
+        if type(to_set) is not type(None):
             self._all_reference_calibration_parameters = to_set
     
     
@@ -1454,7 +1455,8 @@ class Database(object):
                 save_prefix = save_prefix + '_FFT'
         else:
             save_prefix = None
-        if (rotation_angle is not None) and (self.num_rotation_angles != 1):
+        if (type(rotation_angle) is not type(None)) and\
+            (self.num_rotation_angles != 1):
             irotation_angle =\
                 np.where(self.rotation_angles == rotation_angle)[0][0]
             data_to_plot = self.data[reg,...,irotation_angle,:]

@@ -79,7 +79,7 @@ class RawObservation(object):
     def verbose(self, value):
         if type(value) is bool:
             self._verbose = value
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("verbose was set to a non-bool.")
     
     @property
@@ -95,7 +95,7 @@ class RawObservation(object):
     def polarized(self, value):
         if type(value) is bool:
             self._polarized = value
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("polarized was set to a non-bool.")
     
     @property
@@ -111,7 +111,7 @@ class RawObservation(object):
     def include_moon(self, value):
         if type(value) is bool:
             self._include_moon = value
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("Value of include_moon given to " +\
                             "RawObservation was not a Boolean.")
     
@@ -128,7 +128,7 @@ class RawObservation(object):
     def moon_temp(self, value):
         if type(value) in real_numerical_types:
             self._moon_temp = value
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("Type of moon temperature was not numerical.")
     
     @property
@@ -158,7 +158,7 @@ class RawObservation(object):
         
         value a 1D numpy.ndarray of length npix associated with self.nside
         """
-        if value is not None:
+        if type(value) is not type(None):
             try:
                 value = np.array(value)
             except:
@@ -204,7 +204,7 @@ class RawObservation(object):
         """
         if type(value) is FunctionType:
             self._inverse_calibration_equation = value
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("The inverse calibration equation given to " +\
                             "a RawObservation was not a function.")
     
@@ -236,7 +236,7 @@ class RawObservation(object):
             else:
                 raise TypeError("Types of keys to dictionary passed as " +\
                                 "true_calibration_parameters not all string!")
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("true_calibration_parameters given to " +\
                             "RawObservation was not a dictionary.")
     
@@ -288,7 +288,7 @@ class RawObservation(object):
         value a _PolarizedBeam object if self.polarized==True
               a _TotalPowerBeam object if self.polarized==False
         """
-        if value is not None:
+        if type(value) is not type(None):
             self._check_beam_type(value)
             self._beam = value
     
@@ -325,7 +325,7 @@ class RawObservation(object):
                 raise TypeError("RawObservation expected a pointing " +\
                                 "of length 2 ([lat, lon] in degrees), but " +\
                                 "didn't get one.")
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("RawObservation expected a pointing of " +\
                             "sequence type but didn't get one.")
     
@@ -352,7 +352,7 @@ class RawObservation(object):
         """
         if type(value) in real_numerical_types:
             self._psi = value
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("psi value given to RawObservation was " +\
                             "not of numerical type.")
     
@@ -386,7 +386,7 @@ class RawObservation(object):
                                  "numpy.ndarray which wasn't 1D.")
         elif type(value) in real_numerical_types:
             self._rotation_angles = np.array([value])
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("rotation_angles was set to something which " +\
                             "was neither a number or a 1D sequence of " +\
                             "numbers.")
@@ -422,7 +422,7 @@ class RawObservation(object):
         
         value a 1D numpy.ndarray of float frequencies
         """
-        if value is not None:
+        if type(value) is not type(None):
             propval = np.array(value)
             if propval.ndim == 1:
                 self._frequencies = propval
@@ -442,7 +442,7 @@ class RawObservation(object):
     def channel_widths(self, value):
         """
         """
-        if value is not None:
+        if type(value) is not type(None):
             if value.shape == self.frequencies.shape:
                 self._channel_widths = value
             else:
@@ -480,7 +480,7 @@ class RawObservation(object):
                         del self._foreground_kwargs[key]
             else:
                 raise ValueError("foreground_kwargs keys must all be strings.")
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("foreground_kwargs must be a dictionary.")
     
     @property
@@ -522,7 +522,7 @@ class RawObservation(object):
                 raise ValueError("signal_data which was not a dictionary " +\
                                  "did not have the right shape (correct " +\
                                  "shape is (2, self.Nchannels))")
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("signal_data given to RawObservation was " +\
                             "neither a dictionary or a 2D sequence.")
     
@@ -596,7 +596,7 @@ class RawObservation(object):
     def tint(self, value):
         if (type(value) in real_numerical_types) and (value > 0.):
             self._tint = value
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("tint must be an integer or float which is " +\
                             "positive.")
     
@@ -613,7 +613,7 @@ class RawObservation(object):
     def include_signal(self, value):
         if type(value) is bool:
             self._include_signal = value
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("include_signal was set to a non-bool.")
     
     @property
@@ -629,7 +629,7 @@ class RawObservation(object):
     def include_foreground(self, value):
         if type(value) is bool:
             self._include_foreground = value
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("include_foreground was set to a non-bool.")
     
     @property
@@ -644,7 +644,7 @@ class RawObservation(object):
     def include_smearing(self, value):
         if type(value) is bool:
             self._include_smearing = value
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("include_smearing was set to a non-bool.")
     
     @property
@@ -655,7 +655,7 @@ class RawObservation(object):
     
     @seed.setter
     def seed(self, value):
-        if (value is None) or (type(value) in int_types):
+        if (type(value) is type(None)) or (type(value) in int_types):
             self._seed = value
         else:
             raise TypeError("seed given to RawObservation must be None or " +\

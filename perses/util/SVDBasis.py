@@ -3,7 +3,7 @@ import numpy.linalg as npla
 import scipy.linalg as scila
 
 def weighted_SVD_basis(curves, error, Neigen=None):
-    if Neigen is None:
+    if type(Neigen) is type(None):
         Neigen = len(error)
     Cinv = np.diag(np.power(error, -2))
     matrix_G = np.dot(curves.T, np.dot(curves, Cinv))
@@ -31,7 +31,7 @@ def SVD_basis(curves, Neigen=None, return_importances=False):
             importances of Neigen modes (only if return_importances is True)
     """
     U, importances, basis = npla.svd(curves, full_matrices=True, compute_uv=True)
-    if Neigen is not None:
+    if type(Neigen) is not type(None):
         try:
             Neigen = int(Neigen)
         except:
@@ -86,7 +86,7 @@ def SVD_coeff(curves, basis, error=None, orthonormal=True):
             for ith curve in result[:,i] or numpy.ndarray of shape (Neigen,)
             if only one curve is given.
     """
-    if error is None:
+    if type(error) is type(None):
         return npla.lstsq(basis.T, curves.T)[0]
     else:
         norm = npla.inv(np.dot(basis / error, (basis / error).T))
@@ -126,9 +126,10 @@ def SVD_rms_residual(curves, basis, error=None):
     
     returns either a numpy.ndarray of shape (Ncurve,) or a single float scalar
     """
-    if error is None:
+    if type(error) is type(None):
         return np.sqrt(np.sum(\
             np.power(SVD_residual(curves, basis), 2), axis=-1))
     else:
-        return np.sqrt(np.sum(np.power(SVD_residual(curves, basis, error=error) / error, 2), axis=-1))
+        return np.sqrt(np.sum(np.power(\
+            SVD_residual(curves, basis, error=error) / error, 2), axis=-1))
 

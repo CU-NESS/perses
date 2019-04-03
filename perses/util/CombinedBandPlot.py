@@ -73,13 +73,13 @@ def get_master_cn_sets(prefix_sets, N, skip, stop, save_data, clobber,\
             print(\
                 "Getting data for ModelSet with prefix {!s}...".format(prefix))
             anl = ModelSet(prefix)
-            if frequencies is None:
+            if type(frequencies) is type(None):
                 frequencies = anl.data.frequencies[0]
             else:
                 assert np.all(frequencies == anl.data.frequencies[0])
-            if include_checkpoints is not None:
+            if type(include_checkpoints) is not type(None):
                 anl.include_checkpoints = include_checkpoints
-            if force_elements is None:
+            if type(force_elements) is type(None):
                 elements = anl._get_random_elements(N, skip, stop)
             else:
                 elements = force_elements
@@ -203,7 +203,7 @@ def combined_band_plot(prefix_sets, file_name, colors, ax=None, N=1e2,\
         noises_by_model[imodel] =\
             noises_by_model[imodel] + true_signals_by_model[imodel]
 
-    if ax is None:
+    if type(ax) is type(None):
         fig = pl.figure()
         ax = fig.add_subplot(111)
     dashed_minmax = []
@@ -211,7 +211,7 @@ def combined_band_plot(prefix_sets, file_name, colors, ax=None, N=1e2,\
     stat_minmax = []
     for imodel in range(len(prefix_sets)):
         label = labels[imodel]
-        if true_signal_by_model is not None:
+        if type(true_signal_by_model) is not type(None):
             ax.plot(frequencies, true_signal_by_model[imodel],\
                 color=colors[imodel], linewidth=2, linestyle='-',\
                 label='input')
@@ -239,7 +239,7 @@ def combined_band_plot(prefix_sets, file_name, colors, ax=None, N=1e2,\
         print(("RMS of model #{0} when measured from the mean is {1:.3g} " +\
             "at maximum, {2:.3g} on average, and {3:.3g} RMS.").format(imodel,\
             np.max(rmss), np.mean(rmss), np.sqrt(np.mean(np.power(rmss, 2)))))
-        if true_signal_by_model is not None:
+        if type(true_signal_by_model) is not type(None):
             rms_from_true = rms_distance_from_curve(curves_by_model[imodel],\
                 true_signal_by_model[imodel])
             print(("RMS of model #{0} when measured from the input is " +\
@@ -254,7 +254,7 @@ def combined_band_plot(prefix_sets, file_name, colors, ax=None, N=1e2,\
                 include_curve=true_signal_by_model[imodel],\
                 force_include=force_include, minmax_only=False,\
                 print_rms=False)[1])
-    if legend_kwargs is None:
+    if type(legend_kwargs) is type(None):
         legend = ax.legend([], [])
         legend.remove()
     else:
@@ -317,7 +317,7 @@ def combined_band_plot(prefix_sets, file_name, colors, ax=None, N=1e2,\
 #    band_minmax = []
 #    stat_minmax = []
 #    for imodel in range(len(prefix_sets)):
-#        if true_signal_by_model is not None:
+#        if type(true_signal_by_model) is not type(None):
 #            ax1.plot(frequencies, true_signal_by_model[imodel],\
 #                color=colors[imodel], linewidth=2, linestyle='-',\
 #                label='input')
@@ -340,7 +340,7 @@ def combined_band_plot(prefix_sets, file_name, colors, ax=None, N=1e2,\
 #        print(("RMS of model #{0} when measured from the middle of the " +\
 #            "band ({0}%) is {0} at maximum and {0} on average.").format(\
 #            imodel, dashed_percent, np.max(rmss), np.mean(rmss)))
-#        #if true_signal_by_model is not None:
+#        #if type(true_signal_by_model) is not type(None):
 #        #    stat_minmax.append(curve_plot_from_data(frequencies,\
 #        #        noises_by_model[imodel], plot_band[0], False, ax1, '',\
 #        #        ylabels[0], label='statistical {!s}'.format(band_percent),\
@@ -349,7 +349,7 @@ def combined_band_plot(prefix_sets, file_name, colors, ax=None, N=1e2,\
 #        #        minmax_only=False)[1])
 #    ax1.set_xticklabels([''] * len(ax1.get_xticklabels()))
 #    ax1.set_yticks(ax1.get_yticks()[1:])
-#    if legend_kwargs[0] is None:
+#    if type(legend_kwargs[0]) is type(None):
 #        legend = ax1.legend([], [])
 #        legend.remove()
 #    else:
@@ -357,7 +357,7 @@ def combined_band_plot(prefix_sets, file_name, colors, ax=None, N=1e2,\
 #    ax1.set_xlim((frequencies[0], frequencies[-1]))
 #    #ax2 = fig.add_subplot(212)
 #    #for imodel in range(len(prefix_sets)):
-#    #    if true_signal_by_model is not None:
+#    #    if type(true_signal_by_model) is not type(None):
 #    #        ax2.plot(frequencies, np.zeros_like(frequencies),\
 #    #            color=colors[imodel], linewidth=3, linestyle='-',\
 #    #            label='input')
@@ -374,7 +374,7 @@ def combined_band_plot(prefix_sets, file_name, colors, ax=None, N=1e2,\
 #    #        color=colors[imodel],\
 #    #        label='systematic {!s}'.format(band_percent),\
 #    #        include_curve=np.zeros_like(frequencies), minmax_only=False)
-#    #    if true_signal_by_model is not None:
+#    #    if type(true_signal_by_model) is not type(None):
 #    #        curve_plot_from_data(frequencies,\
 #    #            noises_by_model[imodel] - true_signals_by_model[imodel],\
 #    #            plot_band[0], False, ax2, xlabel, ylabels[1], alpha=0.5,\
@@ -382,7 +382,7 @@ def combined_band_plot(prefix_sets, file_name, colors, ax=None, N=1e2,\
 #    #            label='statistical {!s}'.format(band_percent),\
 #    #            include_curve=np.zeros_like(frequencies), minmax_only=False)
 #    #ax2.set_yticks(ax2.get_yticks()[:-1])
-#    #if legend_kwargs[1] is None:
+#    #if type(legend_kwargs[1]) is type(None):
 #    #    legend = ax2.legend([], [])
 #    #    legend.remove()
 #    #else:

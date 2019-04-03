@@ -42,7 +42,7 @@ def write_encrypted_signal(frequencies, signal_in_mK, file_name,\
     noise_magnitude: magnitude of the noise added to signal to garble it
     seed: if None (default), random seed is generated and saved in the file
     """
-    if seed is None:
+    if type(seed) is type(None):
         seed = np.random.randint(2 ** 32)
     random = np.random.RandomState(seed=seed)
     noise = random.normal(0, 1, size=signal_in_mK.shape) * noise_magnitude

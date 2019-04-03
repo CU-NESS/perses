@@ -39,7 +39,7 @@ class _GaussianBeam(object):
 
     @y_fwhm.setter
     def y_fwhm(self, value):
-        if (value is None) or (type(value) is FunctionType):
+        if (type(value) is type(None)) or (type(value) is FunctionType):
             self._y_fwhm = value
         else:
             raise AttributeError("If y_fwhm is given, it must be a single " +\
@@ -48,7 +48,7 @@ class _GaussianBeam(object):
     @property
     def circular(self):
         if not hasattr(self, '_circular'):
-            self._circular = (self.y_fwhm is None)
+            self._circular = (type(self.y_fwhm) is type(None))
         return self._circular
     
     @property

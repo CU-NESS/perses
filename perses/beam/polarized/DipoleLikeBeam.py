@@ -23,7 +23,7 @@ class DipoleLikeBeam(_PolarizedBeam):
     
     @modulating_function.setter
     def modulating_function(self, value):
-        if value is None:
+        if type(value) is type(None):
             self._modulating_function = None
         elif type(value) is FunctionType:
             self._modulating_function = value
@@ -66,7 +66,7 @@ class DipoleLikeBeam(_PolarizedBeam):
         numfreqs = len(frequencies)
         npix = hp.pixelfunc.nside2npix(nside)
         patterns = self.dipole_pattern(nside)
-        if self.modulating_function is None:
+        if type(self.modulating_function) is type(None):
             # just expand frequency dimension to correct size
             patterns = patterns * np.ones(numfreqs)[np.newaxis,:,np.newaxis]
         else:

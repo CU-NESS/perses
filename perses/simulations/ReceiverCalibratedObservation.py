@@ -81,7 +81,7 @@ class ReceiverCalibratedObservation(RawObservation):
         """
         if type(value) is FunctionType:
             self._calibration_equation = value
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("The calibration equation given to a " +\
                             "RawObservation was not a function.")
 
@@ -115,7 +115,7 @@ class ReceiverCalibratedObservation(RawObservation):
                 raise TypeError("Types of keys to dictionary passed as " +\
                                 "reference_calibration_parameters not all " +\
                                 "string!")
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("reference_calibration_parameters given to " +\
                             "RawObservation was not a dictionary.")
         

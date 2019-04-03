@@ -217,7 +217,7 @@ class AresSignalModel(LoadableModel):
         value: dictionary with string keys and string, number, or bool values
                ("small" numpy.ndarray objects are also acceptable values)
         """
-        if value is None:
+        if type(value) is type(None):
             self._simple_kwargs = {}
         elif isinstance(value, dict):
             if all([isinstance(key, basestring) for key in value]):
@@ -269,7 +269,7 @@ class AresSignalModel(LoadableModel):
                           bool values ("small" numpy.ndarray objects are also
                           acceptable values)
         """
-        if value is None:
+        if type(value) is type(None):
             self._synthesis_model_kwargs = None
         elif isinstance(value, dict):
             if all([isinstance(key, basestring) for key in value]):
@@ -297,7 +297,7 @@ class AresSignalModel(LoadableModel):
                 self._ares_kwargs = {}
             self._ares_kwargs.update(self.simple_kwargs)
             self._ares_kwargs['output_frequencies'] = self.frequencies
-            if self.synthesis_model_kwargs is not None:
+            if type(self.synthesis_model_kwargs) is not type(None):
                 pop = SynthesisModel(**self.synthesis_model_kwargs)
                 junk = pop.L1600_per_sfr
                 self._ares_kwargs['pop_sed_by_Z{0}'] =\
@@ -413,7 +413,7 @@ class AresSignalModel(LoadableModel):
         subgroup = group.create_group('simple_kwargs')
         for key in self.simple_kwargs:
             subgroup.attrs[key] = self.simple_kwargs[key]
-        if self.synthesis_model_kwargs is not None:
+        if type(self.synthesis_model_kwargs) is not type(None):
             subgroup = group.create_group('synthesis_model_kwargs')
             for key in self.synthesis_model_kwargs:
                 subgroup.attrs[key] = self.synthesis_model_kwargs[key]

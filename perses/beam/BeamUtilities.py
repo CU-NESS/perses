@@ -966,7 +966,7 @@ def linear_to_dB(lin_data, reference=None):
     
     returns version of lin_data in logarithmic units
     """
-    if reference is None:
+    if type(reference) is type(None):
         reference = np.max(lin_data)
     return 10. * np.log10(lin_data / reference)
 

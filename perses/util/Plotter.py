@@ -113,7 +113,7 @@ elif mode in ['signal', 'residuals', 'additive_biases',\
             context.update(imports)
             evalled_string = eval(val, context)
             if var in ['true', 'signal', 'gain', 'offset']:
-                if true_given is not None:
+                if type(true_given) is not type(None):
                     raise ValueError("More than one of the arguments " +\
                                      "from ['true', 'signal', 'gain', " +\
                                      "'offset'] was supplied but these " +\
@@ -143,7 +143,7 @@ elif mode in ['signal', 'residuals', 'additive_biases',\
         plot_string = plot_string + word[0].upper() + word[1:]
     plot_string = plot_string + '(**kwargs)'
     exec(plot_string)
-    if true_given is not None:
+    if type(true_given) is not type(None):
         frequencies = anl.data.attrs['frequencies']
         pl.plot(frequencies, true_given, linewidth=2,\
             label='input', color='k')

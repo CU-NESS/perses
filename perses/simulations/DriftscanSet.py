@@ -205,7 +205,7 @@ class DriftscanSet(Savable, Loadable):
         value: list of (unique) strings whose length is given by the number of
                curves in the temperatures array property.
         """
-        if value is None:
+        if type(value) is type(None):
             self._curve_names =\
                 ['curve_{}'.format(index) for index in range(self.num_curves)]
         elif type(value) in sequence_types:
@@ -266,7 +266,7 @@ class DriftscanSet(Savable, Loadable):
                  default, this is None, which means all spectra are equally
                  weighted
         """
-        if weights is None:
+        if type(weights) is type(None):
             weights = np.ones_like(self.times)
         weight_sum = np.sum(weights)
         self.times = np.array([np.sum(self.times * weights) / weight_sum])
@@ -442,7 +442,7 @@ class DriftscanSet(Savable, Loadable):
         returns: if curve_index is a slice, an array, or None, returns 3D array
                  otherwise, returns a 2D array
         """
-        if curve_index is None:
+        if type(curve_index) is type(None):
             return self.temperatures
         elif (type(curve_index) in int_types) or\
             isinstance(curve_index, slice):
@@ -515,7 +515,7 @@ class DriftscanSet(Savable, Loadable):
         
         returns: None if show is False, Axes on which plot was made otherwise
         """
-        if ax is None:
+        if type(ax) is type(None):
             fig = pl.figure()
             ax = fig.add_subplot(111)
         channels = np.arange(self.num_channels)
@@ -540,7 +540,7 @@ class DriftscanSet(Savable, Loadable):
         ax.tick_params(labelsize=fontsize, width=2.5, length=7.5,\
             which='major')
         ax.tick_params(width=1.5, length=4.5, which='minor')
-        if label is not None:
+        if type(label) is not type(None):
             ax.legend(fontsize=fontsize)
         if show:
             pl.show()
@@ -572,7 +572,7 @@ class DriftscanSet(Savable, Loadable):
             (type(curve_index) not in int_types):
             raise TypeError("curve_index must be either a single integer " +\
                 "index or a single string in the curve_names array property.")
-        if ax is None:
+        if type(ax) is type(None):
             fig = pl.figure()
             ax = fig.add_subplot(111)
         (left, right) = (self.frequencies[0], self.frequencies[-1])
@@ -635,7 +635,7 @@ class DriftscanSet(Savable, Loadable):
         times_to_plot = self.times
         if hour_units:
             times_to_plot = times_to_plot * 24
-        if ax is None:
+        if type(ax) is type(None):
             fig = pl.figure()
             ax = fig.add_subplot(111)
         if temperatures.ndim == 1:
@@ -659,7 +659,7 @@ class DriftscanSet(Savable, Loadable):
         ax.tick_params(labelsize=fontsize, width=2.5, length=7.5,\
             which='major')
         ax.tick_params(width=1.5, length=4.5, which='minor')
-        if label is not None:
+        if type(label) is not type(None):
             ax.legend(fontsize=fontsize)
         if show:
             pl.show()
@@ -694,7 +694,7 @@ class DriftscanSet(Savable, Loadable):
         else:
             raise ValueError("time_index did not satisfy " +\
                 "0<=time_index<self.num_times")
-        if ax is None:
+        if type(ax) is type(None):
             fig = pl.figure()
             ax = fig.add_subplot(111)
         if temperatures.ndim == 1:
@@ -721,7 +721,7 @@ class DriftscanSet(Savable, Loadable):
         ax.tick_params(labelsize=fontsize, width=2.5, length=7.5,\
             which='major')
         ax.tick_params(width=1.5, length=4.5, which='minor')
-        if label is not None:
+        if type(label) is not type(None):
             ax.legend(fontsize=fontsize)
         if show:
             pl.show()

@@ -85,7 +85,7 @@ def plot_beam_weighted_moon_blocking_fraction(frequencies, rotation_angles,\
         raise TypeError("beam_weighted_moon_blocking_fraction given was " +\
                         "not of a valid shape. It should have the same " +\
                         "number of dimensions as the data of the observation.")
-    if save_file is not None:
+    if type(save_file) is not type(None):
         pl.savefig(save_file)
     if show:
         pl.show()
@@ -209,14 +209,14 @@ def plot_data(polarized, frequencies, rotation_angles, data, which='all',\
                 if oneD:
                     pl.plot(frequencies, data_to_plot[iwhich_stokes],\
                         **plot_kwargs)
-                    if error is not None:
+                    if type(error) is not type(None):
                         pl.fill_between(frequencies,\
                             (data_to_plot - error)[iwhich_stokes],\
                             (data_to_plot + error)[iwhich_stokes], alpha=0.5)
                 else:
                     pl.imshow(data_to_plot[iwhich_stokes], **plot_kwargs)
                 add_title_colorbar_and_labels(which_stokes, oneD)
-                if save_prefix is not None:
+                if type(save_prefix) is not type(None):
                     pl.savefig(save_prefix + '_' + which_stokes + '.png')
         if which in ['all', 'Ip']:
             pl.figure(figsize=figsize)
@@ -225,19 +225,19 @@ def plot_data(polarized, frequencies, rotation_angles, data, which='all',\
             else:
                 pl.imshow(Ip, **plot_kwargs)
             add_title_colorbar_and_labels('I_p', oneD) # underscore for TeX
-            if save_prefix is not None:
+            if type(save_prefix) is not type(None):
                 pl.savefig(save_prefix + '_Ip.png')
     elif which in ['all', 'I']:
         pl.figure(figsize=figsize)
         if oneD:
             pl.plot(frequencies, data_to_plot, **plot_kwargs)
-            if error is not None:
+            if type(error) is not type(None):
                 pl.fill_between(frequencies, data_to_plot - error,\
                     data_to_plot + error, alpha=0.5)
         else:
             pl.imshow(data_to_plot, **plot_kwargs)
         add_title_colorbar_and_labels('I', oneD)
-        if save_prefix is not None:
+        if type(save_prefix) is not type(None):
             pl.savefig(save_prefix + '_I.png')
     else:
         raise ValueError("Only values of which allowed when " +\
@@ -286,7 +286,7 @@ def plot_fourier_component(polarized, frequencies, num_rotation_angles,\
         ax.set_ylabel("Phase of FFT ($\circ$)")
         ax.set_xlabel("Frequency (MHz)")
         pl.subplots_adjust(hspace=0)
-        if save_prefix is not None:
+        if type(save_prefix) is not type(None):
             pl.savefig(save_prefix + '_' + which + '.png')
     if polarized:
         stokes_names = ['I', 'Q', 'U', 'V', 'Ip']
@@ -338,7 +338,7 @@ def plot_QU_phase_difference(polarized, frequencies, data_frequencies,\
     pl.xlabel("Harmonic $n$ (as multiples of $f_{rotation}$)")
     pl.ylabel("Phase of FFT")
     pl.title('Phase difference vs. Harmonic number' + title_extra)
-    if save_file is not None:
+    if type(save_file) is not type(None):
         pl.savefig(save_file)
     if show:
         pl.show()

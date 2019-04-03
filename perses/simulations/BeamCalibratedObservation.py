@@ -139,7 +139,7 @@ class BeamCalibratedObservation(ReceiverCalibratedObservation):
     def fit_function(self, value):
         if type(value) is FunctionType:
             self._fit_function = value
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("fit_function was set to something which was " +\
                             "not a function.")
     
@@ -161,7 +161,7 @@ class BeamCalibratedObservation(ReceiverCalibratedObservation):
             else:
                 raise ValueError("All keys of fit_function_kwargs " +\
                                  "must be strings.")
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("fit_function_kwargs was set to a non-dict.")
     
     @property
@@ -187,7 +187,7 @@ class BeamCalibratedObservation(ReceiverCalibratedObservation):
         ]
         if value in acceptable_knowledge_usages:
             self._knowledge_usage = value
-        elif value is not None:
+        elif type(value) is not type(None):
             raise ValueError(("knowledge_usage was set to something which " +\
                 "was not in the list of acceptable values, which are " +\
                 "{!s}.").format(acceptable_knowledge_usage))
@@ -215,7 +215,7 @@ class BeamCalibratedObservation(ReceiverCalibratedObservation):
     
     @known_beam.setter
     def known_beam(self, value):
-        if value is None:
+        if type(value) is type(None):
             return
         self._check_beam_type(value)
         self._known_beam = value
@@ -276,7 +276,7 @@ class BeamCalibratedObservation(ReceiverCalibratedObservation):
                 raise TypeError("BeamCalibratedObservation expected a " +\
                                 "known_pointing of length 2 ([lat, lon] in " +\
                                 "degrees), but didn't get one.")
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("BeamCalibratedObservation expected a " +\
                             "known_pointing of sequence type but didn't " +\
                             "get one.")
@@ -304,7 +304,7 @@ class BeamCalibratedObservation(ReceiverCalibratedObservation):
         """
         if type(value) in real_numerical_types:
             self._known_psi = value
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("known_psi value given to " +\
                             "BeamCalibratedObservation was not of " +\
                             "numerical type.")
@@ -322,7 +322,7 @@ class BeamCalibratedObservation(ReceiverCalibratedObservation):
     def known_moon_temp(self, value):
         if type(value) in real_numerical_types:
             self._known_moon_temp = value
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("Type of known_moon_temperature was not " +\
                             "numerical.")
     
@@ -347,7 +347,7 @@ class BeamCalibratedObservation(ReceiverCalibratedObservation):
         
         value a 1D numpy.ndarray of length npix associated with self.nside
         """
-        if value is None:
+        if type(value) is type(None):
             return
         try:
             value = np.array(value)
@@ -398,7 +398,7 @@ class BeamCalibratedObservation(ReceiverCalibratedObservation):
                                  "numpy.ndarray which wasn't 1D.")
         elif type(value) in real_numerical_types:
             self._known_rotation_angles = np.array([value])
-        elif value is not None:
+        elif type(value) is not type(None):
             raise TypeError("known_rotation_angles was set to something " +\
                             "which was neither a number or a 1D sequence " +\
                             "of numbers.")
