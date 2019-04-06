@@ -157,7 +157,6 @@ class _PolarizedBeam(_Beam):
             stokes = np.stack([convolve_maps(spin_maps(stokes, angle,\
                 degrees=degrees, pixel_axis=1, nest=nest), unpol_int,\
                 normed=False, pixel_axis=1) for angle in angles], axis=1)
-        
         if polarized:
             stokes += polarized_stokes
             extra_string = 'both polarized and '
@@ -192,13 +191,18 @@ class _PolarizedBeam(_Beam):
             nside, pointing, psi, normed=False, **map_kwargs))
         beams = (beams / (4 * np.pi * np.mean(beams[0])))
         beam_comps = ['I', 'Q', 'U', 'V']
+        mollview_kwargs['hold'] = True
+        fig = pl.figure(figsize=(20, 12))
         for ibeam_comp in range(4):
+            ax = fig.add_subplot(2, 2, 1 + ibeam_comp)
             hp.mollview(beams[ibeam_comp], **mollview_kwargs)
-            pl.title('{0!s} {1!s} beam'.format(title, beam_comps[ibeam_comp]),\
-                size=fontsize)
+            pl.gca().set_title('{0!s} {1!s} beam'.format(title,\
+                beam_comps[ibeam_comp]), size=fontsize)
         if show:
             pl.show()
-        return beams
+            return beams
+        else:
+            return (fig, beams)
 
     def plot_grid(self, title, frequency, theta_res, phi_res, pointing, psi,\
         grid_kwargs={}, plot_kwargs={}, show=False):
