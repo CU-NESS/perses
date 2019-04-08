@@ -8,8 +8,10 @@ from perses.util.Sites import sites as observing_sites
 from perses.util.SphericalHarmonics import decompose_polar_function_legendre,\
     spherical_harmonic_fit, polar_weighted_spherical_harmonic_fit,\
     reorganize_spherical_harmonic_coefficients
-from perses.util.Spline import cubic_spline_real, cubic_spline_complex,\
-    quintic_spline_real, quintic_spline_complex
+from perses.util.Spline import linear_spline_real, linear_spline_complex,\
+    cubic_spline_real, cubic_spline_complex, quintic_spline_real,\
+    quintic_spline_complex, highest_spline_order_from_num_points,\
+    highest_spline_real, highest_spline_complex
 from perses.util.MakeVideo import make_video
 from perses.util.SignalExpander import ideal_signal_expander,\
     make_signal_expander

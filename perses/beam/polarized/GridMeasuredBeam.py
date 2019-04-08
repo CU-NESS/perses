@@ -3,6 +3,7 @@ from types import FunctionType
 import time
 import numpy as np
 import matplotlib.pyplot as pl
+from pylinex import Loadable, Savable, create_hdf5_dataset, get_hdf5_value
 from ...util import ParameterFile, sequence_types, real_numerical_types,\
     quintic_spline_complex
 from ..BeamUtilities import rotate_map, rotate_maps, integrate_grids,\
@@ -25,13 +26,13 @@ try:
 except ImportError:
     have_mp = False
 
-class GridMeasuredBeam(_PolarizedBeam):
+class GridMeasuredBeam(_PolarizedBeam, Loadable, Savable):
     """
     Class enabling the modeling of real beams using data. Data is kept
     and used as a grid in frequency, theta, and phi.
     """
     def __init__(self, frequencies, thetas, phis, JthetaX, JthetaY, JphiX,\
-        JphiY, **kwargs):
+        JphiY):
         """
         GridMeasuredBeam constructor
 
@@ -41,11 +42,38 @@ class GridMeasuredBeam(_PolarizedBeam):
                     electric field which the (W) arm of the given antenna emits
                     in the (alpha) direction when in transmit mode
         """
-        self.pf = ParameterFile(**kwargs)
         self.frequencies = frequencies
         self.thetas = thetas
         self.phis = phis
         self.grids = np.stack([JthetaX, JthetaY, JphiX, JphiY], axis=0)
+    
+    def fill_hdf5_group(self, group, grids_link=None):
+        """
+        A function which fills the given hdf5 file group with information about
+        this Savable object. This function raises an error unless it is
+        implemented by all subclasses of Savable.
+        
+        group: hdf5 file group to fill with information about this object
+        """
+        group.attrs['frequencies'] = self.frequencies
+        group.attrs['thetas'] = self.thetas
+        group.attrs['phis'] = self.phis
+        create_hdf5_dataset(group, 'grids', data=self.grids, link=grids_link)
+    
+    @staticmethod
+    def load_from_hdf5_group(group):
+        """
+        A function which loads an instance of the current Savable subclass from
+        the given hdf5 file group. This function raises an error unless it is
+        implemented by all subclasses of Savable.
+        
+        group: hdf5 file group from which to load an instance
+        """
+        frequencies = group.attrs['frequencies']
+        thetas = group.attrs['thetas']
+        phis = group.attrs['phis']
+        grids = get_hdf5_value(group['grids'])
+        return GridMeasuredBeam(frequencies, thetas, phis, *grids)
     
     def spin(self, angle, degrees=True):
         """
@@ -159,17 +187,10 @@ class GridMeasuredBeam(_PolarizedBeam):
             raise ValueError("Cannot interpolate to all given frequencies " +\
                 "because at least one was outside the range where data is " +\
                 "available.")
-        num_new_frequencies = len(new_frequencies)
-        new_grids = np.ndarray((4, num_new_frequencies, self.num_thetas,\
-            self.num_phis), dtype=complex)
-        for igrid in range(4):
-            for itheta in range(self.num_thetas):
-                for iphi in range(self.num_phis):
-                    new_grids[igrid,:,itheta,iphi] = quintic_spline_complex(\
-                        new_frequencies, self.frequencies,\
-                        self.grids[igrid,:,itheta,iphi])
+        new_grids = [quintic_spline_complex(new_frequencies, self.frequencies,\
+            grid) for grid in self.grids]
         return GridMeasuredBeam(new_frequencies, self.thetas, self.phis,\
-            *new_grids)
+            *[grid for grid in new_grids])
 
     @property
     def frequencies(self):

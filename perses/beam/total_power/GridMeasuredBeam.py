@@ -3,6 +3,7 @@ from types import FunctionType
 import time
 import numpy as np
 import matplotlib.pyplot as pl
+from pylinex import Loadable, Savable, create_hdf5_dataset, get_hdf5_value
 from ...util import ParameterFile, real_numerical_types, sequence_types,\
     spherical_harmonic_fit, reorganize_spherical_harmonic_coefficients,\
     quintic_spline_real
@@ -23,22 +24,49 @@ try:
 except ImportError:
     have_mp = False
 
-class GridMeasuredBeam(_TotalPowerBeam):
+class GridMeasuredBeam(_TotalPowerBeam, Savable, Loadable):
     """
     Class enabling the modeling of real beams using data. Data is kept
     and used as a grid in frequency, theta, and phi.
     """
-    def __init__(self, frequencies, thetas, phis, beams, **kwargs):
+    def __init__(self, frequencies, thetas, phis, beams):
         """
         GridMeasuredBeam constructor
 
         beam_symmetrized: boolean determining whether beam is averaged in phi
         """
-        self.pf = ParameterFile(**kwargs)
         self.frequencies = frequencies
         self.thetas = thetas
         self.phis = phis
         self.grids = beams
+    
+    def fill_hdf5_group(self, group, grids_link=None):
+        """
+        A function which fills the given hdf5 file group with information about
+        this Savable object. This function raises an error unless it is
+        implemented by all subclasses of Savable.
+        
+        group: hdf5 file group to fill with information about this object
+        """
+        group.attrs['frequencies'] = self.frequencies
+        group.attrs['thetas'] = self.thetas
+        group.attrs['phis'] = self.phis
+        create_hdf5_dataset(group, 'grids', data=self.grids, link=grids_link)
+    
+    @staticmethod
+    def load_from_hdf5_group(group):
+        """
+        A function which loads an instance of the current Savable subclass from
+        the given hdf5 file group. This function raises an error unless it is
+        implemented by all subclasses of Savable.
+        
+        group: hdf5 file group from which to load an instance
+        """
+        frequencies = group.attrs['frequencies']
+        thetas = group.attrs['thetas']
+        phis = group.attrs['phis']
+        grids = get_hdf5_value(group['grids'])
+        return GridMeasuredBeam(frequencies, thetas, phis, grids)
     
     def scale_frequency_space(self, scale_factor):
         """
@@ -108,16 +136,8 @@ class GridMeasuredBeam(_TotalPowerBeam):
             raise ValueError("Cannot interpolate to all given frequencies " +\
                 "because at least one was outside the range where data is " +\
                 "available.")
-        num_new_frequencies = len(new_frequencies)
-        new_grids =\
-            np.ndarray((num_new_frequencies, self.num_thetas, self.num_phis))
-        for itheta in range(self.num_thetas):
-            for iphi in range(self.num_phis):
-                new_grids[:,itheta,iphi] = quintic_spline_real(\
-                    new_frequencies, self.frequencies,\
-                    self.grids[:,itheta,iphi])
         return GridMeasuredBeam(new_frequencies, self.thetas, self.phis,\
-            new_grids)
+            quintic_spline_real(new_frequencies, self.frequencies, self.grids))
     
     def spin(self, angle, degrees=True):
         """
