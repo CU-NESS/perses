@@ -11,7 +11,8 @@ Description: A file with a class which acts as a model wrapper of the
 import numpy as np
 from pylinex import LoadableModel
 from ares.simulations.Global21cm import Global21cm
-from ..util import bool_types, sequence_types
+from ..util import bool_types, sequence_types, create_hdf5_dataset,\
+    get_hdf5_value
 
 class FourParameterModel(LoadableModel):
     """
@@ -172,7 +173,7 @@ class FourParameterModel(LoadableModel):
         group.attrs['class'] = 'FourParameterModel'
         group.attrs['import_string'] =\
             'from perses.models import FourParameterModel'
-        group.create_dataset('frequencies', data=self.frequencies)
+        create_hdf5_dataset(group, 'frequencies', data=self.frequencies)
         group.attrs['in_Kelvin'] = self.in_Kelvin
     
     @staticmethod
@@ -186,7 +187,7 @@ class FourParameterModel(LoadableModel):
         returns: a FourParameterModel created from the information saved in
                  group
         """
-        frequencies = group['frequencies'].value
+        frequencies = get_hdf5_value(group['frequencies'])
         in_Kelvin = group.attrs['in_Kelvin']
         return FourParameterModel(frequencies, in_Kelvin=in_Kelvin)
     

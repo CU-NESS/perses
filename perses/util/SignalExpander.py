@@ -6,6 +6,7 @@ Date: 18 Mar 2019
 Description: File containing functions which generate signal expanders.
 """
 import numpy as np
+from distpy import get_hdf5_value
 from pylinex import RepeatExpander, PadExpander, CompositeExpander,\
     ModulationExpander
 
@@ -47,7 +48,8 @@ def make_signal_expander(training_databases, polarized=None):
     num_regions = len(training_databases)
     for (region, training_database) in enumerate(training_databases):
         bwmbf_key = 'beam_weighted_moon_blocking_fractions'
-        mean_bwmbf = np.mean(training_database[bwmbf_key][()], axis=0)
+        mean_bwmbf =\
+            np.mean(get_hdf5_value(training_database[bwmbf_key]), axis=0)
         if region == 0:
             modulating_factor = np.zeros((num_regions,) +\
                 ((4,) if polarized else ()) + mean_bwmbf.shape)

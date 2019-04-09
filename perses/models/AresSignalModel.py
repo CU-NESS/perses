@@ -13,7 +13,8 @@ from pylinex import LoadableModel
 from ares.util import ParameterBundle
 from ares.sources import SynthesisModel
 from ares.simulations.Global21cm import Global21cm
-from ..util import bool_types, sequence_types
+from ..util import bool_types, sequence_types, create_hdf5_dataset,\
+    get_hdf5_value
 
 try:
     # this runs with no issues in python 2 but raises error in python 3
@@ -402,7 +403,7 @@ class AresSignalModel(LoadableModel):
         group.attrs['class'] = 'AresSignalModel'
         group.attrs['import_string'] =\
             'from perses.models import AresSignalModel'
-        group.create_dataset('frequencies', data=self.frequencies)
+        create_hdf5_dataset(group, 'frequencies', data=self.frequencies)
         group.attrs['in_Kelvin'] = self.in_Kelvin
         subgroup = group.create_group('parameters')
         for (iparameter, parameter) in enumerate(self.parameters):
@@ -428,7 +429,7 @@ class AresSignalModel(LoadableModel):
         
         returns: an AresSignalModel created from the information saved in group
         """
-        frequencies = group['frequencies'].value
+        frequencies = get_hdf5_value(group['frequencies'])
         in_Kelvin = group.attrs['in_Kelvin']
         (subgroup, iparameter, parameters) = (group['parameters'], 0, [])
         while '{:d}'.format(iparameter) in subgroup.attrs:

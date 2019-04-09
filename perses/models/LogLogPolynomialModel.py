@@ -10,7 +10,7 @@ Description: File containing a class representing a foreground model which
 import numpy as np
 from pylinex import load_expander_from_hdf5_group, Basis, LoadableModel,\
     BasisModel, TransformedModel, Fitter
-from ..util import numerical_types
+from ..util import numerical_types, create_hdf5_dataset, get_hdf5_value
 from .ForegroundModel import ForegroundModel
 
 class LogLogPolynomialModel(TransformedModel, LoadableModel, ForegroundModel):
@@ -176,7 +176,7 @@ class LogLogPolynomialModel(TransformedModel, LoadableModel, ForegroundModel):
         group.attrs['class'] = 'LogLogPolynomialModel'
         group.attrs['import_string'] =\
             'from perses.models import LogLogPolynomialModel'
-        group.create_dataset('x_values', data=self.x_values)
+        create_hdf5_dataset(group, 'x_values', data=self.x_values)
         group.attrs['reference_x'] = self.reference_x
         group.attrs['reference_dynamic_range'] = self.reference_dynamic_range
         group.attrs['num_terms'] = self.model.basis.num_basis_vectors
@@ -191,7 +191,7 @@ class LogLogPolynomialModel(TransformedModel, LoadableModel, ForegroundModel):
         
         returns: LogLogPolynomialModel object which was previously saved
         """
-        x_values = group['x_values'].value
+        x_values = get_hdf5_value(group['x_values'])
         reference_x = group.attrs['reference_x']
         reference_dynamic_range = group.attrs['reference_dynamic_range']
         num_terms = group.attrs['num_terms']

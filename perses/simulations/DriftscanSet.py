@@ -9,7 +9,7 @@ Description: File containing a class which, at heart, stores a 3D array of
 """
 import numpy as np
 import matplotlib.pyplot as pl
-from distpy import Savable, Loadable
+from distpy import Savable, Loadable, create_hdf5_dataset, get_hdf5_value
 from perses.util import int_types, bool_types, sequence_types
 
 try:
@@ -312,12 +312,12 @@ class DriftscanSet(Savable, Loadable):
         
         group: hdf5 file group to fill with information about this DriftscanSet
         """
-        group.create_dataset('times', data=self.times)
-        group.create_dataset('frequencies', data=self.frequencies)
-        group.create_dataset('temperatures', data=self.temperatures)
+        create_hdf5_dataset(group, 'times', data=self.times)
+        create_hdf5_dataset(group, 'frequencies', data=self.frequencies)
+        create_hdf5_dataset(group, 'temperatures', data=self.temperatures)
         subgroup = group.create_group('curve_names')
         for (curve_name_index, curve_name) in enumerate(self.curve_names):
-            subgroup.create_dataset('{:d}'.format(curve_name_index),\
+            create_hdf5_dataset(subgroup, '{:d}'.format(curve_name_index),\
                 data=curve_name)
     
     @staticmethod
@@ -329,14 +329,14 @@ class DriftscanSet(Savable, Loadable):
         
         returns: DriftscanSet object loaded from the given hdf5 file group
         """
-        times = group['times'].value
-        frequencies = group['frequencies'].value
-        temperatures = group['temperatures'].value
+        times = get_hdf5_value(group['times'])
+        frequencies = get_hdf5_value(group['frequencies'])
+        temperatures = get_hdf5_value(group['temperatures'])
         subgroup = group['curve_names']
         icurve = 0
         curve_names = []
         while '{:d}'.format(icurve) in subgroup:
-            curve_names.append(subgroup['{:d}'.format(icurve)].value)
+            curve_names.append(get_hdf5_value(subgroup['{:d}'.format(icurve)]))
             icurve += 1
         return DriftscanSet(times, frequencies, temperatures,\
             curve_names=curve_names)

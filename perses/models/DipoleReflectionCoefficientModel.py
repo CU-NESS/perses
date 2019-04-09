@@ -8,7 +8,8 @@ Description: A file with a class which models the reflection coefficient of a
 """
 import numpy as np
 from pylinex import LoadableModel
-from ..util import sequence_types, numerical_types
+from ..util import sequence_types, numerical_types, create_hdf5_dataset,\
+    get_hdf5_value
 from .DipoleImpedanceModel import DipoleImpedanceModel
 
 class DipoleReflectionCoefficientModel(LoadableModel):
@@ -168,7 +169,7 @@ class DipoleReflectionCoefficientModel(LoadableModel):
         group.attrs['class'] = 'DipoleReflectionCoefficientModel'
         group.attrs['import_string'] =\
             'from perses.models import DipoleReflectionCoefficientModel'
-        group.create_dataset('frequencies', data=self.frequencies)
+        create_hdf5_dataset(group, 'frequencies', data=self.frequencies)
         group.attrs['source_impedance'] = self.source_impedance
     
     @staticmethod
@@ -182,7 +183,7 @@ class DipoleReflectionCoefficientModel(LoadableModel):
         returns: DipoleReflectionCoefficientModel created from the information
                  saved in group
         """
-        return DipoleImpedanceModel(group['frequencies'].value,\
+        return DipoleImpedanceModel(get_hdf5_value(group['frequencies']),\
             source_impedance=group.attrs['source_impedance'])
     
     def __eq__(self, other):

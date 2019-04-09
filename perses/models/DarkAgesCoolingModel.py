@@ -9,8 +9,9 @@ Description: File containing Tanh21cmModel class as an extension of pylinex's
 import numpy as np
 from ares.physics import Hydrogen, Cosmology
 from ares.physics.Constants import nu_0_mhz
-from pylinex import LoadableModel, get_hdf5_value
-from ..util import sequence_types, bool_types
+from pylinex import LoadableModel
+from ..util import sequence_types, bool_types, create_hdf5_dataset,\
+    get_hdf5_value
 
 class DarkAgesCoolingModel(LoadableModel):
     """
@@ -165,7 +166,7 @@ class DarkAgesCoolingModel(LoadableModel):
         group.attrs['import_string'] =\
             'from perses.models import DarkAgesCoolingModel'
         group.attrs['in_Kelvin'] = self.in_Kelvin
-        group.create_dataset('frequencies', data=self.frequencies)
+        create_hdf5_dataset(group, 'frequencies', data=self.frequencies)
     
     @staticmethod
     def load_from_hdf5_group(group):

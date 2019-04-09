@@ -12,7 +12,7 @@ import os, h5py
 from types import FunctionType
 import numpy as np
 from ..util import int_types, real_numerical_types, sequence_types,\
-    read_encrypted_signal
+    read_encrypted_signal, create_hdf5_dataset
 from ..foregrounds import Galaxy, HaslamGalaxy
 from ..beam.total_power.BaseTotalPowerBeam import _TotalPowerBeam
 from ..beam.polarized.BasePolarizedBeam import _PolarizedBeam
@@ -1393,7 +1393,8 @@ class Database(object):
             'raw_error', 'error'\
         ]
         for dataset in datasets_to_save:
-            hdf5_file.create_dataset(dataset, data=getattr(self, dataset))
+            create_hdf5_dataset(hdf5_file, dataset,\
+                data=getattr(self, dataset))
         attributes_to_save =\
         [\
             'frequencies', 'num_regions', 'num_rotation_angles',\

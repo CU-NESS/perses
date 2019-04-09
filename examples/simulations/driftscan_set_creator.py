@@ -11,7 +11,7 @@ import numpy as np
 import numpy.linalg as la
 import matplotlib.pyplot as pl
 import healpy as hp
-from distpy import GaussianDistribution
+from distpy import GaussianDistribution, get_hdf5_value
 from perses.foregrounds import Galaxy
 from perses.simulations import EDGESObservatory
 from perses.simulations.Driftscan import smear_maps_through_LST
@@ -76,8 +76,8 @@ channels = np.arange(nchannel)
 hdf5_file = h5py.File(file_name, 'r')
 for ibeam in range(nbeams):
     for imaps in range(nmaps):
-        pl.scatter(channels,\
-            hdf5_file['beam_{0:d}_maps_{1:d}'.format(ibeam, imaps)].value)
+        pl.scatter(channels, get_hdf5_value(\
+            hdf5_file['beam_{0:d}_maps_{1:d}'.format(ibeam, imaps)]))
 hdf5_file.close()
 os.remove(file_name)
 pl.show()

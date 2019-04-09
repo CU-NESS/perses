@@ -9,6 +9,7 @@ Description: File containing class which creates sets of foreground curves
 """
 import os, time, h5py
 import numpy as np
+from distpy import create_hdf5_dataset, get_hdf5_value
 from ..util import bool_types, sequence_types
 from .GroundObservatory import GroundObservatory
 from .DriftscanSet import DriftscanSet
@@ -315,7 +316,7 @@ class DriftscanSetCreator(object):
                     for ilst in range(self.nlst_intervals):
                          convolution[ilst,:] = self.simulate_single_spectrum(\
                              beam, maps, ilst, **kwargs)
-                    self.file['temperatures'].create_dataset(\
+                    create_hdf5_dataset(self.file['temperatures'],\
                         'beam_{0:d}_maps_{1:d}'.format(ibeam, imaps),\
                         data=convolution)
                     completed += 1
@@ -342,15 +343,17 @@ class DriftscanSetCreator(object):
             else:
                 self._file = h5py.File(self.file_name, 'w')
                 self._file.create_group('temperatures')
-                self._file.create_dataset('frequencies', data=self.frequencies)
-                self._file.create_dataset('times', data=self.nominal_lsts)
+                create_hdf5_dataset(self._file, 'frequencies',\
+                    data=self.frequencies)
+                create_hdf5_dataset(self._file, 'times',\
+                    data=self.nominal_lsts)
                 group = self._file.create_group('beam_names')
                 for (beam_name_index, beam_name) in enumerate(self.beam_names):
-                    group.create_dataset('{:d}'.format(beam_name_index),\
+                    create_hdf5_dataset(group, '{:d}'.format(beam_name_index),\
                         data=beam_name)
                 group = self._file.create_group('map_names')
                 for (map_name_index, map_name) in enumerate(self.map_names):
-                    group.create_dataset('{:d}'.format(map_name_index),\
+                    create_hdf5_dataset(group, '{:d}'.format(map_name_index),\
                         data=map_name)
                 self._file.attrs['next_index'] = 0
         return self._file
@@ -382,7 +385,8 @@ class DriftscanSetCreator(object):
         for ibeam in range(self.nbeams):
             for imaps in range(self.nmaps):
                 dataset_name = 'beam_{0:d}_maps_{1:d}'.format(ibeam, imaps)
-                training_set[ibeam,imaps,:,:] = group[dataset_name].value
+                training_set[ibeam,imaps,:,:] =\
+                    get_hdf5_value(group[dataset_name])
         self.close()
         if flatten_identifiers:
             training_set =\
@@ -422,8 +426,8 @@ class DriftscanSetCreator(object):
                  as last element of tuple.
         """
         hdf5_file = h5py.File(file_name, 'r')
-        frequencies = hdf5_file['frequencies'].value
-        nominal_lsts = hdf5_file['times'].value
+        frequencies = get_hdf5_value(hdf5_file['frequencies'])
+        nominal_lsts = get_hdf5_value(hdf5_file['times'])
         (nlst, nfreq) = (len(nominal_lsts), len(frequencies))
         group = hdf5_file['temperatures']
         nbeams = 0
@@ -435,8 +439,8 @@ class DriftscanSetCreator(object):
         training_set = np.ndarray((nbeams, nmaps, nlst, nfreq))
         for ibeam in range(nbeams):
             for imaps in range(nmaps):
-                training_set[ibeam,imaps,:,:] =\
-                    group['beam_{0}_maps_{1}'.format(ibeam, imaps)].value
+                training_set[ibeam,imaps,:,:] = get_hdf5_value(\
+                    group['beam_{0}_maps_{1}'.format(ibeam, imaps)])
         hdf5_file.close()
         if flatten_identifiers:
             training_set =\
@@ -474,13 +478,13 @@ class DriftscanSetCreator(object):
         ibeam = 0
         beam_names = []
         while '{:d}'.format(ibeam) in group:
-            beam_names.append(group['{:d}'.format(ibeam)].value)
+            beam_names.append(get_hdf5_value(group['{:d}'.format(ibeam)]))
             ibeam += 1
         group = hdf5_file['map_names']
         imap = 0
         map_names = []
         while '{:d}'.format(imap) in group:
-            map_names.append(group['{:d}'.format(imap)].value)
+            map_names.append(get_hdf5_value(group['{:d}'.format(imap)]))
             imap += 1
         hdf5_file.close()
         curve_names = sum([['{0!s}_{1!s}'.format(beam_name, map_name)\

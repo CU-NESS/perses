@@ -13,8 +13,9 @@ from ares.util import ParameterFile
 from ares.physics import Hydrogen, Cosmology, RateCoefficients
 from ares.physics.Constants import k_B, J21_num, nu_0_mhz
 from pylinex import LoadableModel, FixedModel, DistortedModel, SumModel,\
-    RenamedModel, TanhModel, get_hdf5_value
-from ..util import sequence_types, bool_types
+    RenamedModel, TanhModel
+from ..util import sequence_types, bool_types, create_hdf5_dataset,\
+    get_hdf5_value
 
 alpha_A =\
     RateCoefficients(recombination='A').RadiativeRecombinationRate(0, 1e4)
@@ -314,7 +315,7 @@ class Tanh21cmModel(LoadableModel):
         group.attrs['import_string'] =\
             'from perses.models import Tanh21cmModel'
         group.attrs['in_Kelvin'] = self.in_Kelvin
-        group.create_dataset('frequencies', data=self.frequencies)
+        create_hdf5_dataset(group, 'frequencies', data=self.frequencies)
     
     @staticmethod
     def load_from_hdf5_group(group):

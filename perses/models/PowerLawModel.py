@@ -8,7 +8,7 @@ Description: File containing a class representing a power law foreground model.
 import numpy as np
 from pylinex import load_expander_from_hdf5_group, Basis, LoadableModel,\
     BasisModel, TransformedModel, DistortedModel, RenamedModel, LoadableModel
-from ..util import real_numerical_types
+from ..util import real_numerical_types, create_hdf5_dataset, get_hdf5_value
 from .ForegroundModel import ForegroundModel
 
 class PowerLawModel(RenamedModel, LoadableModel, ForegroundModel):
@@ -137,7 +137,7 @@ class PowerLawModel(RenamedModel, LoadableModel, ForegroundModel):
         group.attrs['class'] = 'PowerLawModel'
         group.attrs['import_string'] =\
             'from perses.models import PowerLawModel'
-        group.create_dataset('x_values', data=self.x_values)
+        create_hdf5_dataset(group, 'x_values', data=self.x_values)
         group.attrs['reference_x'] = self.reference_x
         self.expander.fill_hdf5_group(group.create_group('expander'))
     
@@ -150,7 +150,7 @@ class PowerLawModel(RenamedModel, LoadableModel, ForegroundModel):
         
         returns: PowerLawModel object which was previously saved
         """
-        x_values = group['x_values'].value
+        x_values = get_hdf5_value(group['x_values'])
         reference_x = group.attrs['reference_x']
         expander = load_expander_from_hdf5_group(group['expander'])
         return PowerLawModel(x_values, expander=expander,\

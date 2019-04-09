@@ -18,7 +18,7 @@ MHz and spectral index between 45 and 408 MHz. A&A. A138.
 import os, time, h5py
 import numpy as np
 import healpy as hp
-from ..util import real_numerical_types
+from ..util import real_numerical_types, get_hdf5_value
 from .SpatialPowerLawGalaxy import SpatialPowerLawGalaxy
 from ..simulations import earths_celestial_north_pole
 
@@ -86,7 +86,7 @@ class GuzmanExtrapolatedHaslamGalaxy(SpatialPowerLawGalaxy):
                 os.environ['PERSES'])
             t1 = time.time()
             hdf5_file = h5py.File(file_name, 'r')
-            self._guzman_map_45 = hdf5_file['map'].value
+            self._guzman_map_45 = get_hdf5_value(hdf5_file['map'])
             self._guzman_map_45 = self.fix_resolution(self._guzman_map_45)
             hdf5_file.close()
             t2 = time.time()

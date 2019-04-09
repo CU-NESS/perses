@@ -11,6 +11,7 @@ Description: File containing a function which performs the following tasks:
 import numpy as np
 import os, h5py
 from .ObservationUtilities import earths_celestial_north_pole as NCP
+from ..util import create_hdf5_dataset
 from ..beam.BeamUtilities import rotate_vector_maps
 
 def cora_stokes_map_to_E_gal(freq_low, freq_high, num_freq, nside=64,\
@@ -57,8 +58,8 @@ def cora_stokes_map_to_E_gal(freq_low, freq_high, num_freq, nside=64,\
         use_inverse=True)
     if save:
         save_file = h5py.File(save_filename, 'w')
-        save_file.create_dataset('E_theta_gal', data=E_theta_gal)
-        save_file.create_dataset('E_phi_gal', data=E_phi_gal)
+        create_hdf5_dataset(save_file, 'E_theta_gal', data=E_theta_gal)
+        create_hdf5_dataset(save_file, 'E_phi_gal', data=E_phi_gal)
         save_file.close()
     return E_theta_gal, E_phi_gal
 

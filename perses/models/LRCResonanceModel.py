@@ -8,7 +8,7 @@ Description: A file with a class which models LRC resonances in frequency
 """
 import numpy as np
 from pylinex import LoadableModel
-from ..util import sequence_types
+from ..util import sequence_types, create_hdf5_dataset, get_hdf5_value
 
 class LRCResonanceModel(LoadableModel):
     """
@@ -147,7 +147,7 @@ class LRCResonanceModel(LoadableModel):
         group.attrs['class'] = 'LRCResonanceModel'
         group.attrs['import_string'] =\
             'from perses.models import LRCResonanceModel'
-        group.create_dataset('frequencies', data=self.frequencies)
+        create_hdf5_dataset(group, 'frequencies', data=self.frequencies)
     
     @staticmethod
     def load_from_hdf5_group(group):
@@ -159,7 +159,7 @@ class LRCResonanceModel(LoadableModel):
         
         returns: LRCResonanceModel created from the information saved in group
         """
-        return LRCResonanceModel(group['frequencies'].value)
+        return LRCResonanceModel(get_hdf5_value(group['frequencies']))
     
     def __eq__(self, other):
         """

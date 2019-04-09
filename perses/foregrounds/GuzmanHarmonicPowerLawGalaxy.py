@@ -14,6 +14,7 @@ MHz and spectral index between 45 and 408 MHz. A&A. A138.
 """
 import os, time
 import healpy as hp
+from ..util import get_hdf5_value
 from .HarmonicPowerLawGalaxy import HarmonicPowerLawGalaxy
 
 class GuzmanHarmonicPowerLawGalaxy(HarmonicPowerLawGalaxy):
@@ -57,7 +58,7 @@ class GuzmanHarmonicPowerLawGalaxy(HarmonicPowerLawGalaxy):
                 os.environ['PERSES'])
             t1 = time.time()
             hdf5_file = h5py.File(file_name, 'r')
-            self._guzman_map_45 = hdf5_file['map'].value
+            self._guzman_map_45 = get_hdf5_value(hdf5_file['map'])
             self._guzman_map_45 = self.fix_resolution(self._guzman_map_45)
             hdf5_file.close()
             t2 = time.time()

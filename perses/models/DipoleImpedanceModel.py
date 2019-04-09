@@ -9,7 +9,7 @@ Description: A file with a class which models the radiation impedance of a
 from __future__ import division
 import numpy as np
 from pylinex import LoadableModel
-from ..util import sequence_types
+from ..util import sequence_types, create_hdf5_dataset, get_hdf5_value
 from mpmath import euler as euler_mascheroni_constant
 from scipy.special import sici as trigonometric_integrals
 
@@ -163,7 +163,7 @@ class DipoleImpedanceModel(LoadableModel):
         group.attrs['class'] = 'DipoleImpedanceModel'
         group.attrs['import_string'] =\
             'from perses.models import DipoleImpedanceModel'
-        group.create_dataset('frequencies', data=self.frequencies)
+        create_hdf5_dataset(group, 'frequencies', data=self.frequencies)
     
     @staticmethod
     def load_from_hdf5_group(group):
@@ -176,7 +176,7 @@ class DipoleImpedanceModel(LoadableModel):
         returns: DipoleImpedanceModel created from the information saved in
                  group
         """
-        return DipoleImpedanceModel(group['frequencies'].value)
+        return DipoleImpedanceModel(get_hdf5_value(group['frequencies']))
     
     def __eq__(self, other):
         """
