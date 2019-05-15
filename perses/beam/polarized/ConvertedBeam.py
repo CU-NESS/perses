@@ -6,7 +6,6 @@ Date: 3 Mar 2017
 Description: A polarized beam defined by grids taken from a total power beam.
 """
 import numpy as np
-from ...util import ParameterFile
 from ..total_power.GridMeasuredBeam\
     import GridMeasuredBeam as TotalPowerGridMeasuredBeam
 from .GridMeasuredBeam import GridMeasuredBeam as PolarizedGridMeasuredBeam
@@ -23,7 +22,6 @@ class ConvertedBeam(PolarizedGridMeasuredBeam):
         if not isinstance(tpgmb, TotalPowerGridMeasuredBeam):
             raise TypeError("A ConvertedBeam can only be created using an " +\
                             "existing total power GridMeasuredBeam.")
-        self.pf = ParameterFile()
         self.frequencies = tpgmb.frequencies
         self.thetas = tpgmb.thetas
         self.phis = tpgmb.phis

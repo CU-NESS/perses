@@ -47,7 +47,8 @@ class _TotalPowerBeam(_Beam):
         of the Earth or due to a space instrument rotating on its axis while
         obervations are taking place.
         """
-        if (not ('beam_symmetrized' in self.pf)) or\
+        if (not hasattr(self, 'pf')) or\
+            (not ('beam_symmetrized' in self.pf)) or\
             (not (type(self.pf['beam_symmetrized']) is bool)):
             return False
         return self.pf['beam_symmetrized']
