@@ -517,7 +517,7 @@ class ThroughReceiverModel(LoadableModel):
             return False
         if self.gain_model != other.gain_model:
             return False
-        if self.second_gain_model != other.gain_model:
+        if self.second_gain_model != other.second_gain_model:
             return False
         if self.noise_model != other.noise_model:
             return False

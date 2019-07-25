@@ -14,6 +14,7 @@ from perses.models.LRCResonanceModel import LRCResonanceModel
 from perses.models.Tanh21cmModel import Tanh21cmModel
 from perses.models.FourParameterModel import FourParameterModel
 from perses.models.AresSignalModel import AresSignalModel, ares_signal
+from perses.models.TurningPointModel import TurningPointModel
 from perses.models.DarkAgesCoolingModel import DarkAgesCoolingModel
 from perses.models.DarkAgesGasTemperatureModel import\
     DarkAgesGasTemperatureModel
