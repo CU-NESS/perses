@@ -150,3 +150,4 @@ class UniformDriftscanSetCreator(DriftscanSetCreator):
         smeared_maps = smear_maps_through_LST(maps, self.observatory, start,\
             end, approximate=approximate)
         return beam.convolve(self.frequencies, smeared_maps, **kwargs)
+

@@ -12,11 +12,10 @@ import numpy.linalg as la
 import matplotlib.pyplot as pl
 import healpy as hp
 from distpy import GaussianDistribution, get_hdf5_value
-from perses.foregrounds import Galaxy
+from perses.foregrounds import HaslamGalaxy
 from perses.simulations import EDGESObservatory
-from perses.simulations.Driftscan import smear_maps_through_LST
 from perses.beam.total_power.GaussianBeam import GaussianBeam
-from perses.simulations.DriftscanSetCreator import DriftscanSetCreator
+from perses.simulations import UniformDriftscanSetCreator
 
 ################################################################################
 ################################# Inputs #######################################
@@ -40,8 +39,8 @@ haslam_frequency = 408.
 nside = (2 ** nnside)
 lmax = (4 * nside)
 mmax = lmax
-galaxy = Galaxy(galaxy_map='haslam1982')
-haslam_map = galaxy.get_map(haslam_frequency, nside=nside)
+galaxy = HaslamGalaxy(nside=nside)
+haslam_map = galaxy.get_map(haslam_frequency)
 haslam_alm = hp.sphtfunc.map2alm(haslam_map, lmax=lmax, mmax=mmax)
 scaled_frequencies = (frequencies / haslam_frequency)[:,np.newaxis]
 paper_beam_freqs = [50, 70, 100]
@@ -65,20 +64,26 @@ def generate_maps_realization(index):
 
 file_name = 'TEST_DELETE_THIS.hdf5'
 lsts = np.linspace(lst_start_in_days, lst_end_in_days, 1 + nlst_intervals)
+left_lst_edges = lsts[:-1]
+right_lst_edges = lsts[1:]
 
-driftscan_set_creator = DriftscanSetCreator(file_name, observatory,\
-    frequencies, lsts, beams, nbeams, generate_maps_realization, nmaps)
-driftscan_set_creator.generate(approximate=approximate)
+uniform_driftscan_set_creator = UniformDriftscanSetCreator(file_name,\
+    observatory, frequencies, left_lst_edges, right_lst_edges, beams, nbeams,\
+    generate_maps_realization, nmaps)
+uniform_driftscan_set_creator.generate(approximate=approximate)
 
 nchannel = (len(frequencies) * (len(lsts) - 1))
 channels = np.arange(nchannel)
 
-hdf5_file = h5py.File(file_name, 'r')
-for ibeam in range(nbeams):
-    for imaps in range(nmaps):
-        pl.scatter(channels, get_hdf5_value(\
-            hdf5_file['beam_{0:d}_maps_{1:d}'.format(ibeam, imaps)]))
-hdf5_file.close()
+fig = pl.figure(figsize=(12,9))
+ax = fig.add_subplot(111)
+with h5py.File(file_name, 'r') as hdf5_file:
+    print("hdf5_file.items()={}".format(hdf5_file.items()))
+    for ibeam in range(nbeams):
+        for imaps in range(nmaps):
+            ax.scatter(channels, get_hdf5_value(\
+                hdf5_file['temperatures/beam_{0:d}_maps_{1:d}'.format(ibeam,\
+                    imaps)]))
 os.remove(file_name)
 pl.show()
 

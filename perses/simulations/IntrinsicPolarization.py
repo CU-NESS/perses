@@ -8,14 +8,15 @@ Description: File containing a function which performs the following tasks:
              2) transforms Stokes parameters to antenna electric field values
              3) rotates field vector map from celestial to Galactic coordinates
 """
+from __future__ import division
 import numpy as np
 import os, h5py
 from .ObservationUtilities import earths_celestial_north_pole as NCP
 from ..util import create_hdf5_dataset
-from ..beam.BeamUtilities import rotate_vector_maps
+from ..beam.BeamUtilities import rotate_maps, rotate_vector_maps
 
-def cora_stokes_map_to_E_gal(freq_low, freq_high, num_freq, nside=64,\
-    command='foreground', save=True, save_filename='E_theta_E_phi_gal.hdf5'):
+def cora_stokes_map(freq_low, freq_high, num_freq, nside=64,\
+    command='foreground', save=True, save_filename='cora_map.hdf5'):
     """
     Creates a map of intrinsic polarization and converts the stokes
     parameters given by cora (in celestial coordinates) to theta and phi
@@ -37,29 +38,43 @@ def cora_stokes_map_to_E_gal(freq_low, freq_high, num_freq, nside=64,\
     Returns 2 2D numpy arrays E_theta_gal, E_phi_gal with shape
     (num_freq, num_pix). Also saves arrays to an hdf5 file if specified.
     """
-    cora_outfile = 'cora_outmap_TEMP.hdf5'
-    os.system('cora-makesky --freq {} {} {} --nside {} --filename {} {}'\
-        .format(freq_low, freq_high, num_freq, nside, cora_outfile, command))
-    cora_map_file = h5py.File(cora_outfile, 'r')
-    polarization_map = cora_map_file['map']
-    cora_map_file.close
-    I = polarization_map[:,0,:]
-    Q = polarization_map[:,1,:]
-    U = polarization_map[:,2,:]
-    V = polarization_map[:,3,:]
-    I_new = np.sqrt(Q**2 + U**2 + V**2)
-    os.system('rm {}'.format(cora_outfile))
-    E_x = np.sqrt((Q + I_new) / 2.).astype(complex)
-    E_y = (U + (1j * V)) / (2 * E_x)
-    E_theta_cel = E_x
-    E_phi_cel = E_y
-    (E_theta_gal, E_phi_gal) = rotate_vector_maps(theta_comp=E_theta_cel,\
-        phi_comp=E_phi_cel, theta=90-NCP[0], phi=NCP[1], psi=13.01888,\
-        use_inverse=True)
-    if save:
-        save_file = h5py.File(save_filename, 'w')
-        create_hdf5_dataset(save_file, 'E_theta_gal', data=E_theta_gal)
-        create_hdf5_dataset(save_file, 'E_phi_gal', data=E_phi_gal)
-        save_file.close()
-    return E_theta_gal, E_phi_gal
+    if os.path.exists(save_filename):
+        load_file = h5py.File(save_filename, 'r')
+        total_power = load_file['total_power'][()]
+        polarization_fraction = load_file['polarization_fraction'][()]
+        polarization_angle = load_file['polarization_angle'][()]
+        load_file.close()
+    else:
+        cora_outfile = 'cora_outmap_TEMP.hdf5'
+        os.system('cora-makesky --freq {} {} {} --nside {} --filename {} {}'\
+            .format(freq_low, freq_high, num_freq, nside, cora_outfile, command))
+        cora_map_file = h5py.File(cora_outfile, 'r')
+        polarization_map = cora_map_file['map'][()]
+        cora_map_file.close
+        total_power = polarization_map[:,0,:]
+        stokes_Q_plus_iU =\
+            (polarization_map[:,1,:] + (1.j * polarization_map[:,2,:]))
+        stokes_U = polarization_map
+        polarization_fraction = np.abs(stokes_Q_plus_iU) / total_power
+        polarization_angle = np.mod(np.angle(stokes_Q_plus_iU), 2 * np.pi) / 2
+        os.system('rm {}'.format(cora_outfile))
+        total_power = rotate_maps(total_power, 90-NCP[0], NCP[1], 13.01888,\
+            use_inverse=False)
+        polarization_fraction = rotate_maps(polarization_fraction, 90-NCP[0],\
+            NCP[1], 13.01888, use_inverse=False)
+        (cos_angle, sin_angle) = rotate_vector_maps(\
+            theta_comp=np.cos(polarization_angle),\
+            phi_comp=np.sin(polarization_angle), theta=90-NCP[0], phi=NCP[1],\
+            psi=13.01888, use_inverse=False)
+        polarization_angle =\
+            np.mod(2 * np.angle(cos_angle + (1.j * sin_angle)), 2 * np.pi) / 2
+        if save:
+            save_file = h5py.File(save_filename, 'w')
+            create_hdf5_dataset(save_file, 'total_power', data=total_power)
+            create_hdf5_dataset(save_file, 'polarization_fraction',\
+                data=polarization_fraction)
+            create_hdf5_dataset(save_file, 'polarization_angle',\
+                data=polarization_angle)
+            save_file.close()
+    return (total_power, polarization_fraction, polarization_angle)
 
