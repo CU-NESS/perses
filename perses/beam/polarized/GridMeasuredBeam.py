@@ -413,9 +413,8 @@ class GridMeasuredBeam(_PolarizedBeam, Loadable, Savable):
         else:
             raise ValueError("One of Eintheta and Einphi was None. Either " +\
                              "both must be None or neither must be None.")
-        JtX, JtY, JpX, JpY = np.moveaxis(self.get_grids(frequencies,\
-            self.theta_res, self.phi_res, (90., 0.), 0., normed=False,\
-            **kwargs), -3, -1)
+        JtX, JtY, JpX, JpY = self.get_grids(frequencies, self.theta_res,\
+            self.phi_res, (90., 0.), 0., normed=False, **kwargs)
         
         if polarized:
             raise NotImplementedError("Polarized emission Stokes not yet " +\
