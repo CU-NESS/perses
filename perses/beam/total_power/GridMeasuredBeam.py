@@ -359,7 +359,9 @@ class GridMeasuredBeam(_TotalPowerBeam, Savable, Loadable):
         """
         if self._should_use_raw_data(theta_res, phi_res, pointing, psi):
             print('using raw data')
-            if type(frequencies) in real_numerical_types:
+            frequencies_originally_single_number =\
+                (type(frequencies) in real_numerical_types)
+            if frequencies_originally_single_number:
                 frequencies = [1. * frequencies]
             numfreqs = len(frequencies)
             numthetas = (180 // theta_res) + 1
@@ -371,7 +373,7 @@ class GridMeasuredBeam(_TotalPowerBeam, Savable, Loadable):
                 grids[ifreq,:,:] = self.grids[internal_ifreq,:,:]
             if normed:
                 grids = normalize_grids(grids)
-            if numfreqs == 1:
+            if (numfreqs == 1) and frequencies_originally_single_number:
                 return grids[0,:,:]
             else:
                 return grids[:,:,:]

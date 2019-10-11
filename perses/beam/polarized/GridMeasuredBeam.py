@@ -10,7 +10,7 @@ from ..BeamUtilities import rotate_map, rotate_maps, integrate_grids,\
     convolve_grid, convolve_grids, normalize_grids, normalize_maps,\
     symmetrize_grid, maps_from_grids, stokes_beams_from_Jones_matrix,\
     spin_grids, smear_grids, rotate_vector_maps, Ein_from_components
-from ..BaseBeam import DummyPool
+from ..BaseBeam import DummyPool, _Beam
 from ..total_power.GridMeasuredBeam\
     import GridMeasuredBeam as TotalPowerGridMeasuredBeam
 from .BasePolarizedBeam import _PolarizedBeam
@@ -349,7 +349,9 @@ class GridMeasuredBeam(_PolarizedBeam, Loadable, Savable):
         if self._should_use_raw_data(pointing, psi, theta_res=theta_res,\
             phi_res=phi_res):
             print('using raw data')
-            if type(frequencies) in real_numerical_types:
+            frequencies_originally_single_number =\
+                (type(frequencies) in real_numerical_types)
+            if frequencies_originally_single_number:
                 frequencies = [1. * frequencies]
             numfreqs = len(frequencies)
             numthetas = (180 // theta_res) + 1
@@ -363,7 +365,7 @@ class GridMeasuredBeam(_PolarizedBeam, Loadable, Savable):
             grids = self.grids[:,internal_ifreqs,:,:]
             if normed:
                 grids = normalize_grids(grids)
-            if numfreqs == 1:
+            if (numfreqs == 1) and frequencies_originally_single_number:
                 return grids[:,0,:,:]
             else:
                 return grids[:,:,:,:]
