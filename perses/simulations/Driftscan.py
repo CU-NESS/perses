@@ -73,7 +73,8 @@ def rotate_maps_to_LST(sky_maps, observatory, local_sidereal_time):
     final_maps = rotate_maps(celestial_pole_centered_maps,\
         observatory.theta, observatory.phi, 0, use_inverse=True,\
         axis=-1, deg=False)
-    final_maps = spin_maps(final_maps, -displacement, pixel_axis=-1)
+    final_maps =\
+        spin_maps(final_maps, observatory.angle - displacement, pixel_axis=-1)
     return final_maps
 
 def smear_maps_through_LST(sky_maps, observatory, lst_start, lst_end,\
@@ -153,7 +154,8 @@ def smear_maps_through_LST(sky_maps, observatory, lst_start, lst_end,\
     final_maps = rotate_maps(smeared_celestial_pole_centered_maps,\
         observatory.theta, observatory.phi, 0, use_inverse=True,\
         axis=-1, deg=False)
-    final_maps = spin_maps(final_maps, -displacement, pixel_axis=-1)
+    final_maps = spin_maps(final_maps, observatory.angle - displacement,\
+        pixel_axis=-1)
     return final_maps
 
 def smear_maps_through_LST_patches(sky_maps, observatory, lst_locations,\
@@ -225,6 +227,7 @@ def smear_maps_through_LST_patches(sky_maps, observatory, lst_locations,\
         np.degrees(np.arctan2(rotated_northhat[1], rotated_northhat[0]))
     # Rotate the map such that the beam is at the center with correct psi from
     # above rotator:
-    final_maps = spin_maps(final_maps, -displacement, pixel_axis=-1)
+    final_maps = spin_maps(final_maps, observatory.angle - displacement,\
+        pixel_axis=-1)
     return final_maps
 
