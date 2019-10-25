@@ -1,3 +1,4 @@
+from __future__ import division
 from types import FunctionType
 import numpy as np
 
@@ -62,12 +63,15 @@ class _GaussianBeam(object):
                                      "elliptical.")
         return self._fwhm
     
-    def gaussian_profile(self, frequencies, thetas, phis):
+    def gaussian_profile(self, frequencies, thetas, phis, sqrt_of_final=False):
         """
         Function giving the value of the Gaussian.
         
         frequencies the frequencies to find fwhm's with from x_fwhm and y_fwhm
         thetas, phis: the spherical coordinate angles (in radians)
+        sqrt_of_final: if True, the FWHM is determined by the square of this
+                                profile.
+                       otherwise, the FWHM is determined by this profile itself
         
         NOTE: The three arguments to this function--frequencies, thetas, and
               phis--must all be castable into a common shape.
@@ -82,5 +86,5 @@ class _GaussianBeam(object):
             y_part =\
                 (thetas * np.sin(phis) / np.radians(self.y_fwhm(frequencies)))
             exponent = ((x_part ** 2) + (y_part ** 2))
-        return np.exp(-np.log(16) * exponent)
+        return np.exp(-np.log(4 if sqrt_of_final else 16) * exponent)
 

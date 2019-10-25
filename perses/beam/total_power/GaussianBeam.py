@@ -37,5 +37,6 @@ class GaussianBeam(IdealBeam, _GaussianBeam):
         NOTE: The three arguments to this function--frequencies, thetas, and
               phis--must all be castable into a common shape.
         """
-        return self.gaussian_profile(frequencies, thetas, phis)
+        return self.gaussian_profile(frequencies, thetas, phis,\
+            sqrt_of_final=False)
 

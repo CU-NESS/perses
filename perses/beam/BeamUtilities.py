@@ -1,4 +1,5 @@
 import gc
+import time # TODO delete this
 import numpy as np
 from scipy.special import sph_harm
 from ..util import int_types, real_numerical_types, sequence_types
@@ -296,7 +297,7 @@ def convolve_grids(grids, thetas, phis, sky_maps, theta_axis=-2, phi_axis=-1,\
     """
     ndim = grids.ndim
     (theta_axis, phi_axis) = (theta_axis % ndim, phi_axis % ndim)
-    min_axis, max_axis = min(theta_axis, phi_axis), max(theta_axis, phi_axis)
+    (min_axis, max_axis) = min(theta_axis, phi_axis), max(theta_axis, phi_axis)
     if max_axis - min_axis != 1:
        raise ValueError("theta_axis and phi_axis must be adjacent.")
     if len(sky_maps.shape[min_axis+1:]) != len(grids.shape[max_axis+1:]):
@@ -486,7 +487,8 @@ def grids_from_maps(maps, num_thetas=181, num_phis=360, nest=False,\
     pixel_axis the index of the axis which represents healpy pixel space
     """
     pixel_axis = (pixel_axis % maps.ndim)
-    nside = hp.pixelfunc.npix2nside(maps.shape[pixel_axis])
+    npix = maps.shape[pixel_axis]
+    nside = hp.pixelfunc.npix2nside(npix)
     thetas_1d = np.linspace(0, 180, num_thetas)
     phis_1d = np.linspace(0, 360, num_phis + 1)[:-1]
     thetas = thetas_1d[:,np.newaxis] * np.ones_like(phis_1d)[np.newaxis,:]
@@ -722,7 +724,7 @@ def interpolate_maps(maps, thetas, phis, nest=False, axis=-1, degrees=False):
 
 
 def rotate_maps(omaps, theta, phi, psi, use_inverse=False, nest=False,\
-    axis=-1, deg=True):
+    axis=-1, deg=True, verbose=True):
     """
     This function rotates an entire set of healpy maps using healpy's rotator
     class. Care should be taken because this function can be considerably
@@ -745,6 +747,7 @@ def rotate_maps(omaps, theta, phi, psi, use_inverse=False, nest=False,\
     
     returns a rotated map with the same nside parameter
     """
+    start_time = time.time()
     npix = omaps.shape[axis]
     nside = hp.pixelfunc.npix2nside(npix)
     # prefix 'r' stands for 'rotated'
@@ -761,12 +764,17 @@ def rotate_maps(omaps, theta, phi, psi, use_inverse=False, nest=False,\
     pixels = np.arange(npix)
     rot_thetas, rot_phis = hp.pixelfunc.pix2ang(nside, pixels)
     orig_thetas, orig_phis = rotator(rot_thetas, rot_phis)
-    return interpolate_maps(omaps, orig_thetas, orig_phis, nest=nest,\
+    return_value = interpolate_maps(omaps, orig_thetas, orig_phis, nest=nest,\
         axis=axis, degrees=False)
+    end_time = time.time()
+    duration = end_time - start_time
+    if verbose:
+        print("Rotating maps took {:.3f} s.".format(duration))
+    return return_value
 
 
 def rotate_vector_map(theta_comp, phi_comp, theta, phi, psi,\
-    use_inverse=False, nest=False, nthreads=1):
+    use_inverse=False, nest=False, verbose=True):
     """
     This function rotates an entire healpy map of vectors using healpy's
     rotator class. Care should be taken because this function is considerably
@@ -783,58 +791,16 @@ def rotate_vector_map(theta_comp, phi_comp, theta, phi, psi,\
                 onto the zenith, False if rotation should be made such that
                 zenith gets rotated onto the pointing
     nest True (False) if omap in NESTED (RING) format, default False
+    verbose: if True, amount of time taken to rotate is printed after
+             calculation
     
     returns a rotated map with the same nside parameter
     """
-    if len(theta_comp) == len(phi_comp):
-        npix = len(theta_comp)
-    else:
-        raise NotImplementedError("theta_comp and phi_comp must have same " +\
-                                  "resolution.")
-    nside = hp.pixelfunc.npix2nside(npix)
-    # prefix 'r' stands for 'rotated'
-    rotator_on_orig_map = spherical_rotator(theta, phi, psi, deg=True)
-    rotator_on_rotated_map = rotator_on_orig_map.get_inverse()
-    if use_inverse:
-        rotator = rotator_on_orig_map
-        rmat = rotator_on_rotated_map.mat
-    else:
-        rotator = rotator_on_rotated_map
-        rmat = rotator_on_orig_map.mat
-    if (nthreads == 1) or (not have_mp):
-        pool = DummyPool()
-    else:
-        pool = Pool(nthreads)
-    def components_from_opix(opix):
-        rotated_angles = hp.pixelfunc.pix2ang(nside, opix)
-        rtheta, rphi = rotated_angles
-        # prefix 'o' stands for 'original'
-        otheta, ophi = rotator(rotated_angles)
-        Eotheta, Eophi = interpolate_maps(np.stack([theta_comp, phi_comp]),\
-            otheta, ophi, nest=nest)
-        sin_ophi = np.sin(ophi)
-        cos_ophi = np.cos(ophi)
-        cos_otheta = np.cos(otheta)
-        Eox = (cos_otheta * cos_ophi * Eotheta) - (sin_ophi * Eophi)
-        Eoy = (cos_otheta * sin_ophi * Eotheta) + (cos_ophi * Eophi)
-        Eoz = -np.sin(otheta) * Eotheta
-        Eo_cart = np.array([[Eox], [Eoy], [Eoz]])
-        Er_cart = np.einsum('ki,ij->kj', rmat, Eo_cart)[:,0]
-        Erx, Ery, Erz = Er_cart[0], Er_cart[1], Er_cart[2]
-        sin_rphi = np.sin(rphi)
-        cos_rphi = np.cos(rphi)
-        cos_rtheta = np.cos(rtheta)
-        rtc = ((cos_rtheta * (cos_rphi * Erx + sin_rphi * Ery)) -\
-            (np.sin(rtheta) * Erz))
-        rpc = (cos_rphi * Ery) - (sin_rphi * Erx)
-        return rtc, rpc
-    ang_comps = np.array(list(pool.map(components_from_opix, np.arange(npix))))
-    pool.close()
-    return ang_comps[:,0], ang_comps[:,1]
-
+    return rotate_vector_maps(theta_comp, phi_comp, theta, phi, psi,\
+        use_inverse=use_inverse, nest=nest, verbose=verbose)
 
 def rotate_vector_maps(theta_comp, phi_comp, theta, phi, psi,\
-    use_inverse=False, nest=False, axis=-1, nthreads=1):
+    use_inverse=False, nest=False, axis=-1, verbose=True):
     """
     This function rotates an entire healpy map using healpy's rotator class.
     Care should be taken because this function is considerably
@@ -852,9 +818,12 @@ def rotate_vector_maps(theta_comp, phi_comp, theta, phi, psi,\
                 zenith gets rotated onto the pointing
     nest True (False) if omap in NESTED (RING) format, default False
     axis the axis number which represents pixel space
+    verbose: if True, amount of time taken to rotate is printed after
+             calculation
     
     returns a rotated map with the same nside parameter
     """
+    start_time = time.time()
     if theta_comp.shape == phi_comp.shape:
         npix = theta_comp.shape[axis]
         axis = (axis % theta_comp.ndim)
@@ -862,7 +831,6 @@ def rotate_vector_maps(theta_comp, phi_comp, theta, phi, psi,\
         raise NotImplementedError("theta_comp and phi_comp must have same " +\
                                   "resolution.")
     nside = hp.pixelfunc.npix2nside(npix)
-    # prefix 'r' stands for 'rotated'
     rotator_on_orig_map = spherical_rotator(theta, phi, psi, deg=True)
     rotator_on_rotated_map = rotator_on_orig_map.get_inverse()
     if use_inverse:
@@ -871,42 +839,43 @@ def rotate_vector_maps(theta_comp, phi_comp, theta, phi, psi,\
     else:
         rotator = rotator_on_rotated_map
         rmat = rotator_on_orig_map.mat
-
-    if (nthreads == 1) or (not have_mp):
-        pool = DummyPool()
-    else:
-        pool = Pool(nthreads)
-    def components_from_opix(opix):
-        rotated_angles = hp.pixelfunc.pix2ang(nside, opix)
-        rtheta, rphi = rotated_angles
-        # prefix 'o' stands for 'original'
-        otheta, ophi = rotator(rotated_angles)
-        Eotheta, Eophi = interpolate_maps(np.stack([theta_comp, phi_comp]),\
-            otheta, ophi, nest=nest, axis=axis+1)
-        sin_ophi = np.sin(ophi)
-        cos_ophi = np.cos(ophi)
-        cos_otheta = np.cos(otheta)
-        Eox = (cos_otheta * cos_ophi * Eotheta) - (sin_ophi * Eophi)
-        Eoy = (cos_otheta * sin_ophi * Eotheta) + (cos_ophi * Eophi)
-        Eoz = -np.sin(otheta) * Eotheta
-        Eo_cart = np.stack([np.stack([Eox, Eoy, Eoz], axis=-1)], axis=-1)
-        Er_cart = np.einsum('ki,...ij->...kj', rmat, Eo_cart)[...,0]
-        Erx, Ery, Erz = Er_cart[...,0], Er_cart[...,1], Er_cart[...,2]
-        sin_rphi = np.sin(rphi)
-        cos_rphi = np.cos(rphi)
-        cos_rtheta = np.cos(rtheta)
-        rtc = ((cos_rtheta * (cos_rphi * Erx + sin_rphi * Ery)) -\
-            (np.sin(rtheta) * Erz))
-        rpc = (cos_rphi * Ery) - (sin_rphi * Erx)
-        return rtc, rpc
-    ang_components =\
-        np.array(list(pool.map(components_from_opix, np.arange(npix))))
-    pool.close()
-    rotated_theta_comp = ang_components[:,0,...]
-    rotated_phi_comp = ang_components[:,1,...]
+    (rotated_thetas, rotated_phis) =\
+        hp.pixelfunc.pix2ang(nside, np.arange(npix))
+    cos_rphis = np.cos(rotated_phis)
+    sin_rphis = np.sin(rotated_phis)
+    cos_rthetas = np.cos(rotated_thetas)
+    sin_rthetas = np.sin(rotated_thetas)
+    (original_thetas, original_phis) = rotator(rotated_thetas, rotated_phis)
+    cos_ophis = np.cos(original_phis)
+    sin_ophis = np.sin(original_phis)
+    cos_othetas = np.cos(original_thetas)
+    sin_othetas = np.sin(original_thetas)
+    (Eothetas, Eophis) = interpolate_maps(np.stack([theta_comp, phi_comp]),\
+        original_thetas, original_phis, nest=nest, axis=axis+1)
+    if axis != 0:
+        Eothetas = np.moveaxis(Eothetas, axis, 0)
+        Eophis = np.moveaxis(Eophis, axis, 0)
+    angle_slice = (slice(None),) + ((Eothetas.ndim - 1) * (np.newaxis,))
+    Eoxs = (cos_othetas[angle_slice] * cos_ophis[angle_slice] * Eothetas) -\
+        (sin_ophis[angle_slice] * Eophis)
+    Eoys = (cos_othetas[angle_slice] * sin_ophis[angle_slice] * Eothetas) +\
+        (cos_ophis[angle_slice] * Eophis)
+    Eozs = (-sin_othetas[angle_slice]) * Eothetas
+    Eo_cart = np.stack([np.stack([Eoxs, Eoys, Eozs], axis=-1)], axis=-1)
+    Er_cart = np.einsum('ki,...ij->...kj', rmat, Eo_cart)[...,0]
+    (Erxs, Erys, Erzs) = (Er_cart[...,0], Er_cart[...,1], Er_cart[...,2])
+    rotated_theta_comp = ((cos_rthetas[angle_slice] *\
+        (cos_rphis[angle_slice] * Erxs + sin_rphis[angle_slice] * Erys)) -\
+        (sin_rthetas[angle_slice] * Erzs))
+    rotated_phi_comp =\
+        (cos_rphis[angle_slice] * Erys) - (sin_rphis[angle_slice] * Erxs)
     if axis != 0:
         rotated_theta_comp = np.moveaxis(rotated_theta_comp, 0, axis)
         rotated_phi_comp = np.moveaxis(rotated_phi_comp, 0, axis)
+    end_time = time.time()
+    duration = end_time - start_time
+    if verbose:
+        print("Rotating vector maps took {:.3f} s.".format(duration))
     return rotated_theta_comp, rotated_phi_comp
 
 
@@ -1155,12 +1124,12 @@ def transpose(array, axis1=-2, axis2=-1):
     returns the Hermitian conjugate of the array
     """
     inds = np.arange(array.ndim)
-    inds_axis1, inds_axis2 = inds[axis1], inds[axis2]
+    (inds_axis1, inds_axis2) = (inds[axis1], inds[axis2])
     inds[axis1] = inds_axis2
     inds[axis2] = inds_axis1
     return np.transpose(array, inds)
 
-def hermitian_conjugate(array):
+def hermitian_conjugate(array, axis1=-2, axis2=-1):
     """
     Finds the Hermitian conjugate of the array. To do this, it swaps the last
     two axes and takes the complex conjugate of the array.
@@ -1169,7 +1138,7 @@ def hermitian_conjugate(array):
     
     returns the Hermitian conjugate of the array
     """
-    return np.conj(transpose(array))
+    return np.conj(transpose(array, axis1=axis1, axis2=axis2))
 
 def dot(a, b):
     """
@@ -1182,6 +1151,20 @@ def dot(a, b):
             of b
     """
     return np.einsum('...ki,...ij->...kj', a, b)
+
+def trace(array, axis1=-2, axis2=-1):
+    """
+    Alias for numpy.trace that has the final two axes as the default ones to
+    sum over diagonal of.
+    
+    array: the array to find the trace of
+    axis1: first axis defining matrix form
+    axis2: second axis defining matrix form
+    
+    returns: sum of diagonal elements along axis1 and axis2, a numpy.ndarray of
+             same shape as array with axis1 and axis2 removed
+    """
+    return np.trace(array, axis1=axis1, axis2=axis2)
 
 def mod_squared(quant):
     """
@@ -1210,17 +1193,4 @@ def Jones_matrix_from_components(JthetaX, JthetaY, JphiX, JphiY):
     return np.stack(\
         (np.stack((JthetaX, JthetaY), axis=-1),\
          np.stack((JphiX, JphiY), axis=-1)), axis=-1)
-
-def Ein_from_components(Eintheta, Einphi):
-    """
-    Stacks up Ein as a single numpy.ndarray composed of the components given.
-    
-    Ein(alpha): the electric field in the (alpha) direction as a function of
-                pixel number and frequency. All Ein(alpha) must be complex
-                numpy.ndarray objects with shape (npix, nfreq).
-    
-    returns the full Ein vector of shape (npix, nfreq, 2, 1) composed of the
-            given components
-    """
-    return np.stack((np.stack((Eintheta, Einphi), axis=-1),), axis=-1)
 

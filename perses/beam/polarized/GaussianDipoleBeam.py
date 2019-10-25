@@ -16,7 +16,7 @@ class GaussianDipoleBeam(_GaussianBeam, DipoleLikeBeam):
     multiplied by a (possibly elongated) Gaussian as its gain pattern. The user
     supplies the FWHM (or the two different FWHM's) of the Gaussian.
     """
-    def __init__(self, x_fwhm, y_fwhm=None):
+    def __init__(self, x_fwhm, y_fwhm=None, only_one_dipole=False):
         """
         Initializes a new polarization-capable Gaussian beam with the given
         FWHM information.
@@ -29,8 +29,11 @@ class GaussianDipoleBeam(_GaussianBeam, DipoleLikeBeam):
         y_fwhm: if supplied, it is a function of 1 argument (the frequency)
                 which returns the FWHM (in degrees) in the Y-direction (i.e.
                 the theta*np.sin(phi) direction)
+        only_one_dipole: if True, only one dipole is used
+                         otherwise, two orthogonal dipoles are used
         """
         self.initialize_fwhm(x_fwhm, y_fwhm=y_fwhm)
+        self.only_one_dipole = only_one_dipole
     
     def modulating_function(self, frequencies, thetas, phis):
         """
@@ -43,5 +46,6 @@ class GaussianDipoleBeam(_GaussianBeam, DipoleLikeBeam):
         NOTE: The three arguments to this function--frequencies, thetas, and
               phis--must all be castable into a common shape.
         """
-        return self.gaussian_profile(frequencies, thetas, phis)
+        return self.gaussian_profile(frequencies, thetas, phis,\
+            sqrt_of_final=True)
 

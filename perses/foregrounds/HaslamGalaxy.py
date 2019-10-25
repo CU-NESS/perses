@@ -14,6 +14,7 @@ continuum survey. II - The atlas of contour maps. A&AS. 47.
 """
 import os, time
 import healpy as hp
+from ..util import bool_types
 from .SpatialPowerLawGalaxy import SpatialPowerLawGalaxy
 
 class HaslamGalaxy(SpatialPowerLawGalaxy):
@@ -22,7 +23,7 @@ class HaslamGalaxy(SpatialPowerLawGalaxy):
     with the former taken from the Haslam map and the latter being a power law.
     """
     def __init__(self, nside=128, spectral_index=-2.5,\
-        thermal_background=2.725):
+        thermal_background=2.725, verbose=False):
         """
         Galaxy objects should not be directly instantiated. Only its subclasses
         should be instantiated.
@@ -33,12 +34,14 @@ class HaslamGalaxy(SpatialPowerLawGalaxy):
         thermal_background: level (in K) of the thermal background (e.g. CMB)
                             to exclude from power law extrapolation.
                             Default: 2.725 (CMB temperature)
+        verbose: if True, time it took to prepare the Haslam map is printed
         """
         self.nside = nside
         self.reference_map = self.haslam_map_408
         self.reference_frequency = 408.
         self.spectral_index = spectral_index
         self.thermal_background = thermal_background
+        self.verbose = verbose
     
     @property
     def map(self):
@@ -46,6 +49,27 @@ class HaslamGalaxy(SpatialPowerLawGalaxy):
         Returns 'haslam'
         """
         return 'haslam'
+    
+    @property
+    def verbose(self):
+        """
+        Boolean determining whether time to prepare the map is printed.
+        """
+        if not hasattr(self, '_verbose'):
+            raise AttributeError("verbose was referenced before it was set.")
+        return self._verbose
+    
+    @verbose.setter
+    def verbose(self, value):
+        """
+        Setter for the verbose property.
+        
+        value: True or False
+        """
+        if type(value) in bool_types:
+            self._verbose = value
+        else:
+            raise ValueError("verbose was set to a non-boolean.")
     
     @property
     def haslam_map_408(self):

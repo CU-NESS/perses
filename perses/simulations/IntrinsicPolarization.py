@@ -46,8 +46,9 @@ def cora_stokes_map(freq_low, freq_high, num_freq, nside=64,\
         load_file.close()
     else:
         cora_outfile = 'cora_outmap_TEMP.hdf5'
-        os.system('cora-makesky --freq {} {} {} --nside {} --filename {} {}'\
-            .format(freq_low, freq_high, num_freq, nside, cora_outfile, command))
+        os.system(('cora-makesky --freq {} {} {} --nside {} --filename {} ' +\
+            '{}').format(freq_low, freq_high, num_freq, nside, cora_outfile,\
+            command))
         cora_map_file = h5py.File(cora_outfile, 'r')
         polarization_map = cora_map_file['map'][()]
         cora_map_file.close
@@ -56,7 +57,7 @@ def cora_stokes_map(freq_low, freq_high, num_freq, nside=64,\
             (polarization_map[:,1,:] + (1.j * polarization_map[:,2,:]))
         stokes_U = polarization_map
         polarization_fraction = np.abs(stokes_Q_plus_iU) / total_power
-        polarization_angle = np.mod(np.angle(stokes_Q_plus_iU), 2 * np.pi) / 2
+        polarization_angle = np.mod(np.angle(stokes_Q_plus_iU) / 2, np.pi)
         os.system('rm {}'.format(cora_outfile))
         total_power = rotate_maps(total_power, 90-NCP[0], NCP[1], 13.01888,\
             use_inverse=False)
@@ -67,7 +68,7 @@ def cora_stokes_map(freq_low, freq_high, num_freq, nside=64,\
             phi_comp=np.sin(polarization_angle), theta=90-NCP[0], phi=NCP[1],\
             psi=13.01888, use_inverse=False)
         polarization_angle =\
-            np.mod(2 * np.angle(cos_angle + (1.j * sin_angle)), 2 * np.pi) / 2
+            np.mod(np.angle(cos_angle + (1.j * sin_angle)), 2 * np.pi)
         if save:
             save_file = h5py.File(save_filename, 'w')
             create_hdf5_dataset(save_file, 'total_power', data=total_power)

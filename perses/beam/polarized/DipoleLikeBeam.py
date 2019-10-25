@@ -1,18 +1,21 @@
 """
-File: $PERSES/perses/beam/polarized/DipoleLikeBeam.py
+File: perses/beam/polarized/DipoleLikeBeam.py
 Author: Keith Tauscher
-Date: 7 Jun 2017
+Date: 21 Oct 2019
+
+Description: 
 """
 from types import FunctionType
 import numpy as np
 import healpy as hp
-from ...util import real_numerical_types
+from ...util import real_numerical_types, bool_types
 from .BasePolarizedBeam import _PolarizedBeam
 from ..BeamUtilities import rotate_maps
 
 class DipoleLikeBeam(_PolarizedBeam):
-    def __init__(self, modulating_function=None):
+    def __init__(self, modulating_function=None, only_one_dipole=False):
         self.modulating_function = modulating_function
+        self.only_one_dipole = only_one_dipole
     
     @property
     def modulating_function(self):
@@ -31,6 +34,27 @@ class DipoleLikeBeam(_PolarizedBeam):
             raise TypeError("modulating_function was neither None nor a " +\
                             "function.")
     
+    @property
+    def only_one_dipole(self):
+        """
+        Property storing a boolean determining whether only one dipole is being
+        used or if two dipoles are being used.
+        """
+        if not hasattr(self, '_only_one_dipole'):
+            raise AttributeError("only_one_dipole was referenced before it " +\
+                "was set.")
+        return self._only_one_dipole
+    
+    @only_one_dipole.setter
+    def only_one_dipole(self, value):
+        """
+        Setter determining if only one dipole is used or two are used.
+        """
+        if type(value) in bool_types:
+            self._only_one_dipole = value
+        else:
+            raise TypeError("only_one_dipole was set to a non-bool.")
+    
     def dipole_pattern(self, nside):
         npix = hp.pixelfunc.nside2npix(nside)
         pattern = np.ndarray((4, 1, npix))
@@ -40,9 +64,11 @@ class DipoleLikeBeam(_PolarizedBeam):
         cos_phi_map = np.cos(phi_map)
         del theta_map, phi_map
         pattern[0,0,:] = cos_theta_map * cos_phi_map # JthetaX
-        pattern[1,0,:] = cos_theta_map * sin_phi_map # JthetaY
+        pattern[1,0,:] = cos_theta_map * sin_phi_map *\
+            (0 if self.only_one_dipole else 1) # JthetaY
         pattern[2,0,:] = -sin_phi_map # JphiX
-        pattern[3,0,:] = cos_phi_map # JphiY
+        pattern[3,0,:] =\
+            cos_phi_map * (0 if self.only_one_dipole else 1) # JphiY
         return pattern
     
     def get_maps(self, frequencies, nside, pointing, psi, **kwargs):
