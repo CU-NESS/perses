@@ -505,6 +505,8 @@ class GridMeasuredBeam(_PolarizedBeam, Loadable, Savable):
                  printed
         save_memory: boolean flag determining whether memory is treated more
                      carefully when computing J^dagger sigma_P J
+                     Note: only has effect if polarization fraction and angle
+                     are given
         kwargs: keyword arguments to pass on to self.get_maps
         
         returns Stokes parameters measured by the antennas as a function of
@@ -559,41 +561,48 @@ class GridMeasuredBeam(_PolarizedBeam, Loadable, Savable):
         Jones_matrix = Jones_matrix_from_components(*np.moveaxis(\
             self.get_grids(frequencies, self.theta_res, self.phi_res,\
             (90., 0.), 0., normed=False, **kwargs), -3, -1))
-        sigma = np.array([[[1.+0.j, 0.+0.j], [0.+0.j, 1.+0.j]],\
-            [[1.+0.j, 0.+0.j], [0.+0.j, -1.+0.j]],\
-            [[0.+0.j, 1.+0.j], [1.+0.j, 0.+0.j]],\
-            [[0.+0.j, 0.-1.j], [0.+1.j, 0.+0.j]]])
-        sigma = sigma[:,np.newaxis,np.newaxis,np.newaxis,:,:]
-        if save_memory:
-            Jones_matrix_dagger = hermitian_conjugate(Jones_matrix)
-            Jones_product = np.ndarray((4,) + Jones_matrix.shape)
-            Jones_product[0,...] =\
-                np.real(dot(Jones_matrix_dagger, Jones_matrix))
-            Jones_product[1,...] =\
-                np.real(dot(dot(Jones_matrix_dagger, sigma[1]), Jones_matrix))
-            Jones_product[2,...] =\
-                np.real(dot(dot(Jones_matrix_dagger, sigma[2]), Jones_matrix))
-            Jones_product[3,...] =\
-                np.real(dot(dot(Jones_matrix_dagger, sigma[3]), Jones_matrix))
-            del Jones_matrix, Jones_matrix_dagger, sigma ; gc.collect()
-        else:
-            Jones_matrix = Jones_matrix[np.newaxis,...]
-            Jones_product = np.real(dot(dot(hermitian_conjugate(Jones_matrix),\
-                sigma), Jones_matrix))
-            del Jones_matrix, sigma ; gc.collect()
-        # Jones product has shape (4,ntheta,nphi,nfreq,2,2)
-        trace_Jones_product = trace(Jones_product)
-        # trace_Jones_product has shape (4,ntheta,nphi,nfreq)
-        norm = integrate_grids(trace_Jones_product[0], theta_axis=-3,\
-            phi_axis=-2, keepdims=False)
         if polarized:
-            del trace_Jones_product ; gc.collect()
+            sigma = np.array([[[1.+0.j, 0.+0.j], [0.+0.j, 1.+0.j]],\
+                [[1.+0.j, 0.+0.j], [0.+0.j, -1.+0.j]],\
+                [[0.+0.j, 1.+0.j], [1.+0.j, 0.+0.j]],\
+                [[0.+0.j, 0.-1.j], [0.+1.j, 0.+0.j]]])
+            sigma = sigma[:,np.newaxis,np.newaxis,np.newaxis,:,:]
+            if save_memory:
+                Jones_matrix_dagger = hermitian_conjugate(Jones_matrix)
+                Jones_product = np.ndarray((4,) + Jones_matrix.shape)
+                for index in range(4):
+                    if index == 0:
+                        Jones_product[index,...] =\
+                            np.real(dot(Jones_matrix_dagger, Jones_matrix))
+                    else:
+                        Jones_product[index,...] = np.real(dot(dot(\
+                            Jones_matrix_dagger, sigma[index]), Jones_matrix))
+                del Jones_matrix, Jones_matrix_dagger, sigma ; gc.collect()
+            else:
+                Jones_matrix = Jones_matrix[np.newaxis,...]
+                Jones_product = np.real(dot(dot(\
+                    hermitian_conjugate(Jones_matrix), sigma), Jones_matrix))
+                del Jones_matrix, sigma ; gc.collect()
+            # Jones product has shape (4,ntheta,nphi,nfreq,2,2)
+            trace_Jones_product = trace(Jones_product)
+            # trace_Jones_product has shape (4,ntheta,nphi,nfreq)
+            norm = integrate_grids(trace(Jones_product[0]), theta_axis=-3,\
+                phi_axis=-2, keepdims=False)
         else:
-            del Jones_product ; gc.collect()
-        if len(angles) == 1:
+            trace_Jones_product = np.ndarray((4,) + Jones_matrix.shape[:-2])
+            Jxy_squared = np.sum(np.abs(Jones_matrix) ** 2, axis=-1)
+            (Jx_squared, Jy_squared) = (Jxy_squared[...,0], Jxy_squared[...,1])
+            UpiV_quantity = 2 * np.sum(np.conj(\
+                Jones_matrix[...,0,:]) * Jones_matrix[...,1,:], axis=-1)
+            trace_Jones_product[0,...] = Jx_squared + Jy_squared
+            trace_Jones_product[1,...] = Jx_squared - Jy_squared
+            trace_Jones_product[2,...] = np.real(UpiV_quantity)
+            trace_Jones_product[3,...] = np.imag(UpiV_quantity)
+            norm = integrate_grids(trace_Jones_product[0], theta_axis=-3,\
+                phi_axis=-2, keepdims=False)
+        norm = norm[np.newaxis,...]
+        if len(angles) != 1:
             norm = norm[np.newaxis,...]
-        else:
-            norm = norm[np.newaxis,np.newaxis,...]
         # norm has shape (1,nfreq) if one angle and (1,1,nfreq) if multiple
         if polarized:
             one_minus_pI = unpol_int * (1 - polarization_fraction)

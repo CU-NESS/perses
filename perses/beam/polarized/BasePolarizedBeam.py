@@ -124,7 +124,7 @@ class _PolarizedBeam(_Beam):
         unpol_pars={}, polarization_fraction=None,\
         polarization_fraction_pars={}, polarization_angle=None,\
         polarization_angle_pars={}, verbose=True, include_smearing=False,\
-        angles=None, degrees=True, nest=False, **kwargs):
+        angles=None, degrees=True, nest=False, save_memory=False, **kwargs):
         """
         Simulates the Stokes parameters induced by the sky with given
         unpolarized intensity and complex electric field components in the
@@ -158,6 +158,10 @@ class _PolarizedBeam(_Beam):
                                  kwargs to it
         verbose: boolean switch determining whether time of calculation is
                  printed
+        save_memory: boolean flag determining whether memory is treated more
+                     carefully when computing J^dagger sigma_P J
+                     Note: only has effect if polarization fraction and angle
+                     are given
         kwargs: keyword arguments to pass on to self.get_maps
         
         returns Stokes parameters measured by the antennas as a function of
@@ -211,26 +215,47 @@ class _PolarizedBeam(_Beam):
                 "neither must be None.")
         Jones_matrix =\
             Jones_matrix_from_components(*transpose(self.get_maps(frequencies,\
-            nside, (90., 0.), 0., normed=False, **kwargs)))[np.newaxis,...]
-        sigma = np.array([[[[[1.+0.j, 0.+0.j], [0.+0.j, 1.+0.j]]]],\
-            [[[[1.+0.j, 0.+0.j], [0.+0.j, -1.+0.j]]]],\
-            [[[[0.+0.j, 1.+0.j], [1.+0.j, 0.+0.j]]]],\
-            [[[[0.+0.j, 0.-1.j], [0.+1.j, 0.+0.j]]]]])
-        Jones_product =\
-            dot(dot(hermitian_conjugate(Jones_matrix), sigma), Jones_matrix)
-        del Jones_matrix, sigma ; gc.collect()
-        # Jones_product is J^dagger.sigma_P.J and has shape (4,npix,nfreq,2,2)
-        trace_Jones_product = np.real(trace(Jones_product))
-        norm = integrate_maps(trace_Jones_product[0], pixel_axis=0,\
-            keepdims=False)
+            nside, (90., 0.), 0., normed=False, **kwargs)))
         if polarized:
-            del trace_Jones_product ; gc.collect()
+            sigma = np.array([[[1.+0.j, 0.+0.j], [0.+0.j, 1.+0.j]],\
+                [[1.+0.j, 0.+0.j], [0.+0.j, -1.+0.j]],\
+                [[0.+0.j, 1.+0.j], [1.+0.j, 0.+0.j]],\
+                [[0.+0.j, 0.-1.j], [0.+1.j, 0.+0.j]]])
+            sigma = sigma[:,np.newaxis,np.newaxis,:,:]
+            if save_memory:
+                Jones_matrix_dagger = hermitian_conjugate(Jones_matrix)
+                Jones_product = np.ndarray((4,) + Jones_matrix.shape)
+                for index in range(4):
+                    if index == 0:
+                        Jones_product[index,...] =\
+                            np.real(dot(Jones_matrix_dagger, Jones_matrix))
+                    else:
+                        Jones_product[index,...] = np.real(dot(dot(\
+                            Jones_matrix_dagger, sigma[index]), Jones_matrix))
+                del Jones_matrix, Jones_matrix_dagger, sigma ; gc.collect()
+            else:
+                Jones_matrix = Jones_matrix[np.newaxis,...]
+                Jones_product = np.real(dot(dot(\
+                    hermitian_conjugate(Jones_matrix), sigma), Jones_matrix))
+                del Jones_matrix, sigma ; gc.collect()
+            # Jones_product is J^dagger.sigma_P.J and has shape (4,npix,nfreq,2,2)
+            norm = integrate_maps(trace(Jones_product[0]), pixel_axis=0,\
+                keepdims=False)
         else:
-            del Jones_product ; gc.collect()
-        if len(angles) == 1:
+            trace_Jones_product = np.ndarray((4,) + Jones_matrix.shape[:-2])
+            Jxy_squared = np.sum(np.abs(Jones_matrix) ** 2, axis=-1)
+            (Jx_squared, Jy_squared) = (Jxy_squared[...,0], Jxy_squared[...,1])
+            UpiV_quantity = 2 * np.sum(np.conj(\
+                Jones_matrix[...,0,:]) * Jones_matrix[...,1,:], axis=-1)
+            trace_Jones_product[0,...] = Jx_squared + Jy_squared
+            trace_Jones_product[1,...] = Jx_squared - Jy_squared
+            trace_Jones_product[2,...] = np.real(UpiV_quantity)
+            trace_Jones_product[3,...] = np.imag(UpiV_quantity)
+            norm = integrate_maps(trace_Jones_product[0], pixel_axis=0,\
+                keepdims=False)
+        norm = norm[np.newaxis,:]
+        if len(angles) != 1:
             norm = norm[np.newaxis,...]
-        else:
-            norm = norm[np.newaxis,np.newaxis,...]
         if polarized:
             one_minus_pI = unpol_int * (1 - polarization_fraction)
             sr2pIv = np.sqrt(polarization_fraction * unpol_int)
