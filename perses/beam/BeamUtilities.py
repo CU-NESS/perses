@@ -30,6 +30,87 @@ def stokes_beams_from_Jones_matrix(JtX, JtY, JpX, JpY):
         all_X_mod_squared - all_Y_mod_squared,\
         np.real(UpiV_beam), np.imag(UpiV_beam)], axis=0)
 
+def Mueller_matrix_element_from_Jones_matrix_elements(JtX, JtY, JpX, JpY,\
+    from_Stokes, to_Stokes):
+    """
+    Creates an element of the 4x4 (real) Mueller matrix from the 2x2 (complex)
+    Jones matrix.
+    
+    JtX, JtY, JpX, JpY: elements of the Jones matrix where t is theta direction
+                        (angle from zenith), p is phi direction (azimuthal
+                        angle), and X and Y signify the two antennas
+    from_Stokes: one of ['I', 'Q', 'U', 'V']
+    to_Stokes: one of ['I', 'Q', 'U', 'V']
+    
+    returns: real numpy.ndarray of same shape as Jones matrix elements
+    """
+    if from_Stokes == 'I':
+        if to_Stokes == 'I':
+            return np.sum(np.abs(np.stack([JtX, JtY, JpX, JpY], axis=0)) ** 2,\
+                axis=0)
+        elif to_Stokes == 'Q':
+            return np.sum(np.abs(np.stack([JtX, JpX], axis=0)) ** 2, axis=0) -\
+                np.sum(np.abs(np.stack([JtY, JpY], axis=0)) ** 2, axis=0)
+        elif to_Stokes == 'U':
+            return 2 * np.real((np.conj(JtX) * JtY) + (np.conj(JpX) * JpY))
+        elif to_Stokes == 'V':
+            return 2 * np.imag((np.conj(JtX) * JtY) + (np.conj(JpX) * JpY))
+        else:
+            raise ValueError("to_Stokes was not in ['I', 'Q', 'U', 'V'].")
+    elif from_Stokes == 'Q':
+        if to_Stokes == 'I':
+            return np.sum(np.abs(np.stack([JtX, JtY], axis=0)) ** 2, axis=0) -\
+                np.sum(np.abs(np.stack([JpX, JpY], axis=0)) ** 2, axis=0)
+        elif to_Stokes == 'Q':
+            return np.sum(np.abs(np.stack([JtX, JpY], axis=0)) ** 2, axis=0) -\
+                np.sum(np.abs(np.stack([JtY, JpX], axis=0)) ** 2, axis=0)
+        elif to_Stokes == 'U':
+            return 2 * np.real((np.conj(JtX) * JtY) - (np.conj(JpX) * JpY))
+        elif to_Stokes == 'V':
+            return 2 * np.imag((np.conj(JtX) * JtY) - (np.conj(JpX) * JpY))
+        else:
+            raise ValueError("to_Stokes was not in ['I', 'Q', 'U', 'V'].")
+    elif from_Stokes == 'U':
+        if to_Stokes == 'I':
+            return 2 * np.real((np.conj(JtX) * JpX) + (np.conj(JtY) * JpY))
+        elif to_Stokes == 'Q':
+            return 2 * np.real((np.conj(JtX) * JpX) - (np.conj(JtY) * JpY))
+        elif to_Stokes == 'U':
+            return 2 * np.real((np.conj(JtY) * JpX) + (np.conj(JtX) * JpY))
+        elif to_Stokes == 'V':
+            return 2 * np.imag((np.conj(JtX) * JpY) - (np.conj(JtY) * JpX))
+        else:
+            raise ValueError("to_Stokes was not in ['I', 'Q', 'U', 'V'].")
+    elif from_Stokes == 'V':
+        if to_Stokes == 'I':
+            return (-2) * np.imag((np.conj(JtX) * JpX) + (np.conj(JtY) * JpY))
+        elif to_Stokes == 'Q':
+            return 2 * np.imag((np.conj(JtY) * JpY) - (np.conj(JtX) * JpX))
+        elif to_Stokes == 'U':
+            return (-2) * np.imag((np.conj(JtX) * JpY) + (np.conj(JtY) * JpX))
+        elif to_Stokes == 'V':
+            return 2 * np.real((np.conj(JtX) * JpY) - (np.conj(JtY) * JpX))
+        else:
+            raise ValueError("to_Stokes was not in ['I', 'Q', 'U', 'V'].")
+    else:
+        raise ValueError("from_Stokes was not in ['I', 'Q', 'U', 'V'].")
+
+def Mueller_matrix_from_Jones_matrix_elements(JtX, JtY, JpX, JpY):
+    """
+    Creates the 4x4 (real) Mueller matrix from the 2x2 (complex) Jones matrix.
+    
+    JtX, JtY, JpX, JpY: elements of the Jones matrix where t is theta direction
+                        (angle from zenith), p is phi direction (azimuthal
+                        angle), and X and Y signify the two antennas
+    
+    returns: real numpy.ndarray shape (JtX.shape + (4,4))
+    """
+    return\
+        np.stack([np.stack([Mueller_matrix_element_from_Jones_matrix_elements(\
+        JtX, JtY, JpX, JpY, from_Stokes, to_Stokes)\
+        for to_Stokes in ['I', 'Q', 'U', 'V']], axis=-1)\
+        for from_Stokes in ['I', 'Q', 'U', 'V']], axis=-1)
+
 def smear_grids(grids, start_angle, end_angle, degrees=True, phi_axis=-1):
     ndim = grids.ndim
     phi_axis = (phi_axis % ndim)
@@ -1150,7 +1231,7 @@ def dot(a, b):
     returns the product sum over the last axis of a and the second to last axis
             of b
     """
-    return np.einsum('...ki,...ij->...kj', a, b)
+    return np.sum(a[...,:,:,np.newaxis] * b[...,np.newaxis,:,:], axis=-2)
 
 def trace(array, axis1=-2, axis2=-1):
     """

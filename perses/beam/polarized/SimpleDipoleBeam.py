@@ -1,35 +1,28 @@
 """
-File: $PERSES/perses/beam/polarized/GaussianDipoleBeam.py
+File: $PERSES/perses/beam/polarized/SimpleDipoleBeam.py
 Author: Keith Tauscher
-Date: 7 Jun 2017
+Date: 30 Oct 2019
+
+Description: Class representing the beam of a simple dipole antenna. It can
+             include only one dipole or dual dipoles.
 """
 import numpy as np
-from ..BaseGaussianBeam import _GaussianBeam
 from .DipoleLikeBeam import DipoleLikeBeam
 
-class GaussianDipoleBeam(_GaussianBeam, DipoleLikeBeam):
+class SimpleDipoleBeam(DipoleLikeBeam):
     """
     Class representing a crossed dipole beam. It has a dipole profile
     multiplied by a (possibly elongated) Gaussian as its gain pattern. The user
     supplies the FWHM (or the two different FWHM's) of the Gaussian.
     """
-    def __init__(self, x_fwhm, y_fwhm=None, only_one_dipole=False):
+    def __init__(self, only_one_dipole=False):
         """
-        Initializes a new polarization-capable Gaussian beam with the given
-        FWHM information.
+        Initializes a new polarization-capable dipole beam with either one or
+        two antennas.
         
-        x_fwhm: a function of 1 argument (the frequency) which returns a FWHM
-                in degrees. if x_fwhm is the only argument supplied, then it
-                returns the FWHM of a Gaussian beam which is assumed
-                azimuthally symmetric. If not, it returns the FWHM in the X-
-                direction (i.e. the theta*np.cos(phi) direction)
-        y_fwhm: if supplied, it is a function of 1 argument (the frequency)
-                which returns the FWHM (in degrees) in the Y-direction (i.e.
-                the theta*np.sin(phi) direction)
         only_one_dipole: if True, only one dipole is used
                          otherwise, two orthogonal dipoles are used
         """
-        self.initialize_fwhm(x_fwhm, y_fwhm=y_fwhm)
         self.only_one_dipole = only_one_dipole
     
     def modulating_function(self, frequencies, thetas, phis):
@@ -43,6 +36,6 @@ class GaussianDipoleBeam(_GaussianBeam, DipoleLikeBeam):
         NOTE: The three arguments to this function--frequencies, thetas, and
               phis--must all be castable into a common shape.
         """
-        return self.gaussian_profile(frequencies, thetas, phis,\
-            sqrt_of_final=True)
+        return (np.ones_like(frequencies) * np.ones_like(thetas) *\
+            np.ones_like(phis))
 

@@ -7,9 +7,7 @@ from ..BeamUtilities import linear_to_dB, beam_sizes_from_maps, rotate_map,\
     beam_sizes_from_grids, normalize_grids, grids_from_maps, rotate_maps,\
     convolve_maps, spin_maps, smear_maps
 from ..BaseBeam import _Beam, nside_from_angular_resolution
-from ...util import real_numerical_types
-from ...util.MakeVideo import make_video, pre_slowdown_frames_from_times,\
-    ifreq_from_iframe
+from ...util import real_numerical_types, make_video
 import numpy as np
 import matplotlib.pyplot as pl
 try:
@@ -170,8 +168,8 @@ class _TotalPowerBeam(_Beam):
         
         
     def make_map_video(self, name, frequencies, nside, pointing, psi,\
-        slowdown=1, prebuffer_time=1., postbuffer_time=1.,\
-        file_extension='mp4', map_kwargs={}, plot_kwargs={}):
+        slowdown=1, file_extension='mp4', frequencies_per_second=5,\
+        map_kwargs={}, plot_kwargs={}):
         """
         Makes a video out of frames made by the plot_map function.
         
@@ -184,28 +182,24 @@ class _TotalPowerBeam(_Beam):
         map_kwargs extra keyword arguments to pass to beam.get_maps
         plot_kwargs extra keyword arguments to pass to healpy.mollview
         """
-        frame_rate = 25
         numfreqs = len(frequencies)
         temp_dir_name = 'beam_video_temp'
-        subprocess.call(['mkdir', temp_dir_name])
-        (prebuffer, postbuffer) = pre_slowdown_frames_from_times(frame_rate,\
-            slowdown, (prebuffer_time, postbuffer_time))
-        num_frames = prebuffer + numfreqs + postbuffer
+        os.mkdir(temp_dir_name)
         frame_prefix = temp_dir_name + '/frame_'
         frame_suffix = '.png'
-        for iframe in range(num_frames):
-            ifreq = ifreq_from_iframe(iframe, prebuffer, numfreqs)
+        for ifreq in range(numfreqs):
             frequency = frequencies[ifreq]
             title = "{0!s} at {1} MHz".format(name, frequency)
             self.plot_map(title, frequency, nside, pointing, psi,\
                 map_kwargs=map_kwargs, plot_kwargs=plot_kwargs)
-            pl.savefig('{0!s}{1}{2!s}'.format(frame_prefix, iframe,\
-                frame_suffix))
+            pl.savefig(\
+                '{0!s}{1:d}{2!s}'.format(frame_prefix, ifreq, frame_suffix))
             pl.close()
         name_no_spaces = '_'.join(name.split(' '))
         video_file_name = name_no_spaces + '_video.' + file_extension
-        make_video(video_file_name, frame_rate, frame_prefix,\
-            np.arange(num_frames), frame_suffix, slowdown)
+        make_video(video_file_name, frame_prefix, frame_suffix,\
+            frequencies_per_second, index_format='%d',\
+            slowdown_factor=slowdown)
         subprocess.call(['rm', '-r', temp_dir_name])
 
 
@@ -271,9 +265,8 @@ class _TotalPowerBeam(_Beam):
         return slc
     
     def make_cross_section_video(self, name, frequencies, theta_res, phi_res,\
-        phi_cons, slowdown=1, file_extension='mp4', logarithmic=True,\
-        prebuffer_time=1, postbuffer_time=1, reference=None, grid_kwargs={},\
-        plot_kwargs={}):
+        phi_cons, frequencies_per_second, slowdown=1, file_extension='mp4',\
+        logarithmic=True, reference=None, grid_kwargs={}, plot_kwargs={}):
         """
         Makes a video of a cross section of the given _Beam using
         plot_cross_section to generate the frames. The video is saved in
@@ -292,7 +285,6 @@ class _TotalPowerBeam(_Beam):
         grid_kwargs extra keyword arguments to pass to beam.get_grids
         plot_kwargs extra keyword arguments to pass to matplotlib.pyplot as pl
         """
-        frame_rate = 25
         numfreqs = len(frequencies)
         pointing = (90., 0.)
         psi = 0.
@@ -307,16 +299,11 @@ class _TotalPowerBeam(_Beam):
                 min_dB = this_min
             if this_max > max_dB:
                 max_dB = this_max
-        
         temp_dir_name = 'cross_section_video_temp'
-        subprocess.call(['mkdir', temp_dir_name])
-        (prebuffer, postbuffer) = pre_slowdown_frames_from_times(frame_rate,\
-            slowdown, (prebuffer_time, postbuffer_time))
-        num_frames = prebuffer + numfreqs + postbuffer
+        os.mkdir(temp_dir_name)
         frame_prefix = temp_dir_name + '/frame_'
         frame_suffix = '.png'
-        for iframe in range(num_frames):
-            ifreq = ifreq_from_iframe(iframe, prebuffer, numfreqs)
+        for ifreq in range(numfreqs):
             freq = frequencies[ifreq]
             title = '{0!s} at $\phi={1}$ at $\\nu={2}$ MHz'.format(name,\
                 phi_cons, freq,)
@@ -324,13 +311,14 @@ class _TotalPowerBeam(_Beam):
                 logarithmic=logarithmic, reference=reference,\
                 ylim=(min_dB, max_dB), grid=grids[ifreq,:,:],\
                 grid_kwargs=grid_kwargs, plot_kwargs=plot_kwargs)
-            pl.savefig('{0!s}{1}{2!s}'.format(frame_prefix, iframe,\
+            pl.savefig('{0!s}{1}{2!s}'.format(frame_prefix, ifreq,\
                 frame_suffix))
             pl.close()
         name_no_spaces = '_'.join(name.split(' '))
         video_file_name = name_no_spaces + '_cross_sections.' + file_extension
-        make_video(video_file_name, frame_rate, frame_prefix,\
-            np.arange(num_frames), frame_suffix, slowdown)
+        make_video(video_file_name, frame_prefix, frame_suffix,\
+            frequencies_per_second, index_format='%d',\
+            slowdown_factor=slowdown)
         subprocess.call(['rm', '-r', temp_dir_name])
     
     def beam_sizes(self, frequencies, resolution, use_grid=False,\

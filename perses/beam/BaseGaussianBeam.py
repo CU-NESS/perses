@@ -1,8 +1,20 @@
+"""
+File: $PERSES/perses/beam/BaseGaussianBeam.py
+Author: Keith Tauscher
+Date: 30 Oct 2019
+
+Description: File containing base class for Gaussian beams. This class handles
+             the fwhm(s) and has a function for the Gaussian profile.
+"""
 from __future__ import division
 from types import FunctionType
 import numpy as np
 
 class _GaussianBeam(object):
+    """
+    Base class for Gaussian beams. This class handles the fwhm(s) and has a
+    function for the Gaussian profile.
+    """
     def initialize_fwhm(self, x_fwhm, y_fwhm=None):
         """
         Initializes a new _GaussianBeam with the given FWHM information.

@@ -90,8 +90,8 @@ def read_polarized_beam_assumed_symmetry(file_names, frequencies, ntheta=181,\
     """
     (JthetaX, JphiX) = read_Jones_vector(file_names, frequencies,\
         ntheta=ntheta, nphi=nphi, take_sqrt=take_sqrt)
-    JthetaY = spin_grids(JthetaX, -90, degrees=True, phi_axis=-1)
-    JphiY = spin_grids(JphiX, -90, degrees=True, phi_axis=-1)
+    JthetaY = spin_grids(JthetaX, 90, degrees=True, phi_axis=-1)
+    JphiY = spin_grids(JphiX, 90, degrees=True, phi_axis=-1)
     return np.array([JthetaX, JthetaY, JphiX, JphiY])
 
 def read_polarized_beam(file_names, frequencies, ntheta=181, nphi=360,\

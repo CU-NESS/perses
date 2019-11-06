@@ -3,7 +3,8 @@ File: perses/beam/polarized/DipoleLikeBeam.py
 Author: Keith Tauscher
 Date: 21 Oct 2019
 
-Description: 
+Description: File containing the base class for beams of antennas whose Jones
+             matrices are proportional to the simple dipole beam pattern.
 """
 from types import FunctionType
 import numpy as np
@@ -13,6 +14,10 @@ from .BasePolarizedBeam import _PolarizedBeam
 from ..BeamUtilities import rotate_maps
 
 class DipoleLikeBeam(_PolarizedBeam):
+    """
+    Base class for beams of antennas whose Jones matrices are proportional to
+    the simple dipole beam pattern.
+    """
     def __init__(self, modulating_function=None, only_one_dipole=False):
         self.modulating_function = modulating_function
         self.only_one_dipole = only_one_dipole

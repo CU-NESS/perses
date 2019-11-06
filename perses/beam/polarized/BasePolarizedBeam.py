@@ -9,16 +9,16 @@ Description: Base class for all beams which contain polarization information.
              should return an array of the shape (4, nfreq, npix) where the 4
              elements (in order) are JthetaX, JthetaY, JphiX, and JphiY.
 """
+from __future__ import division
 from types import FunctionType
-import time, gc
+import os, time, gc
 import numpy as np
 import matplotlib.pyplot as pl
-from ...util import real_numerical_types
-from ..BeamUtilities import rotate_maps, rotate_vector_maps, grids_from_maps,\
-    normalize_grids, hermitian_conjugate, dot, mod_squared,\
-    Jones_matrix_from_components, transpose, trace,\
-    stokes_beams_from_Jones_matrix, convolve_maps, smear_maps, spin_maps,\
-    integrate_maps
+from ...util import real_numerical_types, make_video
+from ..BeamUtilities import rotate_maps, rotate_vector_maps,\
+    Jones_matrix_from_components, transpose, stokes_beams_from_Jones_matrix,\
+    convolve_maps, smear_maps, spin_maps, integrate_maps,\
+    Mueller_matrix_from_Jones_matrix_elements
 from ..BaseBeam import _Beam, nside_from_angular_resolution
 
 try:
@@ -84,7 +84,7 @@ class _PolarizedBeam(_Beam):
             nest=nest, axis=0)
         nside = hp.pixelfunc.npix2nside(unpol_int.shape[0])
         JtX, JtY, JpX, JpY = transpose(self.get_maps(frequencies, nside,\
-            (90., 0.), 0., normed=False, **kwargs))
+            (90., 0.), 0., **kwargs))
         stokes = stokes_beams_from_Jones_matrix(JtX, JtY, JpX, JpY)
         norm = np.sum(stokes[0], axis=0)[np.newaxis,...]
         if len(angles) != 1:
@@ -124,7 +124,7 @@ class _PolarizedBeam(_Beam):
         unpol_pars={}, polarization_fraction=None,\
         polarization_fraction_pars={}, polarization_angle=None,\
         polarization_angle_pars={}, verbose=True, include_smearing=False,\
-        angles=None, degrees=True, nest=False, save_memory=False, **kwargs):
+        angles=None, degrees=True, nest=False, **kwargs):
         """
         Simulates the Stokes parameters induced by the sky with given
         unpolarized intensity and complex electric field components in the
@@ -158,10 +158,6 @@ class _PolarizedBeam(_Beam):
                                  kwargs to it
         verbose: boolean switch determining whether time of calculation is
                  printed
-        save_memory: boolean flag determining whether memory is treated more
-                     carefully when computing J^dagger sigma_P J
-                     Note: only has effect if polarization fraction and angle
-                     are given
         kwargs: keyword arguments to pass on to self.get_maps
         
         returns Stokes parameters measured by the antennas as a function of
@@ -182,7 +178,7 @@ class _PolarizedBeam(_Beam):
         else:
             unpol_int = unpol_int.T
         unpol_int = rotate_maps(unpol_int, theta, phi, psi, use_inverse=True,\
-            nest=nest, axis=0)
+            nest=nest, axis=0, verbose=False)
         nside = hp.pixelfunc.npix2nside(unpol_int.shape[0])
         if (type(polarization_fraction) is type(None)) or\
             (type(polarization_angle) is type(None)):
@@ -198,7 +194,7 @@ class _PolarizedBeam(_Beam):
             else:
                 polarization_fraction = polarization_fraction.T
             polarization_fraction = rotate_maps(polarization_fraction, theta,\
-                phi, psi, use_inverse=True, nest=nest, axis=0)
+                phi, psi, use_inverse=True, nest=nest, axis=0, verbose=False)
             if type(polarization_angle) is FunctionType:
                 polarization_angle = [polarization_angle(freq,\
                     **polarization_angle_pars) for freq in frequencies]
@@ -208,40 +204,50 @@ class _PolarizedBeam(_Beam):
             polarization_unit_vector = np.stack(rotate_vector_maps(\
                 theta_comp=np.cos(polarization_angle),\
                 phi_comp=np.sin(polarization_angle), theta=theta, phi=phi,\
-                psi=psi, use_inverse=True, axis=0), axis=-1)[...,np.newaxis]
+                psi=psi, use_inverse=True, axis=0, verbose=False), axis=-1)
         else:
             raise ValueError("One of polarization_fraction and " +\
                 "polarization_angle was None. Either both must be None or " +\
                 "neither must be None.")
-        Jones_matrix =\
-            Jones_matrix_from_components(*transpose(self.get_maps(frequencies,\
-            nside, (90., 0.), 0., normed=False, **kwargs)))
+        (JtX, JtY, JpX, JpY) = transpose(self.get_maps(frequencies, nside,\
+            (90., 0.), 0., **kwargs))
         if polarized:
-            sigma = np.array([[[1.+0.j, 0.+0.j], [0.+0.j, 1.+0.j]],\
-                [[1.+0.j, 0.+0.j], [0.+0.j, -1.+0.j]],\
-                [[0.+0.j, 1.+0.j], [1.+0.j, 0.+0.j]],\
-                [[0.+0.j, 0.-1.j], [0.+1.j, 0.+0.j]]])
-            sigma = sigma[:,np.newaxis,np.newaxis,:,:]
-            if save_memory:
-                Jones_matrix_dagger = hermitian_conjugate(Jones_matrix)
-                Jones_product = np.ndarray((4,) + Jones_matrix.shape)
-                for index in range(4):
-                    if index == 0:
-                        Jones_product[index,...] =\
-                            np.real(dot(Jones_matrix_dagger, Jones_matrix))
-                    else:
-                        Jones_product[index,...] = np.real(dot(dot(\
-                            Jones_matrix_dagger, sigma[index]), Jones_matrix))
-                del Jones_matrix, Jones_matrix_dagger, sigma ; gc.collect()
-            else:
-                Jones_matrix = Jones_matrix[np.newaxis,...]
-                Jones_product = np.real(dot(dot(\
-                    hermitian_conjugate(Jones_matrix), sigma), Jones_matrix))
-                del Jones_matrix, sigma ; gc.collect()
-            # Jones_product is J^dagger.sigma_P.J and has shape (4,npix,nfreq,2,2)
-            norm = integrate_maps(trace(Jones_product[0]), pixel_axis=0,\
-                keepdims=False)
+            Jones_product =\
+                np.ndarray((4,) + JtX.shape + (2, 2), dtype=complex)
+            JtX2 = np.abs(JtX) ** 2
+            JtY2 = np.abs(JtY) ** 2
+            Jones_product[0,...,0,0] = JtX2 + JtY2
+            Jones_product[1,...,0,0] = JtX2 - JtY2
+            del JtX2, JtY2 ; gc.collect()
+            JpX2 = np.abs(JpX) ** 2
+            JpY2 = np.abs(JpY) ** 2
+            Jones_product[0,...,1,1] = JpX2 + JpY2
+            Jones_product[1,...,1,1] = JpX2 - JpY2
+            del JpX2, JpY2 ; gc.collect()
+            twice_JtXastJtY = 2 * np.conj(JtX) * JtY
+            Jones_product[2,...,0,0] = np.real(twice_JtXastJtY)
+            Jones_product[3,...,0,0] = np.imag(twice_JtXastJtY)
+            del twice_JtXastJtY ; gc.collect()
+            twice_JpXastJpY = 2 * np.conj(JpX) * JpY
+            Jones_product[2,...,1,1] = np.real(twice_JpXastJpY)
+            Jones_product[3,...,1,1] = np.imag(twice_JpXastJpY)
+            del twice_JpXastJpY
+            JtXastJpX = np.conj(JtX) * JpX
+            JtYastJpY = np.conj(JtY) * JpY
+            Jones_product[0,...,0,1] = JtXastJpX + JtYastJpY
+            Jones_product[1,...,0,1] = JtXastJpX - JtYastJpY
+            del JtXastJpX, JtYastJpY ; gc.collect()
+            JtYastJpX = np.conj(JtY) * JpX
+            JtXastJpY = np.conj(JtX) * JpY
+            Jones_product[2,...,0,1] = JtYastJpX + JtXastJpY
+            Jones_product[3,...,0,1] = 1j * (JtYastJpX - JtXastJpY)
+            del JtYastJpX, JtXastJpY, JtX, JtY, JpX, JpY ; gc.collect()
+            Jones_product[...,1,0] = np.conj(Jones_product[...,0,1])
+            Jones_product = np.real(Jones_product)
+            norm = integrate_maps(Jones_product[0,...,0,0] +\
+                Jones_product[0,...,1,1], pixel_axis=0, keepdims=False)
         else:
+            Jones_matrix = Jones_matrix_from_components(JtX, JtY, JpX, JpY)
             trace_Jones_product = np.ndarray((4,) + Jones_matrix.shape[:-2])
             Jxy_squared = np.sum(np.abs(Jones_matrix) ** 2, axis=-1)
             (Jx_squared, Jy_squared) = (Jxy_squared[...,0], Jxy_squared[...,1])
@@ -258,12 +264,12 @@ class _PolarizedBeam(_Beam):
             norm = norm[np.newaxis,...]
         if polarized:
             one_minus_pI = unpol_int * (1 - polarization_fraction)
-            sr2pIv = np.sqrt(polarization_fraction * unpol_int)
-            sr2pIv = sr2pIv[:,:,np.newaxis,np.newaxis] *\
-                polarization_unit_vector
-            sr2pIv = sr2pIv[np.newaxis,:]
-            # sr2pIv is the polarization unit vector time sqrt 2pI
-            # shape of sr2pIv is (1,npix,nfreq,2,1)
+            pIvvT2 = np.sqrt(2 * polarization_fraction * unpol_int)
+            pIvvT2 = pIvvT2[:,:,np.newaxis] * polarization_unit_vector
+            pIvvT2 = pIvvT2[np.newaxis,...]
+            pIvvT2 = pIvvT2[...,np.newaxis,:] * pIvvT2[...,:,np.newaxis]
+            # pIvvT2 is the polarization unit vector's outer product times 2pI
+            # shape of pIvvT2 is (1,npix,nfreq,2,2)
         else:
             one_minus_pI = unpol_int
         one_minus_pI = one_minus_pI[np.newaxis,:]
@@ -287,11 +293,11 @@ class _PolarizedBeam(_Beam):
                         angle_bins[iangle], angle_bins[iangle+1],\
                         degrees=degrees, pixel_axis=1, nest=nest)
                     these_stokes = integrate_maps(one_minus_pI *\
-                        np.real(trace(smeared_Jones_product)), pixel_axis=1)
+                        (smeared_Jones_product[...,0,0] +\
+                        smeared_Jones_product[...,1,1]), pixel_axis=1)
                     these_stokes = these_stokes + integrate_maps(\
-                        np.real(dot(dot(transpose(sr2pIv),\
-                        smeared_Jones_product), sr2pIv)[...,0,0]),\
-                        pixel_axis=1)
+                        np.sum(pIvvT2 * smeared_Jones_product,\
+                        axis=(-2, -1)), pixel_axis=1)
                     stokes.append(these_stokes)
                 del smeared_Jones_product ; gc.collect()
                 stokes = np.stack(stokes, axis=1)
@@ -307,10 +313,10 @@ class _PolarizedBeam(_Beam):
                 spun_Jones_product = spin_maps(Jones_product, angle,\
                     degrees=degrees, pixel_axis=1, nest=nest)
                 these_stokes = integrate_maps(one_minus_pI *\
-                    np.real(trace(spun_Jones_product)), pixel_axis=1)
-                these_stokes = these_stokes + integrate_maps(\
-                    np.real(dot(dot(transpose(sr2pIv), spun_Jones_product),\
-                    sr2pIv)[...,0,0]), pixel_axis=1)
+                    (spun_Jones_product[...,0,0] +\
+                    spun_Jones_product[...,1,1]), pixel_axis=1)
+                these_stokes = these_stokes + integrate_maps(np.sum(\
+                    pIvvT2 * spun_Jones_product, axis=(-2, -1)), pixel_axis=1)
                 stokes.append(these_stokes)
             del spun_Jones_product ; gc.collect()
             stokes = np.stack(stokes, axis=1)
@@ -332,40 +338,119 @@ class _PolarizedBeam(_Beam):
             print(("Estimated stokes parameters from {0!s}unpolarized " +\
                 "emission in {1:.4g} s.").format(extra_string, tf - ti))
         return stokes
+    
+    def Mueller_matrix(self, frequencies, nside, pointing, psi, **kwargs):
+        """
+        Finds an element of the Mueller matrix of this beam
+        
+        frequencies: frequencies in MHz at which to find beam
+        nside: healpy resolution parameter of returned map
+        pointing: antenna pointing direction in (lat, lon) in degrees
+        psi: rotation about pointing direction in degrees
+        kwargs: keyword arguments to pass to get_maps
+        
+        returns: numpy.ndarray of shape (nfreq, npix)
+        """
+        matrix = Mueller_matrix_from_Jones_matrix_elements(*\
+            self.get_maps(frequencies, nside, pointing, psi, **kwargs))
+        normalization =\
+            integrate_maps(matrix[...,0,0], pixel_axis=-1, keepdims=True)
+        normalization = normalization[...,np.newaxis,np.newaxis]
+        return matrix / normalization
 
-    def plot_map(self, title, frequency, nside, pointing, psi, map_kwargs={},\
-        mollview_kwargs={}, fontsize=20, show=False):
+    def plot_Mueller_matrix(self, frequency, nside, pointing, psi,\
+        map_kwargs={}, visualization_function='mollview',\
+        visualization_kwargs={}, fontsize=20, show=False):
         """
         Plots the map of this _Beam at the given frequency where the beam is
         pointing in the given direction.
         
-        title name of the beam
         frequency the frequency at which to plot the map
         nside the nside parameter to use within healpy
         pointing the pointing direction (in latitude and (longitude)
         psi the angle through which the beam is rotated about its axis
         map_kwargs extra keyword arguments to pass to self.get_map
-        mollview_kwargs additional keyword arguments to pass to healpy.mollview
-                        (other than title)
+        visualization_function one of
+                               ['mollview', 'gnomview', 'orthview', 'cartview']
+        visualization_kwargs additional keyword arguments to pass to
+                             given visualization function
         
         returns map of this beam in a 1D numpy.ndarray healpy map
         """
-        beams = stokes_beams_from_Jones_matrix(*self.get_maps(frequency,\
-            nside, pointing, psi, normed=False, **map_kwargs))
-        beams = (beams / (4 * np.pi * np.mean(beams[0])))
-        beam_comps = ['I', 'Q', 'U', 'V']
-        mollview_kwargs['hold'] = True
-        fig = pl.figure(figsize=(20, 12))
-        for ibeam_comp in range(4):
-            ax = fig.add_subplot(2, 2, 1 + ibeam_comp)
-            hp.mollview(beams[ibeam_comp], **mollview_kwargs)
-            pl.gca().set_title('{0!s} {1!s} beam'.format(title,\
-                beam_comps[ibeam_comp]), size=fontsize)
+        matrix =\
+            self.Mueller_matrix(frequency, nside, pointing, psi, **map_kwargs)
+        visualization_kwargs['hold'] = True
+        fig = pl.figure(figsize=(20, 20))
+        visualization_function = eval('hp.{!s}'.format(visualization_function))
+        current_plot = 1
+        for to_Stokes in ['I', 'Q', 'U', 'V']:
+            for from_Stokes in ['I', 'Q', 'U', 'V']:
+                ax = fig.add_subplot(4, 4, current_plot)
+                column = ((current_plot - 1) % 4)
+                row = ((current_plot - 1) // 4)
+                visualization_function(matrix[...,row,column],\
+                    **visualization_kwargs)
+                pl.gca().set_title('${0!s}\\rightarrow {1!s}$ beam'.format(\
+                    from_Stokes, to_Stokes), size=fontsize)
+                current_plot += 1
         if show:
             pl.show()
-            return beams
+            return matrix
         else:
-            return (fig, beams)
+            return (fig, matrix)
+    
+    def make_Mueller_matrix_video(self, video_file_name, frequencies, nside,\
+        pointing, psi, map_kwargs={}, visualization_function='mollview',\
+        visualization_kwargs={}, fontsize=20, original_images_per_second=5,\
+        slowdown_factor=2):
+        """
+        Plots the map of this _Beam at the given frequency where the beam is
+        pointing in the given direction.
+        
+        frequency the frequency at which to plot the map
+        nside the nside parameter to use within healpy
+        pointing the pointing direction (in latitude and (longitude)
+        psi the angle through which the beam is rotated about its axis
+        map_kwargs extra keyword arguments to pass to self.get_map
+        visualization_function one of
+                               ['mollview', 'gnomview', 'orthview', 'cartview']
+        visualization_kwargs additional keyword arguments to pass to
+                             given visualization function
+        """
+        matrix = self.Mueller_matrix(frequencies, nside, pointing, psi,\
+            **map_kwargs)
+        visualization_kwargs['hold'] = True
+        visualization_function = eval('hp.{!s}'.format(visualization_function))
+        num_frequencies = len(frequencies)
+        num_digits = int(np.ceil(np.log10(num_frequencies)))
+        index_format = '%{:d}d'.format(num_digits)
+        frame_prefix = 'TEMPtempTEMP_'
+        frame_suffix = '_TEMPtempTEMP.png'
+        frame_file_names = []
+        for ifreq in range(num_frequencies):
+            frame_file_name = '{0!s}{1!s}{2!s}'.format(frame_prefix,\
+                '{:d}'.format(ifreq).zfill(num_digits), frame_suffix)
+            fig = pl.figure(figsize=(20, 20))
+            current_plot = 1
+            for to_Stokes in ['I', 'Q', 'U', 'V']:
+                for from_Stokes in ['I', 'Q', 'U', 'V']:
+                    ax = fig.add_subplot(4, 4, current_plot)
+                    column = ((current_plot - 1) % 4)
+                    row = ((current_plot - 1) // 4)
+                    visualization_function(matrix[ifreq,:,row,column],\
+                        **visualization_kwargs)
+                    title = '${0!s}\\rightarrow {1!s}$ {2!s} MHz'.format(\
+                        from_Stokes, to_Stokes, frequencies[ifreq])
+                    pl.gca().set_title(title, size=fontsize)
+                    current_plot += 1
+            fig.savefig(frame_file_name)
+            frame_file_names.append(frame_file_name)
+            pl.close('all')
+        make_video(video_file_name, frame_prefix, frame_suffix,\
+            original_images_per_second, index_format=index_format,\
+            slowdown_factor=slowdown_factor)
+        for frame_file_name in frame_file_names:
+            os.remove(frame_file_name)
 
     def plot_grid(self, title, frequency, theta_res, phi_res, pointing, psi,\
         grid_kwargs={}, plot_kwargs={}, show=False):
