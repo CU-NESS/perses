@@ -52,8 +52,9 @@ class _TotalPowerBeam(_Beam):
         return self.pf['beam_symmetrized']
 
     def convolve(self, frequencies, sky_maps, pointing=(90, 0), psi=0,\
-        func_pars={}, verbose=True, angles=None, degrees=True,\
-        include_smearing=True, nest=False, **kwargs):
+        func_pars={}, verbose=True, include_smearing=False, angles=None,\
+        degrees=True, nest=False, horizon=False, ground_temperature=0,\
+        **kwargs):
         """
         Convolves this beam with the given sky maps by taking the product of
         the beam maps and the sky maps and integrating over the entire solid
@@ -63,16 +64,38 @@ class _TotalPowerBeam(_Beam):
         frequency and the sky_map at that frequency. nside is assumed constant
         across all maps.
         
-        frequencies: the frequencies at which to perform the convolution
-        sky_maps: maps of sky in 2D numpy.ndarray with shape (nfreqs, npix)
-        pointing: the pointing direction of the telescope for the convolution
-        psi: starting rotation angle, default 0
-        func_pars: the keyword arguments to pass to sky_maps (only needed if
-                   sky_maps has function type)
-        **kwargs: extra arguments to pass to get_maps
+        frequencies: frequencies at which to convolve this beam with the
+                     sky_maps
+        sky_maps: the unpolarized intensity of the sky as a function of pixel
+                  number and frequency. unpol_int can either be a real
+                  numpy.ndarray of shape (nfreq,npix) or a function which
+                  takes frequencies and outputs maps of shape (npix,)
+        pointing: the direction in which the beam is pointing (lat, lon) in deg
+                  default (90, 0)
+        psi: angle through which beam is rotated about its axis in deg
+             default 0
+        func_pars: if sky_maps is a function which creates sky maps, these pars
+                   are passed as kwargs into it.
+        verbose: boolean switch determining whether time of calculation is
+                 printed
+        include_smearing: if True, maps are smeared through angles
+        angles: either None (if only one antenna rotation angle is to be used)
+                of a sequence of angles in degrees or radians
+                (see degrees argument)
+        degrees: True (default) if angles are in degrees, False if angles are
+                 in radians
+        nest: False if healpix maps in RING format (default), True otherwise
+        horizon: if True (default False), ideal horizon is included in
+                 simulation and the ground temperature given by
+                 ground_temperature is used when masking below it
+        ground_temperature: (default 0) temperature to use below the horizon
+        kwargs: keyword arguments to pass on to self.get_maps
 
         returns: convolved spectrum, a 1D numpy.ndarray with shape (numfreqs,)
+                 or 2D numpy.ndarray with shape (numangles, numfreqs) if
+                 sequence of angles is given
         """
+        start_time = time.time()
         if type(angles) is type(None):
             angles = np.zeros(1)
         elif type(angles) in real_numerical_types:
@@ -85,13 +108,19 @@ class _TotalPowerBeam(_Beam):
         elif type(sky_maps) is not np.ndarray:
             raise TypeError("sky_maps given to convolve were not in " +\
                             "sequence or function form.")
-        theta, phi = 90. - pointing[0], pointing[1]
+        (theta, phi) = (90. - pointing[0], pointing[1])
         sky_maps = rotate_maps(sky_maps, theta, phi, psi, use_inverse=True,\
-            nest=nest, axis=-1)
-        nside = hp.pixelfunc.npix2nside(sky_maps.shape[1])
+            nest=nest, verbose=False, axis=-1)
+        npix = sky_maps.shape[1]
+        nside = hp.pixelfunc.npix2nside(npix)
+        if horizon:
+            map_thetas =\
+                hp.pixelfunc.pix2ang(nside, np.arange(npix), nest=nest)[0]
+            ground_slice = (map_thetas > (np.pi / 2))
+            sky_maps[:,ground_slice] = ground_temperature
         beam_maps = self.get_maps(frequencies, nside, (90., 0.), 0., **kwargs)
         if len(angles) == 1:
-            return convolve_maps(spin_maps(beam_maps, angles[0],\
+            spectra = convolve_maps(spin_maps(beam_maps, angles[0],\
                 degrees=degrees, pixel_axis=-1, nest=nest), sky_maps,\
                 normed=True, pixel_axis=-1)
         elif include_smearing:
@@ -101,7 +130,7 @@ class _TotalPowerBeam(_Beam):
                 left = (2 * angle_bins[0]) - angle_bins[1]
                 right = (2 * angle_bins[-1]) - angle_bins[-2]
                 angle_bins = np.concatenate([[left], angle_bins, [right]])
-                return np.stack([convolve_maps(smear_maps(beam_maps,\
+                spectra = np.stack([convolve_maps(smear_maps(beam_maps,\
                     angle_bins[iangle], angle_bins[iangle+1], degrees=degrees,\
                     pixel_axis=-1, nest=nest), sky_maps, normed=True,\
                     pixel_axis=-1) for iangle in range(len(angles))], axis=0)
@@ -109,9 +138,14 @@ class _TotalPowerBeam(_Beam):
                 raise ValueError("angles must be monotonically changing " +\
                                  "if smearing is to be included.")
         else:
-            return np.stack([convolve_maps(spin_maps(beam_maps, angle,\
+            spectra = np.stack([convolve_maps(spin_maps(beam_maps, angle,\
                 degrees=degrees, pixel_axis=-1, nest=nest), sky_maps,\
                 normed=True, pixel_axis=-1) for angle in angles], axis=0)
+        end_time = time.time()
+        if verbose:
+            print(('Convolved beam at {0} frequencies with a map in ' +\
+                '{1:.2g} s.').format(numfreqs, end_time - start_time))
+        return spectra
     
     def convolve_assumed_power_law(self, frequencies, pointing, psi, sky_map,\
         map_freq, spectral_index=-2.5, verbose=True, angles=None,\

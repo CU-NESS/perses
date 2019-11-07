@@ -124,7 +124,8 @@ class _PolarizedBeam(_Beam):
         unpol_pars={}, polarization_fraction=None,\
         polarization_fraction_pars={}, polarization_angle=None,\
         polarization_angle_pars={}, verbose=True, include_smearing=False,\
-        angles=None, degrees=True, nest=False, **kwargs):
+        angles=None, degrees=True, nest=False, horizon=False,\
+        ground_temperature=0, **kwargs):
         """
         Simulates the Stokes parameters induced by the sky with given
         unpolarized intensity and complex electric field components in the
@@ -158,6 +159,17 @@ class _PolarizedBeam(_Beam):
                                  kwargs to it
         verbose: boolean switch determining whether time of calculation is
                  printed
+        include_smearing: if True, maps are smeared through angles
+        angles: either None (if only one antenna rotation angle is to be used)
+                of a sequence of angles in degrees or radians
+                (see degrees argument)
+        degrees: True (default) if angles are in degrees, False if angles are
+                 in radians
+        nest: False if healpix maps in RING format (default), True otherwise
+        horizon: if True (default False), ideal horizon is included in
+                 simulation and the ground temperature given by
+                 ground_temperature is used when masking below it
+        ground_temperature: (default 0) temperature to use below the horizon
         kwargs: keyword arguments to pass on to self.get_maps
         
         returns Stokes parameters measured by the antennas as a function of
@@ -179,7 +191,13 @@ class _PolarizedBeam(_Beam):
             unpol_int = unpol_int.T
         unpol_int = rotate_maps(unpol_int, theta, phi, psi, use_inverse=True,\
             nest=nest, axis=0, verbose=False)
-        nside = hp.pixelfunc.npix2nside(unpol_int.shape[0])
+        npix = unpol_int.shape[0]
+        nside = hp.pixelfunc.npix2nside(npix)
+        if horizon:
+            map_thetas =\
+                hp.pixelfunc.pix2ang(nside, np.arange(npix), nest=nest)[0]
+            ground_slice = (map_thetas > (np.pi / 2))
+            unpol_int[ground_slice,:] = ground_temperature
         if (type(polarization_fraction) is type(None)) or\
             (type(polarization_angle) is type(None)):
             polarized = False
@@ -195,6 +213,8 @@ class _PolarizedBeam(_Beam):
                 polarization_fraction = polarization_fraction.T
             polarization_fraction = rotate_maps(polarization_fraction, theta,\
                 phi, psi, use_inverse=True, nest=nest, axis=0, verbose=False)
+            if horizon:
+                polarization_fraction[ground_slice] = 0
             if type(polarization_angle) is FunctionType:
                 polarization_angle = [polarization_angle(freq,\
                     **polarization_angle_pars) for freq in frequencies]
@@ -360,7 +380,7 @@ class _PolarizedBeam(_Beam):
 
     def plot_Mueller_matrix(self, frequency, nside, pointing, psi,\
         map_kwargs={}, visualization_function='mollview',\
-        visualization_kwargs={}, fontsize=20, show=False):
+        visualization_kwargs={}, fontsize=20, figsize=(20,20), show=False):
         """
         Plots the map of this _Beam at the given frequency where the beam is
         pointing in the given direction.
@@ -380,7 +400,7 @@ class _PolarizedBeam(_Beam):
         matrix =\
             self.Mueller_matrix(frequency, nside, pointing, psi, **map_kwargs)
         visualization_kwargs['hold'] = True
-        fig = pl.figure(figsize=(20, 20))
+        fig = pl.figure(figsize=figsize)
         visualization_function = eval('hp.{!s}'.format(visualization_function))
         current_plot = 1
         for to_Stokes in ['I', 'Q', 'U', 'V']:
@@ -401,8 +421,8 @@ class _PolarizedBeam(_Beam):
     
     def make_Mueller_matrix_video(self, video_file_name, frequencies, nside,\
         pointing, psi, map_kwargs={}, visualization_function='mollview',\
-        visualization_kwargs={}, fontsize=20, original_images_per_second=5,\
-        slowdown_factor=2):
+        visualization_kwargs={}, fontsize=20, figsize=(20, 20),\
+        original_images_per_second=5, slowdown_factor=2):
         """
         Plots the map of this _Beam at the given frequency where the beam is
         pointing in the given direction.
@@ -430,7 +450,7 @@ class _PolarizedBeam(_Beam):
         for ifreq in range(num_frequencies):
             frame_file_name = '{0!s}{1!s}{2!s}'.format(frame_prefix,\
                 '{:d}'.format(ifreq).zfill(num_digits), frame_suffix)
-            fig = pl.figure(figsize=(20, 20))
+            fig = pl.figure(figsize=figsize)
             current_plot = 1
             for to_Stokes in ['I', 'Q', 'U', 'V']:
                 for from_Stokes in ['I', 'Q', 'U', 'V']:
