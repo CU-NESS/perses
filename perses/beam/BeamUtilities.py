@@ -274,7 +274,7 @@ def smear_maps_approximate(sky_maps, delta, lmax=None):
         alm[:,accounted_for:accounted_for+multiplicity] *=\
             np.sinc((m_value * delta) / 360.)
         accounted_for += multiplicity
-    return np.array(hp.sphtfunc.alm2map(alm, nside, pol=False))
+    return np.array(hp.sphtfunc.alm2map(alm, nside, pol=False, verbose=False))
 
 def patchy_smear_maps_approximate(sky_maps, patch_size, patch_locations,\
     lmax=None):

@@ -12,7 +12,8 @@ from ..beam.BeamUtilities import rotate_maps, spin_maps, smear_maps,\
     smear_maps_approximate, patchy_smear_maps_approximate, spherical_rotator
 from .ObservationUtilities import earths_celestial_north_pole, vernal_equinox
 
-def rotate_maps_to_LST(sky_maps, observatory, local_sidereal_time):
+def rotate_maps_to_LST(sky_maps, observatory, local_sidereal_time,\
+    verbose=False):
     """
     Rotates the given sky_maps (in Galactic coordinates) to what will be seen
     of them from a zenith pointing telescope at the given observatory at the
@@ -32,7 +33,8 @@ def rotate_maps_to_LST(sky_maps, observatory, local_sidereal_time):
     first_rotation_phi = earths_celestial_north_pole[1]
     first_rotation_psi = 0
     celestial_pole_centered_maps = rotate_maps(sky_maps, first_rotation_theta,\
-        first_rotation_phi, first_rotation_psi, use_inverse=True, axis=-1)
+        first_rotation_phi, first_rotation_psi, use_inverse=True, axis=-1,\
+        verbose=verbose)
     # We have now done the theta and phi rotations, but we need the psi
     # rotation, i.e. where to start smearing. This has to do with the LST,
     # which is the hour angle between the vernal equinox and the location where
@@ -72,13 +74,13 @@ def rotate_maps_to_LST(sky_maps, observatory, local_sidereal_time):
     # above rotator:
     final_maps = rotate_maps(celestial_pole_centered_maps,\
         observatory.theta, observatory.phi, 0, use_inverse=True,\
-        axis=-1, deg=False)
+        axis=-1, deg=False, verbose=verbose)
     final_maps =\
         spin_maps(final_maps, observatory.angle - displacement, pixel_axis=-1)
     return final_maps
 
 def smear_maps_through_LST(sky_maps, observatory, lst_start, lst_end,\
-    approximate=True):
+    approximate=True, verbose=False):
     """
     Smears maps through the given LST's.
     
@@ -101,7 +103,8 @@ def smear_maps_through_LST(sky_maps, observatory, lst_start, lst_end,\
     first_rotation_phi = earths_celestial_north_pole[1]
     first_rotation_psi = 0
     celestial_pole_centered_maps = rotate_maps(sky_maps, first_rotation_theta,\
-        first_rotation_phi, first_rotation_psi, use_inverse=True, axis=-1)
+        first_rotation_phi, first_rotation_psi, use_inverse=True, axis=-1,\
+        verbose=verbose)
     # We have now done the theta and phi rotations, but we need the psi
     # rotation, i.e. where to start smearing. This has to do with the LST,
     # which is the hour angle between the vernal equinox and the location where
@@ -153,13 +156,13 @@ def smear_maps_through_LST(sky_maps, observatory, lst_start, lst_end,\
     # above rotator:
     final_maps = rotate_maps(smeared_celestial_pole_centered_maps,\
         observatory.theta, observatory.phi, 0, use_inverse=True,\
-        axis=-1, deg=False)
+        axis=-1, deg=False, verbose=verbose)
     final_maps = spin_maps(final_maps, observatory.angle - displacement,\
         pixel_axis=-1)
     return final_maps
 
 def smear_maps_through_LST_patches(sky_maps, observatory, lst_locations,\
-    lst_duration):
+    lst_duration, verbose=False):
     """
     Smears maps through the given LST's in patches of various locations and
     constant duration. This only gives an approximation (it applies an
@@ -182,7 +185,8 @@ def smear_maps_through_LST_patches(sky_maps, observatory, lst_locations,\
     first_rotation_phi = earths_celestial_north_pole[1]
     first_rotation_psi = 0
     celestial_pole_centered_maps = rotate_maps(sky_maps, first_rotation_theta,\
-        first_rotation_phi, first_rotation_psi, use_inverse=True, axis=-1)
+        first_rotation_phi, first_rotation_psi, use_inverse=True, axis=-1,\
+        verbose=verbose)
     # We have now done the theta and phi rotations, but we need the psi
     # rotation, i.e. where to start smearing. This has to do with the LST,
     # which is the hour angle between the vernal equinox and the location where
@@ -209,7 +213,7 @@ def smear_maps_through_LST_patches(sky_maps, observatory, lst_locations,\
         celestial_pole_centered_maps, patch_size, patch_locations)
     final_maps = rotate_maps(smeared_celestial_pole_centered_maps,\
         observatory.theta, observatory.phi, 0, use_inverse=True,\
-        axis=-1, deg=False)
+        axis=-1, deg=False, verbose=verbose)
     # The other thing we need to worry about is where to put the x-axis when we
     # rotated to the beam coordinates. We do this by finding negative thetahat
     # (i.e. unit vector pointing north) and keeping track of where north goes

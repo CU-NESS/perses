@@ -301,6 +301,7 @@ class DriftscanSetCreator(object):
             maps_kwargs = [{}] * self.nmaps
         completed = self.file.attrs['next_index']
         try:
+            continuing = True
             for ibeam in range(self.nbeams):
                 if (ibeam * self.nmaps) < completed:
                     continue
@@ -309,13 +310,21 @@ class DriftscanSetCreator(object):
                 for imaps in range(self.nmaps):
                     if ((ibeam * self.nmaps) + imaps) < completed:
                         continue
+                    if continuing:
+                        if self.verbose:
+                            print(("Starting convolution {0:d}/{1:d} at " +\
+                                "{2!s}.").format(completed + 1,\
+                                self.num_driftscans, time.ctime()))
+                        continuing = False
                     maps = self.maps_function(imaps, *maps_args[imaps],\
                         **maps_kwargs[imaps])
-                    convolution =\
-                        np.ndarray((self.nlst_intervals, maps.shape[0]))
                     for ilst in range(self.nlst_intervals):
-                         convolution[ilst,:] = self.simulate_single_spectrum(\
-                             beam, maps, ilst, **kwargs)
+                         this_spectrum = self.simulate_single_spectrum(beam,\
+                             maps, ilst, **kwargs)
+                         if ilst == 0:
+                             convolution = np.ndarray((self.nlst_intervals,) +\
+                                 this_spectrum.shape)
+                         convolution[ilst,...] = this_spectrum
                     create_hdf5_dataset(self.file['temperatures'],\
                         'beam_{0:d}_maps_{1:d}'.format(ibeam, imaps),\
                         data=convolution)
@@ -374,9 +383,9 @@ class DriftscanSetCreator(object):
         returns: numpy.ndarray whose shape is (identifier_shape + curve_shape)
                  where identifier_shape is (nbeams, nmaps) if
                  flatten_identifiers is False and (nbeams*nmaps,) if
-                 flatten_curves is True and curve_shape is
-                 (nlst_intervals, nfreqs) if flatten_curves if False and
-                 (nlst_intervals*nfreqs,) if flatten_curves is True
+                 flatten_identifiers is True and curve_shape can be
+                 multidimensional if flatten_curves is False but is flattened
+                 if flatten_curves is True
                   
         """
         training_set = np.ndarray((self.nbeams, self.nmaps,\
@@ -385,15 +394,19 @@ class DriftscanSetCreator(object):
         for ibeam in range(self.nbeams):
             for imaps in range(self.nmaps):
                 dataset_name = 'beam_{0:d}_maps_{1:d}'.format(ibeam, imaps)
-                training_set[ibeam,imaps,:,:] =\
-                    get_hdf5_value(group[dataset_name])
+                these_spectra = get_hdf5_value(group[dataset_name])
+                if (ibeam == 0) and (imaps == 0):
+                    training_set = np.ndarray((self.nbeams, self.nmaps) +\
+                        these_spectra.shape)
+                    spectra_ndim = these_spectra.ndim
+                training_set[ibeam,imaps,...] = these_spectra
         self.close()
         if flatten_identifiers:
-            training_set =\
-                np.reshape(training_set, (-1,) + training_set.shape[-2:])
+            training_set = np.reshape(training_set,\
+                (-1,) + training_set.shape[-spectra_ndim:])
         if flatten_curves:
-            training_set =\
-                np.reshape(training_set, training_set.shape[:-2] + (-1,))
+            training_set = np.reshape(training_set,\
+                training_set.shape[:-spectra_ndim] + (-1,))
         return training_set
     
     @staticmethod
@@ -418,12 +431,9 @@ class DriftscanSetCreator(object):
         returns: numpy.ndarray whose shape is (identifier_shape + curve_shape)
                  where identifier_shape is (nbeams, nmaps) if
                  flatten_identifiers is False and (nbeams*nmaps,) if
-                 flatten_curves is True and curve_shape is
-                 (nlst_intervals, nfreqs) if flatten_curves if False and
-                 (nlst_intervals*nfreqs,) if flatten_curves is True. If
-                 return_frequencies is True, frequencies also returned as
-                 second element of tuple. If return_times, times also returned
-                 as last element of tuple.
+                 flatten_identifiers is True and curve_shape can be
+                 multidimensional if flatten_curves is False but is flattened
+                 if flatten_curves is True
         """
         hdf5_file = h5py.File(file_name, 'r')
         frequencies = get_hdf5_value(hdf5_file['frequencies'])
@@ -439,15 +449,20 @@ class DriftscanSetCreator(object):
         training_set = np.ndarray((nbeams, nmaps, nlst, nfreq))
         for ibeam in range(nbeams):
             for imaps in range(nmaps):
-                training_set[ibeam,imaps,:,:] = get_hdf5_value(\
+                these_spectra = get_hdf5_value(\
                     group['beam_{0}_maps_{1}'.format(ibeam, imaps)])
+                if (ibeam == 0) and (imaps == 0):
+                    training_set =\
+                        np.ndarray((nbeams, nmaps) + these_spectra.shape)
+                    spectra_ndim = these_spectra.ndim
+                training_set[ibeam,imaps,...] = these_spectra
         hdf5_file.close()
         if flatten_identifiers:
-            training_set =\
-                np.reshape(training_set, (-1,) + training_set.shape[-2:])
+            training_set = np.reshape(training_set,\
+                (-1,) + training_set.shape[-spectra_ndim:])
         if flatten_curves:
-            training_set =\
-                np.reshape(training_set, training_set.shape[:-2] + (-1,))
+            training_set = np.reshape(training_set,\
+                training_set.shape[:-spectra_ndim] + (-1,))
         to_return = [training_set]
         if return_frequencies:
             to_return.append(frequencies)
