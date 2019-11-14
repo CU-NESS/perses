@@ -15,7 +15,7 @@ from distpy import GaussianDistribution, get_hdf5_value
 from perses.foregrounds import HaslamGalaxy
 from perses.simulations import EDGESObservatory
 from perses.beam.total_power.GaussianBeam import GaussianBeam
-from perses.simulations import UniformDriftscanSetCreator
+from perses.simulations import InstantaneousDriftscanSetCreator
 
 ################################################################################
 ################################# Inputs #######################################
@@ -58,32 +58,30 @@ def generate_maps_realization(index):
     spectral_indices = spectral_index_distribution.draw(haslam_alm.shape)
     alms = haslam_alm[np.newaxis,:] *\
         np.power(scaled_frequencies, spectral_indices[np.newaxis,:])
-    return np.stack([hp.sphtfunc.alm2map(alm, nside, lmax=lmax, mmax=mmax)\
-        for alm in alms], axis=0)
+    return np.stack([hp.sphtfunc.alm2map(alm, nside, lmax=lmax, mmax=mmax,\
+        verbose=False) for alm in alms], axis=0)
 
 
 file_name = 'TEST_DELETE_THIS.hdf5'
-lsts = np.linspace(lst_start_in_days, lst_end_in_days, 1 + nlst_intervals)
-left_lst_edges = lsts[:-1]
-right_lst_edges = lsts[1:]
+lsts = np.linspace(lst_start_in_days, lst_end_in_days, nlst_intervals)
 
-uniform_driftscan_set_creator = UniformDriftscanSetCreator(file_name,\
-    observatory, frequencies, left_lst_edges, right_lst_edges, beams, nbeams,\
-    generate_maps_realization, nmaps)
-uniform_driftscan_set_creator.generate(approximate=approximate)
+driftscan_set_creator = InstantaneousDriftscanSetCreator(file_name,\
+    observatory, frequencies, lsts, beams, nbeams, generate_maps_realization,\
+    nmaps)
+driftscan_set_creator.generate(verbose=False)
 
-nchannel = (len(frequencies) * (len(lsts) - 1))
+nchannel = (len(frequencies) * (len(lsts)))
 channels = np.arange(nchannel)
 
 fig = pl.figure(figsize=(12,9))
 ax = fig.add_subplot(111)
 with h5py.File(file_name, 'r') as hdf5_file:
-    print("hdf5_file.items()={}".format(hdf5_file.items()))
     for ibeam in range(nbeams):
         for imaps in range(nmaps):
-            ax.scatter(channels, get_hdf5_value(\
-                hdf5_file['temperatures/beam_{0:d}_maps_{1:d}'.format(ibeam,\
-                    imaps)]))
+            spectrum = get_hdf5_value(hdf5_file[\
+                'temperatures/beam_{0:d}_maps_{1:d}'.format(ibeam, imaps)])
+            ax.scatter(channels, spectrum)
 os.remove(file_name)
+
 pl.show()
 

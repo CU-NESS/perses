@@ -316,8 +316,8 @@ class GridMeasuredBeam(_TotalPowerBeam, Savable, Loadable):
         """
         coefficients =\
             self.decompose_spherical_harmonics(nside, lmax=lmax, group=False)
-        new_maps =\
-            np.array(hp.sphtfunc.alm2map(coefficients, nside, pol=False))
+        new_maps = np.array(hp.sphtfunc.alm2map(coefficients, nside,\
+            pol=False, verbose=False))
         new_grids = grids_from_maps(new_maps, num_thetas=self.num_thetas,\
             num_phis=self.num_phis, pixel_axis=-1)
         return GridMeasuredBeam(self.frequencies, self.thetas, self.phis,\

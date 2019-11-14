@@ -14,6 +14,8 @@ from perses.simulations.DriftscanSet import DriftscanSet
 from perses.simulations.DriftscanExtractor import DriftscanExtractor
 from perses.simulations.DriftscanForecaster import DriftscanForecaster
 from perses.simulations.DriftscanSetCreator import DriftscanSetCreator
+from perses.simulations.InstantaneousDriftscanSetCreator import\
+    InstantaneousDriftscanSetCreator
 from perses.simulations.UniformDriftscanSetCreator import\
     UniformDriftscanSetCreator
 from perses.simulations.PatchyDriftscanSetCreator import\

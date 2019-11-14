@@ -111,6 +111,7 @@ class _TotalPowerBeam(_Beam):
         (theta, phi) = (90. - pointing[0], pointing[1])
         sky_maps = rotate_maps(sky_maps, theta, phi, psi, use_inverse=True,\
             nest=nest, verbose=False, axis=-1)
+        numfreqs = sky_maps.shape[0]
         npix = sky_maps.shape[1]
         nside = hp.pixelfunc.npix2nside(npix)
         if horizon:

@@ -9,7 +9,6 @@ Description: File containing DriftscanSetCreator subclass which performs
 import numpy as np
 from ..util import sequence_types
 from .Driftscan import smear_maps_through_LST
-from .DriftscanSet import DriftscanSet
 from .DriftscanSetCreator import DriftscanSetCreator
 
 class UniformDriftscanSetCreator(DriftscanSetCreator):

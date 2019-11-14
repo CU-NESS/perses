@@ -149,5 +149,5 @@ class HarmonicPowerLawGalaxy(Galaxy):
         return np.array(hp.sphtfunc.alm2map(self.reference_alm[np.newaxis,:] *\
             np.power(frequencies[:,np.newaxis] / self.reference_frequency,\
             self.expanded_spectral_index[np.newaxis,:]), self.nside,\
-            pol=False)) + self.thermal_background
+            pol=False, verbose=False)) + self.thermal_background
 

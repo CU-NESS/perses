@@ -36,7 +36,7 @@ def gaussian_map_from_power_spectrum(monopole, power_spectrum, nside=None):
             spherical_harmonics[index] = parts[0] + (parts[1] * 1.j)
     if type(nside) is type(None):
         nside = min(4096, ceil_pow2((lmax + 1) / np.sqrt(12)))
-    return hp.sphtfunc.alm2map(spherical_harmonics, nside)
+    return hp.sphtfunc.alm2map(spherical_harmonics, nside, verbose=False)
 
 
 def ceil_pow2(x):
