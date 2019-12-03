@@ -3,7 +3,9 @@ File: $PERSES/perses/beam/polarized/GaussianDipoleBeam.py
 Author: Keith Tauscher
 Date: 7 Jun 2017
 """
+from __future__ import division
 import numpy as np
+import matplotlib.pyplot as pl
 from ..BaseGaussianBeam import _GaussianBeam
 from .DipoleLikeBeam import DipoleLikeBeam
 
@@ -13,7 +15,8 @@ class GaussianDipoleBeam(_GaussianBeam, DipoleLikeBeam):
     multiplied by a (possibly elongated) Gaussian as its gain pattern. The user
     supplies the FWHM (or the two different FWHM's) of the Gaussian.
     """
-    def __init__(self, x_fwhm, y_fwhm=None, only_one_dipole=False):
+    def __init__(self, x_fwhm, y_fwhm=None, only_one_dipole=False,\
+        rotation_in_degrees=0):
         """
         Initializes a new polarization-capable Gaussian beam with the given
         FWHM information.
@@ -28,9 +31,12 @@ class GaussianDipoleBeam(_GaussianBeam, DipoleLikeBeam):
                 the theta*np.sin(phi) direction)
         only_one_dipole: if True, only one dipole is used
                          otherwise, two orthogonal dipoles are used
+        rotation_in_degrees: rotation in degrees between the +X-antenna and the
+                             +X-axis
         """
         self.initialize_fwhm(x_fwhm, y_fwhm=y_fwhm)
         self.only_one_dipole = only_one_dipole
+        self.rotation_in_degrees = rotation_in_degrees
     
     def modulating_function(self, frequencies, thetas, phis):
         """

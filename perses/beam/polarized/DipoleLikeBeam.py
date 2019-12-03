@@ -18,9 +18,11 @@ class DipoleLikeBeam(_PolarizedBeam):
     Base class for beams of antennas whose Jones matrices are proportional to
     the simple dipole beam pattern.
     """
-    def __init__(self, modulating_function=None, only_one_dipole=False):
+    def __init__(self, modulating_function=None, only_one_dipole=False,\
+        rotation_in_degrees=0):
         self.modulating_function = modulating_function
         self.only_one_dipole = only_one_dipole
+        self.rotation_in_degrees = rotation_in_degrees
     
     @property
     def modulating_function(self):
@@ -60,10 +62,54 @@ class DipoleLikeBeam(_PolarizedBeam):
         else:
             raise TypeError("only_one_dipole was set to a non-bool.")
     
+    @property
+    def rotation_in_degrees(self):
+        """
+        Property storing the rotation in degrees that the +X-antenna and the
+        +X-axis.
+        """
+        if not hasattr(self, '_rotation_in_degrees'):
+            raise AttributeError("rotation_in_degrees was referenced " +\
+                "before it was set.")
+        return self._rotation_in_degrees
+    
+    @rotation_in_degrees.setter
+    def rotation_in_degrees(self, value):
+        """
+        Setter for the rotation in degrees that the +X-antenna and the +X-axis.
+        
+        value: single real number
+        """
+        if type(value) in real_numerical_types:
+            self._rotation_in_degrees = value
+        else:
+            raise TypeError("rotation_in_degrees was set to a non-number.")
+    
+    @property
+    def rotation_in_radians(self):
+        """
+        Property storing the rotation in radians that the +X-antenna and the
+        +X-axis.
+        """
+        if not hasattr(self, '_rotation_in_radians'):
+            self._rotation_in_radians = np.radians(self.rotation_in_degrees)
+        return self._rotation_in_radians
+    
     def dipole_pattern(self, nside):
+        """
+        Function that finds the dipole pattern for this antenna at the given
+        resolution.
+        
+        nside: the healpy resolution parameter, nside
+        
+        returns: array of shape (4, 1, npix) where the first axis represents
+                 the elements of the Jones matrix and the last axis represents
+                 pixels.
+        """
         npix = hp.pixelfunc.nside2npix(nside)
         pattern = np.ndarray((4, 1, npix))
-        theta_map, phi_map = hp.pixelfunc.pix2ang(nside, np.arange(npix))
+        (theta_map, phi_map) = hp.pixelfunc.pix2ang(nside, np.arange(npix))
+        phi_map = phi_map - self.rotation_in_radians
         cos_theta_map = np.cos(theta_map)
         sin_phi_map = np.sin(phi_map)
         cos_phi_map = np.cos(phi_map)

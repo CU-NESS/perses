@@ -9,6 +9,9 @@ Description: File containing base class for Gaussian beams. This class handles
 from __future__ import division
 from types import FunctionType
 import numpy as np
+from scipy.special import comb as combinations
+from distpy import Expression, GaussianDistribution, WindowedDistribution,\
+    UniformConditionDistribution
 
 class _GaussianBeam(object):
     """
@@ -99,4 +102,80 @@ class _GaussianBeam(object):
                 (thetas * np.sin(phis) / np.radians(self.y_fwhm(frequencies)))
             exponent = ((x_part ** 2) + (y_part ** 2))
         return np.exp(-np.log(4 if sqrt_of_final else 16) * exponent)
+
+def fwhm_training_set(frequencies, legendre_mean,\
+    legendre_standard_deviations, num_fwhms, random=np.random, minimum_fwhm=0,\
+    maximum_fwhm=None):
+    """
+    """
+    delta_frequency = frequencies[-1] - frequencies[0]
+    frequency_mean = (frequencies[-1] + frequencies[0]) / 2
+    if legendre_mean.shape == legendre_standard_deviations.shape:
+        if legendre_mean.ndim == 1:
+            order = len(legendre_mean) - 1
+        else:
+            raise ValueError("legendre_mean and " +\
+                "legendre_standard_deviations were not a 1D numpy.ndarray.")
+    else:
+        raise ValueError("legendre_mean and legendre_standard_deviations " +\
+            "did not have the same shape.")
+    matrix_from_poly_to_norm_poly = np.ndarray((order + 1, order + 1))
+    matrix_from_norm_poly_to_legendre_poly = np.ndarray((order + 1, order + 1))
+    for row in range(order + 1):
+        for column in range(order + 1):
+            if column > row:
+                first_element = 0
+                second_element = 0
+            else:
+                first_element = frequency_mean ** (row - column)
+                first_element = first_element / ((delta_frequency / 2) ** row)
+                first_element = first_element * combinations(row, column)
+                if ((row + column) % 2) == 0:
+                    k_in_sum = (row - column) // 2
+                    second_element = (combinations(row, k_in_sum) *\
+                        combinations(row + column, row)) / (2 ** row)
+                    if (k_in_sum % 2) == 1:
+                        second_element = (-1) * second_element
+                else:
+                    first_element = (-1) * first_element
+                    second_element = 0
+            matrix_from_poly_to_norm_poly[row,column] = first_element
+            matrix_from_norm_poly_to_legendre_poly[row,column] = second_element
+    matrix_from_legendre_poly_coefficients_to_poly_coefficients = np.dot(\
+        matrix_from_norm_poly_to_legendre_poly,\
+        matrix_from_poly_to_norm_poly).T
+    legendre_covariance = np.diag(legendre_standard_deviations ** 2)
+    gaussian_distribution_in_legendre_poly_space =\
+        GaussianDistribution(legendre_mean, legendre_covariance)
+    gaussian_distribution_in_poly_space =\
+        gaussian_distribution_in_legendre_poly_space.__matmul__(\
+        matrix_from_legendre_poly_coefficients_to_poly_coefficients)
+    condition_string = ('np.all(np.polyval(np.array([{!s}]), ' +\
+        'frequencies) > minimum_fwhm)').format(\
+        ''.join(['{{{:d}}},'.format(order - index)\
+        for index in range(order + 1)])[:-1])
+    if maximum_fwhm is not None:
+        condition_string = ('{0!s} and np.all(np.polyval(np.array([{1!s}]),' +\
+            ' frequencies) < maximum_fwhm)').format(condition_string,\
+            ''.join(['{{{:d}}},'.format(order - index)\
+        for index in range(order + 1)])[:-1])
+    condition = Expression(condition_string,\
+        import_strings=['import numpy as np'],\
+        kwargs={'frequencies': frequencies, 'minimum_fwhm': minimum_fwhm,\
+        'maximum_fwhm': maximum_fwhm})
+    condition_distribution_in_poly_space =\
+        UniformConditionDistribution(condition)
+    windowed_distribution_in_poly_space = WindowedDistribution(\
+        gaussian_distribution_in_poly_space,\
+        condition_distribution_in_poly_space)
+    poly_draws =\
+        windowed_distribution_in_poly_space.draw(num_fwhms, random=random)
+    fwhms = []
+    for draw in poly_draws:
+        fwhm_string = 'lambda nu: ({!s})'.format('+'.join(\
+            ['({0} * (nu ** {1:d}))'.format(draw[index], index)\
+            for index in range(order + 1)]))
+        fwhm = eval(fwhm_string)
+        fwhms.append(fwhm)
+    return fwhms
 

@@ -15,15 +15,18 @@ class SimpleDipoleBeam(DipoleLikeBeam):
     multiplied by a (possibly elongated) Gaussian as its gain pattern. The user
     supplies the FWHM (or the two different FWHM's) of the Gaussian.
     """
-    def __init__(self, only_one_dipole=False):
+    def __init__(self, only_one_dipole=False, rotation_in_degrees=0):
         """
         Initializes a new polarization-capable dipole beam with either one or
         two antennas.
         
         only_one_dipole: if True, only one dipole is used
                          otherwise, two orthogonal dipoles are used
+        rotation_in_degrees: rotation in degrees between the +X-antenna and the
+                             +X-axis
         """
         self.only_one_dipole = only_one_dipole
+        self.rotation_in_degrees = rotation_in_degrees
     
     def modulating_function(self, frequencies, thetas, phis):
         """
