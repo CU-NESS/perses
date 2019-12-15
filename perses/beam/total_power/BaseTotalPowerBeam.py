@@ -1,7 +1,7 @@
 """
 $PERSES/perses/beam/total_power/BaseTotalPowerBeam.py
 """
-import subprocess, time
+import os, subprocess, time
 from types import FunctionType
 from ..BeamUtilities import linear_to_dB, beam_sizes_from_maps, rotate_map,\
     beam_sizes_from_grids, normalize_grids, grids_from_maps, rotate_maps,\
