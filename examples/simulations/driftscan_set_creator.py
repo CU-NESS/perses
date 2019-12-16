@@ -6,7 +6,7 @@ Date: 5 Mar 2018
 Description: File containing an example showing how to use the
              DriftscanSetCreator class.
 """
-import os, time, h5py
+import os, sys, time, h5py
 import numpy as np
 import numpy.linalg as la
 import matplotlib.pyplot as pl
@@ -22,7 +22,6 @@ from perses.simulations import InstantaneousDriftscanSetCreator
 ################################################################################
 nnside = 3 #  --->  nside = 8
 should_approximate = True
-observatory = EDGESObservatory()
 nconvolutions = 300
 (lst_start_in_seconds, lst_end_in_seconds) = (0, 80000)
 (lst_start_in_days, lst_end_in_days) =\
@@ -35,6 +34,9 @@ frequencies = np.linspace(50, 100, 51)
 ################################################################################
 ################################################################################
 
+
+observatories = [EDGESObservatory()]
+nobservatories = len(observatories) # 1
 haslam_frequency = 408.
 nside = (2 ** nnside)
 lmax = (4 * nside)
@@ -66,8 +68,8 @@ file_name = 'TEST_DELETE_THIS.hdf5'
 lsts = np.linspace(lst_start_in_days, lst_end_in_days, nlst_intervals)
 
 driftscan_set_creator = InstantaneousDriftscanSetCreator(file_name,\
-    observatory, frequencies, lsts, beams, nbeams, generate_maps_realization,\
-    nmaps)
+    frequencies, lsts, observatories, nobservatories, beams, nbeams,\
+    generate_maps_realization, nmaps)
 driftscan_set_creator.generate(verbose=False)
 
 nchannel = (len(frequencies) * (len(lsts)))
@@ -76,11 +78,13 @@ channels = np.arange(nchannel)
 fig = pl.figure(figsize=(12,9))
 ax = fig.add_subplot(111)
 with h5py.File(file_name, 'r') as hdf5_file:
-    for ibeam in range(nbeams):
-        for imaps in range(nmaps):
-            spectrum = get_hdf5_value(hdf5_file[\
-                'temperatures/beam_{0:d}_maps_{1:d}'.format(ibeam, imaps)])
-            ax.scatter(channels, spectrum)
+    for iobservatory in range(nobservatories):
+        for ibeam in range(nbeams):
+            for imaps in range(nmaps):
+                spectrum = get_hdf5_value(hdf5_file[\
+                    ('temperatures/observatory_{0:d}_beam_{1:d}_maps_' +\
+                    '{2:d}').format(iobservatory, ibeam, imaps)])
+                ax.scatter(channels, spectrum)
 os.remove(file_name)
 
 pl.show()

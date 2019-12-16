@@ -18,17 +18,16 @@ class PatchyDriftscanSetCreator(DriftscanSetCreator):
     through LST patches, as is represented in real instruments which have
     downtime.
     """
-    def __init__(self, file_name, observatory, frequencies, nominal_lsts,\
-        lst_samples, lst_duration, beam_function, nbeams, maps_function,\
-        nmaps, beam_names=None, map_names=None, verbose=True):
+    def __init__(self, file_name, frequencies, nominal_lsts, lst_samples,\
+        lst_duration, observatory_function, nobservatories, beam_function,\
+        nbeams, maps_function, nmaps, observatory_names=None, beam_names=None,\
+        map_names=None, verbose=True):
         """
         Creates a set of foreground curves with the given beams and maps at the
         given local sidereal time samples.
         
         file_name: either a file location where an hdf5 file can be saved or a
                    location where it has already begun being saved
-        observatory: GroundObservatory object describing the location and
-                     orientation of the experiment making these observations
         frequencies: 1D numpy.ndarray of frequency values to which data applies
         nominal_lsts: 1D array of LST's to associate with each spectrum for
                       plotting purposes.
@@ -36,6 +35,11 @@ class PatchyDriftscanSetCreator(DriftscanSetCreator):
                      that were used in binning to the nominal_lsts, given in
                      fractions of a day
         lst_duration: duration of each LST patch, given in fraction of a day
+        observatory_function: either a sequence of Observatory objects or a
+                              function which, when given an index satisfying
+                              0<=index<nobservatories, yields a Observatory
+                              object
+        nobservatories: not used if observatory_function is a sequence
         beam_function: either a sequence of Beam objects or a function which,
                        when given an index satisfying 0<=index<nbeams, yields a
                        Beam object
@@ -44,6 +48,9 @@ class PatchyDriftscanSetCreator(DriftscanSetCreator):
                        which, when given an index satisfying 0<=index<nmaps,
                        yields a 2D numpy.ndarray
         nmaps: not used if maps_function is a sequence
+        observatory_names: None or a list of nobservatories unique strings.
+                           If None (default), observatories are listed as
+                           'observatory_{:d}'.format(iobservatory)
         beam_names: None or a list of nbeams unique strings. If None (default),
                     beams are listed as 'beam_{:d}'.format(ibeam)
         map_names: None or a list of nmaps unique strings. If None (default),
@@ -53,15 +60,17 @@ class PatchyDriftscanSetCreator(DriftscanSetCreator):
         """
         self.verbose = verbose
         self.file_name = file_name
-        self.observatory = observatory
         self.frequencies = frequencies
         self.nominal_lsts = nominal_lsts
         self.lst_samples = lst_samples
         self.lst_duration = lst_duration
+        self.nobservatories = nobservatories
+        self.observatory_function = observatory_function
         self.nbeams = nbeams
         self.beam_function = beam_function
         self.nmaps = nmaps
         self.maps_function = maps_function
+        self.observatory_names = observatory_names
         self.beam_names = beam_names
         self.map_names = map_names
     
@@ -160,12 +169,14 @@ class PatchyDriftscanSetCreator(DriftscanSetCreator):
         else:
             raise TypeError("lst_duration was set to a non-number.")
     
-    def simulate_single_spectrum(self, beam, maps, ilst, **kwargs):
+    def simulate_single_spectrum(self, observatory, beam, maps, ilst,\
+        **kwargs):
         """
         Simulates single spectrum for this driftscan set. Note: this driftscan
         produces only approximations. Though, this is fast, it is not exactly
         accurate. But, neither is using finite dimensional maps.
         
+        observatory: the observatory to use in making this spectrum
         beam: the beam to use in making this spectrum
         maps: the sequence of galaxy maps to use in making this spectrum
         ilst: index of the LST interval to simulate, must be a non-negative
@@ -174,7 +185,7 @@ class PatchyDriftscanSetCreator(DriftscanSetCreator):
         
         returns: single 1D numpy.ndarray of length self.nfrequencies
         """
-        smeared_maps = smear_maps_through_LST_patches(maps, self.observatory,\
+        smeared_maps = smear_maps_through_LST_patches(maps, observatory,\
             self.lst_samples[ilst], self.lst_duration)
         return beam.convolve(self.frequencies, smeared_maps, **kwargs)
 

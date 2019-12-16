@@ -136,6 +136,62 @@ class DriftscanSetCreator(object):
                 "non-GroundObservatory object.")
     
     @property
+    def observatory_function(self):
+        """
+        Property storing a function which generates the observatories used to
+        create the set of foreground curves.
+        """
+        if not hasattr(self, '_observatory_function'):
+            raise AttributeError("observatory_function referenced before " +\
+                "it was set.")
+        return self._observatory_function
+    
+    @observatory_function.setter
+    def observatory_function(self, value):
+        """
+        Setter for the function which generates observatories used to create
+        the set of foreground curves.
+        
+        value: either a sequence of Observatory objects or a function which,
+               when given an integer satisfying 0<=i<nobservatories, yields an
+               Observatory object
+        """
+        if type(value) in sequence_types:
+            self._observatory_function = (lambda index: value[index])
+            self._nobservatories = len(value)
+        else:
+            self._observatory_function = value
+    
+    @property
+    def nobservatories(self):
+        """
+        Property storing the integer number of observatories to use.
+        """
+        if not hasattr(self, '_nobservatories'):
+            raise AttributeError("nobservatories referenced before it was " +\
+                "set.")
+        return self._nobservatories
+    
+    @nobservatories.setter
+    def nobservatories(self, value):
+        """
+        Setter for the number of observatories to use.
+        
+        value: a positive integer (or None if observatory_function is set to an
+               array)
+        """
+        if type(value) is type(None):
+            pass
+        elif isinstance(value, int):
+            if value > 0:
+                self._nobservatories = value
+            else:
+                raise ValueError("nobservatories was set to a non-positive " +\
+                    "integer.")
+        else:
+            raise TypeError("nobservatories was set to a non-int.")
+    
+    @property
     def beam_function(self):
         """
         Property storing a function which generates the beams used to create
@@ -245,7 +301,8 @@ class DriftscanSetCreator(object):
         create.
         """
         if not hasattr(self, '_num_driftscans'):
-            self._num_driftscans = self.nbeams * self.nmaps
+            self._num_driftscans =\
+                self.nobservatories * self.nbeams * self.nmaps
         return self._num_driftscans
     
     @property
@@ -257,10 +314,12 @@ class DriftscanSetCreator(object):
             self._nlst_intervals = len(self.nominal_lsts)
         return self._nlst_intervals
     
-    def simulate_single_spectrum(self, beam, maps, ilst, **kwargs):
+    def simulate_single_spectrum(self, observatory, beam, maps, ilst,\
+        **kwargs):
         """
         Simulates single spectrum for this driftscan set.
         
+        observatory: the observatory to use in making this spectrum
         beam: the beam to use in making this spectrum
         maps: the sequence of galaxy maps to use in making this spectrum
         ilst: index of the LST interval to simulate, must be a non-negative
@@ -273,13 +332,18 @@ class DriftscanSetCreator(object):
             "implemented by every subclass of DriftscanSetCreator and " +\
             "DriftscanSetCreator should never be directly instantiated.")
     
-    def generate(self, beam_args=None, beam_kwargs=None, maps_args=None,\
-        maps_kwargs=None, **kwargs):
+    def generate(self, observatory_args=None, observatory_kwargs=None,\
+        beam_args=None, beam_kwargs=None, maps_args=None, maps_kwargs=None,\
+        **kwargs):
         """
         Generates (or continues generating) convolutions for a set of Driftscan
         style foregrounds. These curves are saved in the hdf5 file at file_name
         as they are generated.
         
+        observatory_args: list of lists of positional arguments to pass to
+                          observatory_function
+        observatory_kwargs: list of dictionaries of keyword arguments to pass
+                            to observatory_function
         beam_args: list of lists of positional arguments to pass to
                    beam_function
         beam_kwargs: list of dictionaries of keyword arguments to pass to
@@ -291,6 +355,10 @@ class DriftscanSetCreator(object):
         **kwargs: dictionary of keyword arguments to pass to
                   simulate_single_spectrum function of this class.
         """
+        if type(observatory_args) is type(None):
+            observatory_args = [[]] * self.nobservatories
+        if type(observatory_kwargs) is type(None):
+            observatory_kwargs = [{}] * self.nobservatories
         if type(beam_args) is type(None):
             beam_args = [[]] * self.nbeams
         if type(beam_kwargs) is type(None):
@@ -302,39 +370,48 @@ class DriftscanSetCreator(object):
         completed = self.file.attrs['next_index']
         try:
             continuing = True
-            for ibeam in range(self.nbeams):
-                if (ibeam * self.nmaps) < completed:
+            for iobservatory in range(self.nobservatories):
+                if ((iobservatory + 1) * self.nbeams * self.nmaps) < completed:
                     continue
-                beam = self.beam_function(ibeam, *beam_args[ibeam],\
-                    **beam_kwargs[ibeam])
-                for imaps in range(self.nmaps):
-                    if ((ibeam * self.nmaps) + imaps) < completed:
+                observatory = self.observatory_function(iobservatory,\
+                    *observatory_args[iobservatory],\
+                    **observatory_kwargs[iobservatory])
+                for ibeam in range(self.nbeams):
+                    if (((iobservatory * self.nbeams) + (ibeam + 1)) *\
+                        self.nmaps) < completed:
                         continue
-                    if continuing:
+                    beam = self.beam_function(ibeam, *beam_args[ibeam],\
+                        **beam_kwargs[ibeam])
+                    for imaps in range(self.nmaps):
+                        if ((((iobservatory * self.nbeams) + ibeam) *\
+                            self.nmaps) + imaps) < completed:
+                            continue
+                        if continuing:
+                            if self.verbose:
+                                print(("Starting convolution #{0:d}/{1:d} " +\
+                                    "at {2!s}.").format(completed + 1,\
+                                    self.num_driftscans, time.ctime()))
+                            continuing = False
+                        maps = self.maps_function(imaps, *maps_args[imaps],\
+                            **maps_kwargs[imaps])
+                        for ilst in range(self.nlst_intervals):
+                            this_spectrum = self.simulate_single_spectrum(\
+                                observatory, beam, maps, ilst, **kwargs)
+                            if ilst == 0:
+                                convolution = np.ndarray(\
+                                    (self.nlst_intervals,) +\
+                                    this_spectrum.shape)
+                            convolution[ilst,...] = this_spectrum
+                        create_hdf5_dataset(self.file['temperatures'],\
+                            'observatory_{0:d}_beam_{1:d}_maps_{2:d}'.format(\
+                            iobservatory, ibeam, imaps), data=convolution)
+                        completed += 1
+                        self.file.attrs['next_index'] = completed
+                        self.close()
                         if self.verbose:
-                            print(("Starting convolution {0:d}/{1:d} at " +\
-                                "{2!s}.").format(completed + 1,\
+                            print(("Finished convolution #{0:d}/{1:d} at " +\
+                                "{2!s}.").format(completed,\
                                 self.num_driftscans, time.ctime()))
-                        continuing = False
-                    maps = self.maps_function(imaps, *maps_args[imaps],\
-                        **maps_kwargs[imaps])
-                    for ilst in range(self.nlst_intervals):
-                         this_spectrum = self.simulate_single_spectrum(beam,\
-                             maps, ilst, **kwargs)
-                         if ilst == 0:
-                             convolution = np.ndarray((self.nlst_intervals,) +\
-                                 this_spectrum.shape)
-                         convolution[ilst,...] = this_spectrum
-                    create_hdf5_dataset(self.file['temperatures'],\
-                        'beam_{0:d}_maps_{1:d}'.format(ibeam, imaps),\
-                        data=convolution)
-                    completed += 1
-                    self.file.attrs['next_index'] = completed
-                    self.close()
-                    if self.verbose:
-                        print(("Finished convolution #{0:d}/{1:d} at " +\
-                            "{2!s}.").format(completed, self.num_driftscans,\
-                            time.ctime()))
         except KeyboardInterrupt:
             if self.verbose:
                 print(("Stopping convolutions due to KeyboardInterrupt at " +\
@@ -356,6 +433,12 @@ class DriftscanSetCreator(object):
                     data=self.frequencies)
                 create_hdf5_dataset(self._file, 'times',\
                     data=self.nominal_lsts)
+                group = self._file.create_group('observatory_names')
+                for (observatory_name_index, observatory_name) in\
+                    enumerate(self.observatory_names):
+                    create_hdf5_dataset(group,\
+                        '{:d}'.format(observatory_name_index),\
+                        data=observatory_name)
                 group = self._file.create_group('beam_names')
                 for (beam_name_index, beam_name) in enumerate(self.beam_names):
                     create_hdf5_dataset(group, '{:d}'.format(beam_name_index),\
@@ -381,25 +464,26 @@ class DriftscanSetCreator(object):
                         axis)
         
         returns: numpy.ndarray whose shape is (identifier_shape + curve_shape)
-                 where identifier_shape is (nbeams, nmaps) if
-                 flatten_identifiers is False and (nbeams*nmaps,) if
-                 flatten_identifiers is True and curve_shape can be
-                 multidimensional if flatten_curves is False but is flattened
-                 if flatten_curves is True
-                  
+                 where identifier_shape is (nobservatories, nbeams, nmaps) if
+                 flatten_identifiers is False and
+                 (nobservatories*nbeams*nmaps,) if flatten_identifiers is True
+                 and curve_shape can be multidimensional if flatten_curves is
+                 False but is flattened if flatten_curves is True
         """
-        training_set = np.ndarray((self.nbeams, self.nmaps,\
-            self.nlst_intervals, self.nfrequencies))
         group = self.file['temperatures']
-        for ibeam in range(self.nbeams):
-            for imaps in range(self.nmaps):
-                dataset_name = 'beam_{0:d}_maps_{1:d}'.format(ibeam, imaps)
-                these_spectra = get_hdf5_value(group[dataset_name])
-                if (ibeam == 0) and (imaps == 0):
-                    training_set = np.ndarray((self.nbeams, self.nmaps) +\
-                        these_spectra.shape)
-                    spectra_ndim = these_spectra.ndim
-                training_set[ibeam,imaps,...] = these_spectra
+        for iobservatory in range(self.nobservatories):
+            for ibeam in range(self.nbeams):
+                for imaps in range(self.nmaps):
+                    dataset_name =\
+                        'observatory_{0:d}_beam_{1:d}_maps_{2:d}'.format(\
+                        iobservatory, ibeam, imaps)
+                    these_spectra = get_hdf5_value(group[dataset_name])
+                    if (iobservatory == 0) and (ibeam == 0) and (imaps == 0):
+                        training_set = np.ndarray(\
+                            (self.nobservatories, self.nbeams, self.nmaps) +\
+                            these_spectra.shape)
+                        spectra_ndim = these_spectra.ndim
+                    training_set[iobservatory,ibeam,imaps,...] = these_spectra
         self.close()
         if flatten_identifiers:
             training_set = np.reshape(training_set,\
@@ -408,6 +492,24 @@ class DriftscanSetCreator(object):
             training_set = np.reshape(training_set,\
                 training_set.shape[:-spectra_ndim] + (-1,))
         return training_set
+    
+    @property
+    def driftscan_set(self):
+        """
+        Property storing the DriftscanSet object created by this
+        DriftscanSetCreator object.
+        """
+        self.generate()
+        curve_set = self.get_training_set(flatten_identifiers=True,\
+            flatten_curves=False)
+        curve_names = []
+        for observatory_name in self.observatory_names:
+            for beam_name in self.beam_names:
+                for map_name in self.map_names:
+                    curve_names.append('{0!s}_{1!s}_{2!s}'.format(\
+                        observatory_name, beam_name, map_name))
+        return DriftscanSet(self.nominal_lsts, self.frequencies, curve_set,\
+            curve_names=curve_names)
     
     @staticmethod
     def load_training_set(file_name, flatten_identifiers=False,\
@@ -429,33 +531,37 @@ class DriftscanSetCreator(object):
                       returned tuple)
         
         returns: numpy.ndarray whose shape is (identifier_shape + curve_shape)
-                 where identifier_shape is (nbeams, nmaps) if
-                 flatten_identifiers is False and (nbeams*nmaps,) if
-                 flatten_identifiers is True and curve_shape can be
-                 multidimensional if flatten_curves is False but is flattened
-                 if flatten_curves is True
+                 where identifier_shape is (nobservatories, nbeams, nmaps) if
+                 flatten_identifiers is False and
+                 (nobservatories*nbeams*nmaps,) if flatten_identifiers is True
+                 and curve_shape can be multidimensional if flatten_curves is
+                 False but is flattened if flatten_curves is True
         """
         hdf5_file = h5py.File(file_name, 'r')
         frequencies = get_hdf5_value(hdf5_file['frequencies'])
         nominal_lsts = get_hdf5_value(hdf5_file['times'])
         (nlst, nfreq) = (len(nominal_lsts), len(frequencies))
         group = hdf5_file['temperatures']
+        nobservatories = 0
+        while 'observatory_{:d}_beam_0_maps_0'.format(nobservatories) in group:
+            nobservatories += 1
         nbeams = 0
-        while 'beam_{:d}_maps_0'.format(nbeams) in group:
+        while 'observatory_0_beam_{:d}_maps_0'.format(nbeams) in group:
             nbeams += 1
         nmaps = 0
         while 'beam_0_maps_{:d}'.format(nmaps) in group:
             nmaps += 1
-        training_set = np.ndarray((nbeams, nmaps, nlst, nfreq))
-        for ibeam in range(nbeams):
-            for imaps in range(nmaps):
-                these_spectra = get_hdf5_value(\
-                    group['beam_{0}_maps_{1}'.format(ibeam, imaps)])
-                if (ibeam == 0) and (imaps == 0):
-                    training_set =\
-                        np.ndarray((nbeams, nmaps) + these_spectra.shape)
-                    spectra_ndim = these_spectra.ndim
-                training_set[ibeam,imaps,...] = these_spectra
+        for iobservatory in range(nobservatories):
+            for ibeam in range(nbeams):
+                for imaps in range(nmaps):
+                    these_spectra = get_hdf5_value(\
+                        group['beam_{0}_maps_{1}'.format(ibeam, imaps)])
+                    if (iobservatory == 0) and (ibeam == 0) and (imaps == 0):
+                        training_set = np.ndarray(\
+                            (nobservatories, nbeams, nmaps) +\
+                            these_spectra.shape)
+                        spectra_ndim = these_spectra.ndim
+                    training_set[iobservatory,ibeam,imaps,...] = these_spectra
         hdf5_file.close()
         if flatten_identifiers:
             training_set = np.reshape(training_set,\
@@ -489,6 +595,13 @@ class DriftscanSetCreator(object):
             flatten_identifiers=True, flatten_curves=False,\
             return_frequencies=True, return_times=True)
         hdf5_file = h5py.File(file_name, 'r')
+        group = hdf5_file['observatory_names']
+        iobservatory = 0
+        observatory_names = []
+        while '{:d}'.format(iobservatory) in group:
+            observatory_names.append(\
+                get_hdf5_value(group['{:d}'.format(iobservatory)]))
+            iobservatory += 1
         group = hdf5_file['beam_names']
         ibeam = 0
         beam_names = []
@@ -502,8 +615,12 @@ class DriftscanSetCreator(object):
             map_names.append(get_hdf5_value(group['{:d}'.format(imap)]))
             imap += 1
         hdf5_file.close()
-        curve_names = sum([['{0!s}_{1!s}'.format(beam_name, map_name)\
-            for map_name in map_names] for beam_name in beam_names], [])
+        curve_names = []
+        for observatory_name in observatory_names:
+            for beam_name in beam_names:
+                for map_name in map_names:
+                    curve_names.append('{0!s}_{1!s}_{2!s}'.format(\
+                        observatory_name, beam_name, map_name))
         return DriftscanSet(nominal_lsts, frequencies, curve_set,\
             curve_names=curve_names)
     
@@ -514,6 +631,41 @@ class DriftscanSetCreator(object):
         """
         raise NotImplementedError("nominal_lsts should be implemented by " +\
             "each subclass of DriftscanSetCreators individually.")
+    
+    @property
+    def observatory_names(self):
+        """
+        Property storing the names of the observatories in this DriftscanSet.
+        """
+        if not hasattr(self, '_observatory_names'):
+            raise AttributeError("observatory_names was referenced before " +\
+                "it was set.")
+        return self._observatory_names
+    
+    @observatory_names.setter
+    def observatory_names(self, value):
+        """
+        Setter for the names of the observatories in this set of driftscan
+        curves.
+        
+        value: list of (unique) strings whose length is given by the number of
+               observatories in this set
+        """
+        if type(value) is type(None):
+            self._observatory_names = ['observatory_{:d}'.format(index)\
+                for index in range(self.nobservatories)]
+        elif type(value) in sequence_types:
+            if len(value) == self.nobservatories:
+                if all([isinstance(element, basestring) for element in value]):
+                    self._observatory_names = [element for element in value]
+                else:
+                    raise TypeError("Not all observatory names were strings.")
+            else:
+                raise ValueError("Length of observatory_names list was not " +\
+                    "equal to the number of beams in this DriftscanSet.")
+        else:
+            raise TypeError("observatory_names was neither None nor a " +\
+                "sequence.")
     
     @property
     def beam_names(self):
@@ -535,7 +687,7 @@ class DriftscanSetCreator(object):
         """
         if type(value) is type(None):
             self._beam_names =\
-                ['beam_{}'.format(index) for index in range(self.nbeams)]
+                ['beam_{:d}'.format(index) for index in range(self.nbeams)]
         elif type(value) in sequence_types:
             if len(value) == self.nbeams:
                 if all([isinstance(element, basestring) for element in value]):
@@ -580,21 +732,6 @@ class DriftscanSetCreator(object):
                     "to the number of galaxy maps in this DriftscanSet.")
         else:
             raise TypeError("map_names was neither None nor a sequence.")
-    
-    @property
-    def driftscan_set(self):
-        """
-        Property storing the DriftscanSet object created by this
-        DriftscanSetCreator object.
-        """
-        self.generate()
-        curve_set = self.get_training_set(flatten_identifiers=True,\
-            flatten_curves=False)
-        curve_names = sum([['{0!s}_{1!s}'.format(beam_name, map_name)\
-            for map_name in self.map_names] for beam_name in self.beam_names],\
-            [])
-        return DriftscanSet(self.nominal_lsts, self.frequencies, curve_set,\
-            curve_names=curve_names)
     
     def close(self):
         """

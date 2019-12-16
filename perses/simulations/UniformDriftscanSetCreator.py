@@ -16,22 +16,26 @@ class UniformDriftscanSetCreator(DriftscanSetCreator):
     DriftscanSetCreator subclass which performs driftscans by smoothly smearing
     maps through LST.
     """
-    def __init__(self, file_name, observatory, frequencies, left_lst_edges,\
-        right_lst_edges, beam_function, nbeams, maps_function, nmaps,\
-        beam_names=None, map_names=None, verbose=True):
+    def __init__(self, file_name, frequencies, left_lst_edges,\
+        right_lst_edges, observatory_function, nobservatories, beam_function,\
+        nbeams, maps_function, nmaps, observatory_names=None, beam_names=None,\
+        map_names=None, verbose=True):
         """
         Creates a set of foreground curves with the given beams and maps at the
         given local sidereal times.
         
         file_name: either a file location where an hdf5 file can be saved or a
                    location where it has already begun being saved
-        observatory: GroundObservatory object describing the location and
-                     orientation of the experiment making these observations
         frequencies: 1D numpy.ndarray of frequency values to which data applies
         left_lst_edges: 1D array of LST values (in fractions of a day!)
                         corresponding to the "beginning time" of each bin.
         right_lst_edges: 1D array of LST values (in fractions of a day!)
                          corresponding to the "ending time" of each bin.
+        observatory_function: either a sequence of Observatory objects or a
+                              function which, when given an index satisfying
+                              0<=index<nobservatories, yields a Observatory
+                              object
+        nobservatories: not used if observatory_function is a sequence
         beam_function: either a sequence of Beam objects or a function which,
                        when given an index satisfying 0<=index<nbeams, yields a
                        Beam object
@@ -40,6 +44,9 @@ class UniformDriftscanSetCreator(DriftscanSetCreator):
                        which, when given an index satisfying 0<=index<nmaps,
                        yields a 2D numpy.ndarray
         nmaps: not used if maps_function is a sequence
+        observatory_names: None or a list of nobservatories unique strings.
+                           If None (default), observatories are listed as
+                           'observatory_{:d}'.format(iobservatory)
         beam_names: None or a list of nbeams unique strings. If None (default),
                     beams are listed as 'beam_{:d}'.format(ibeam)
         map_names: None or a list of nmaps unique strings. If None (default),
@@ -49,14 +56,16 @@ class UniformDriftscanSetCreator(DriftscanSetCreator):
         """
         self.verbose = verbose
         self.file_name = file_name
-        self.observatory = observatory
         self.frequencies = frequencies
         self.left_lst_edges = left_lst_edges
         self.right_lst_edges = right_lst_edges
+        self.nobservatories = nobservatories
+        self.observatory_function = observatory_function
         self.nbeams = nbeams
         self.beam_function = beam_function
         self.nmaps = nmaps
         self.maps_function = maps_function
+        self.observatory_names = observatory_names
         self.beam_names = beam_names
         self.map_names = map_names
     
@@ -126,11 +135,12 @@ class UniformDriftscanSetCreator(DriftscanSetCreator):
                 naive_centers, np.mod(naive_centers + 0.5, 1))
         return self._nominal_lsts
     
-    def simulate_single_spectrum(self, beam, maps, ilst, approximate=True,\
-        **kwargs):
+    def simulate_single_spectrum(self, observatory, beam, maps, ilst,\
+        approximate=True, **kwargs):
         """
         Simulates single spectrum for this driftscan set.
         
+        observatory: the observatory to use in making this spectrum
         beam: the beam to use in making this spectrum
         maps: the sequence of galaxy maps to use in making this spectrum
         ilst: index of the LST interval to simulate, must be a non-negative
@@ -146,7 +156,7 @@ class UniformDriftscanSetCreator(DriftscanSetCreator):
         (start, end) = (self.left_lst_edges[ilst], self.right_lst_edges[ilst])
         if end <= start:
             end = end + 1
-        smeared_maps = smear_maps_through_LST(maps, self.observatory, start,\
+        smeared_maps = smear_maps_through_LST(maps, observatory, start,\
             end, approximate=approximate)
         return beam.convolve(self.frequencies, smeared_maps, **kwargs)
 
