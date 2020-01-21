@@ -6,15 +6,47 @@ Date: 13 Dec 2019
 Description: File containing a class representing a theoretically perfectly
              achromatic and isotropic beam.
 """
+from __future__ import division
 from types import FunctionType
 import numpy as np
-from ...util import real_numerical_types
+import healpy as hp
+from ...util import real_numerical_types, bool_types
 from .IdealBeam import IdealBeam
 
 class IsotropicBeam(IdealBeam):
     """
     Class representing a theoretically perfectly achromatic and isotropic beam.
     """
+    def __init__(self, half_sky=False):
+        """
+        Initalizes a new isotropic beam over either 4pi or 2pi steradians.
+        
+        half_sky: if True, beam is over 2pi steradians, otherwise it is all 4pi
+        """
+        self.half_sky = half_sky
+    
+    @property
+    def half_sky(self):
+        """
+        Property storing whether this is an isotropic beam over only half the
+        sky or the whole sky.
+        """
+        if not hasattr(self, '_half_sky'):
+            raise AttributeError("half_sky was referenced before it was set.")
+        return self._half_sky
+    
+    @half_sky.setter
+    def half_sky(self, value):
+        """
+        Setter for the half_sky property.
+        
+        value: True or False
+        """
+        if type(value) in bool_types:
+            self._half_sky = value
+        else:
+            raise TypeError("half_sky was set to a non-bool.")
+    
     def beam_function(self, frequencies, thetas, phis):
         """
         The function which is called to modulate the dipole pattern. It is a
@@ -26,8 +58,11 @@ class IsotropicBeam(IdealBeam):
         NOTE: The three arguments to this function--frequencies, thetas, and
               phis--must all be castable into a common shape.
         """
-        return np.ones_like(frequencies) * np.ones_like(thetas) *\
-            np.ones_like(phis)
+        if self.half_sky:
+            theta_part = ((thetas < (np.pi / 2)) * 1.)
+        else:
+            theta_part = np.ones_like(thetas)
+        return np.ones_like(frequencies) * theta_part * np.ones_like(phis)
     
     def convolve(self, frequencies, sky_maps, pointing=(90, 0), psi=0,\
         func_pars={}, verbose=True, include_smearing=False, angles=None,\
@@ -84,8 +119,21 @@ class IsotropicBeam(IdealBeam):
             sky_maps = np.stack(sky_maps, axis=0)
         elif type(sky_maps) is not np.ndarray:
             raise TypeError("sky_maps given to convolve were not in " +\
-                            "sequence or function form.")
-        spectrum = np.mean(sky_maps, axis=1)
+                "sequence or function form.")
+        if horizon or self.half_sky:
+            npix = sky_maps.shape[1]
+            nside = hp.pixelfunc.npix2nside(npix)
+            angles_of_pixels = hp.pixelfunc.pix2ang(nside, np.arange(npix))
+            pointing_in_radians =\
+                (np.radians(90 - pointing[0]), np.radians(pointing[1]))
+            gammas = hp.rotator.angdist(angles_of_pixels, pointing_in_radians)
+            half_sky_mean = np.mean(sky_maps[:,gammas<(np.pi/2)], axis=1)
+            if horizon and (not self.half_sky):
+                spectrum = (ground_temperature + half_sky_mean) / 2
+            else:
+                spectrum = half_sky_mean
+        else:
+            spectrum = np.mean(sky_maps, axis=1)
         if len(angles) == 1:
             return spectrum
         else:

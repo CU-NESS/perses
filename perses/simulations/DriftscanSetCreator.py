@@ -112,30 +112,6 @@ class DriftscanSetCreator(object):
             raise TypeError("file_name was set to a non-string.")
     
     @property
-    def observatory(self):
-        """
-        Property storing the GroundObservatory object describing the location
-        and orientation of the observatory on Earth.
-        """
-        if not hasattr(self, '_observatory'):
-            raise AttributeError("observatory referenced before it was set.")
-        return self._observatory
-    
-    @observatory.setter
-    def observatory(self, value):
-        """
-        Setter for the GroundObservatory object describing the location and
-        orientation of the observatory on Earth.
-        
-        value: a GroundObservatory object
-        """
-        if isinstance(value, GroundObservatory):
-            self._observatory = value
-        else:
-            raise TypeError("observatory was set to a " +\
-                "non-GroundObservatory object.")
-    
-    @property
     def observatory_function(self):
         """
         Property storing a function which generates the observatories used to
@@ -549,13 +525,14 @@ class DriftscanSetCreator(object):
         while 'observatory_0_beam_{:d}_maps_0'.format(nbeams) in group:
             nbeams += 1
         nmaps = 0
-        while 'beam_0_maps_{:d}'.format(nmaps) in group:
+        while 'observatory_0_beam_0_maps_{:d}'.format(nmaps) in group:
             nmaps += 1
         for iobservatory in range(nobservatories):
             for ibeam in range(nbeams):
                 for imaps in range(nmaps):
-                    these_spectra = get_hdf5_value(\
-                        group['beam_{0}_maps_{1}'.format(ibeam, imaps)])
+                    these_spectra = get_hdf5_value(group[\
+                        'observatory_{0:d}_beam_{1:d}_maps_{2:d}'.format(\
+                        iobservatory, ibeam, imaps)])
                     if (iobservatory == 0) and (ibeam == 0) and (imaps == 0):
                         training_set = np.ndarray(\
                             (nobservatories, nbeams, nmaps) +\

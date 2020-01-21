@@ -7,6 +7,7 @@ Description: Imports involving the creation of foreground maps.
 """
 from perses.foregrounds.Galaxy import Galaxy
 from perses.foregrounds.SpatialPowerLawGalaxy import SpatialPowerLawGalaxy
+from perses.foregrounds.ToyGalaxy import ToyGalaxy
 from perses.foregrounds.HaslamGalaxy import HaslamGalaxy
 from perses.foregrounds.PerturbedHaslamGalaxy import PerturbedHaslamGalaxy
 from perses.foregrounds.GuzmanGalaxy import GuzmanGalaxy

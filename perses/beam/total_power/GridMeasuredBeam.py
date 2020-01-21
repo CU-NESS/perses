@@ -7,9 +7,8 @@ from pylinex import Loadable, Savable, create_hdf5_dataset, get_hdf5_value
 from ...util import ParameterFile, real_numerical_types, sequence_types,\
     spherical_harmonic_fit, reorganize_spherical_harmonic_coefficients,\
     quintic_spline_real
-from ..BeamUtilities import rotate_map, rotate_maps, convolve_grid,\
-    convolve_grids, normalize_grids, normalize_maps, grids_from_maps,\
-    symmetrize_grid, maps_from_grids, spin_grids, smear_grids
+from ..BeamUtilities import normalize_grids, normalize_maps, grids_from_maps,\
+    symmetrize_grid, maps_from_grids, spin_grids, rotate_maps
 from ..BaseBeam import DummyPool
 from .BaseTotalPowerBeam import _TotalPowerBeam
 
@@ -237,6 +236,30 @@ class GridMeasuredBeam(_TotalPowerBeam, Savable, Loadable):
             self._grids = symmetrize_grid(value)
         else:
             self._grids = value
+    
+    @property
+    def maps(self):
+        """
+        Property storing a dictionary whose keys are nside resolution
+        parameters and whose values are arrays of the shape
+        (len(self.frequencies), npix) where npix is the number of pixels
+        associated with the nside resolution parameter key.
+        """
+        if not hasattr(self, '_maps'):
+            self._maps = {}
+        return self._maps
+    
+    def make_maps(self, nside):
+        """
+        Translates the data grids to maps internally for the given resolution.
+        This function does nothing if this translation has already been done.
+        Once this function has been called, the maps are in self.maps[nside].
+        
+        nside: the resolution parameter for the healpy maps. Must be power of 2
+        """
+        if nside not in self.maps:
+            self.maps[nside] = maps_from_grids(self.grids, nside,\
+                theta_axis=-2, phi_axis=-1)
 
     def get_maps(self, frequencies, nside, pointing, psi, normed=True):
         """
@@ -253,33 +276,27 @@ class GridMeasuredBeam(_TotalPowerBeam, Savable, Loadable):
                 the form of a 2D numpy array of shape (nfreqs, npix) if a
                 sequence of frequencies is given
         """
-        if type(frequencies) in real_numerical_types:
-            frequencies = [1.*frequencies]
-            multi_frequency = False
-        else:
-            multi_frequency = True
-        p_theta = 90. - pointing[0]
-        p_phi = pointing[1]
+        self.make_maps(nside)
+        frequencies_originally_single_number =\
+            (type(frequencies) in real_numerical_types)
+        if frequencies_originally_single_number:
+            frequencies = [1. * frequencies]
         numfreqs = len(frequencies)
         npix = hp.pixelfunc.nside2npix(nside)
         maps = np.ndarray((numfreqs, npix))
-        for ifreq in range(numfreqs):
+        for ifreq in range(len(frequencies)):
             freq = frequencies[ifreq]
-            if not (freq in self.frequencies):
-                raise ValueError("Frequencies must be one of those" +\
-                                 " supplied with real data.")
             internal_ifreq = np.where(self.frequencies == freq)[0][0]
-            maps[ifreq,:] =\
-                maps_from_grids(self.grids[internal_ifreq,:,:], nside,\
-                theta_axis=-2, phi_axis=-1)
-            if not np.allclose(pointing, (90., 0.), atol=1e-5, rtol=0.):
-                maps[ifreq,:] = rotate_map(maps[ifreq,:], p_theta, p_phi, psi)
+            maps[ifreq,:] = self.maps[nside][internal_ifreq,:]
+        if (pointing != (90, 0)) or (psi != 0):
+            maps = rotate_maps(maps, 90 - pointing[0], pointing[1], psi,\
+                use_inverse=False, nest=False, axis=-1, deg=True, verbose=True)
         if normed:
-            maps = normalize_maps(maps)
-        if multi_frequency:
-            return maps[:,:]
-        else:
+            maps = normalize_maps(maps, pixel_axis=-1)
+        if (numfreqs == 1) and frequencies_originally_single_number:
             return maps[0,:]
+        else:
+            return maps[:,:]
     
     def decompose_spherical_harmonics(self, nside, lmax=None, group=True):
         """
