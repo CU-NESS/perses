@@ -1,5 +1,5 @@
 import gc
-import time # TODO delete this
+import time
 import numpy as np
 from scipy.special import sph_harm
 from ..util import int_types, real_numerical_types, sequence_types
@@ -180,7 +180,7 @@ def spin_grids(grids, angle, degrees=True, phi_axis=-1):
     return (high * float_part) + (low * (1 - float_part))
 
 def spin_maps(maps, angle, degrees=True, pixel_axis=-1, nest=False,\
-    pixel_fraction_tolerance=1e-6):
+    pixel_fraction_tolerance=1e-6, verbose=False):
     """
     Spins the given maps (in a direction given by the right hand rule and the
     current north pole) through the given angle.
@@ -201,6 +201,7 @@ def spin_maps(maps, angle, degrees=True, pixel_axis=-1, nest=False,\
     
     returns: numpy.ndarray of same shape as maps containing the spun maps
     """
+    start_time = time.time()
     pixel_axis = (pixel_axis % maps.ndim)
     if degrees:
         angle = np.radians(angle)
@@ -209,13 +210,31 @@ def spin_maps(maps, angle, degrees=True, pixel_axis=-1, nest=False,\
     pixel_size = np.sqrt(np.pi / 3) / nside
     if np.cos(angle) >= np.cos(pixel_size * pixel_fraction_tolerance):
         return maps
-    thetas, phis = hp.pixelfunc.pix2ang(nside, np.arange(npix))
+    thetas, phis = hp.pixelfunc.pix2ang(nside, np.arange(npix), nest=nest)
     phis = (phis - angle) % (2 * np.pi)
-    return interpolate_maps(maps, thetas, phis, nest=nest, axis=pixel_axis,\
-        degrees=False)
+    final_maps = interpolate_maps(maps, thetas, phis, nest=nest,\
+        axis=pixel_axis, degrees=False)
+    end_time = time.time()
+    duration = end_time - start_time
+    if verbose:
+        print("Spinning maps took {:.3f} s.".format(duration))
+    return final_maps
+
+def rotator_for_spinning(angle, degrees=True):
+    """
+    Generates a healpy Rotator object that would spin around the current pole
+    by given angle.
+    
+    angle: the angle through which to spin, equivalent to angle in spin_maps
+           function
+    degrees: boolean describing whether angle is in degrees or not
+    
+    returns: healpy Rotator object which implements the spinning
+    """
+    return spherical_rotator(0, 0, -angle, deg=degrees)
 
 def smear_maps(maps, angle_start, angle_end, degrees=True, pixel_axis=-1,\
-    nest=False):
+    nest=False, verbose=False):
     """
     Smears the given maps (uniformly) between the given angles.
     
@@ -229,6 +248,7 @@ def smear_maps(maps, angle_start, angle_end, degrees=True, pixel_axis=-1,\
     
     returns: numpy.ndarray of same shape as maps containing smeared maps
     """
+    start_time = time.time()
     pixel_axis = (pixel_axis % maps.ndim)
     average_angle = (angle_start + angle_end) / 2.
     angle_difference = (angle_end - angle_start)
@@ -247,9 +267,14 @@ def smear_maps(maps, angle_start, angle_end, degrees=True, pixel_axis=-1,\
             factor = 1.
         cumulative_maps = cumulative_maps + (factor * spin_maps(maps, angle,\
             degrees=degrees, pixel_axis=pixel_axis, nest=nest))
-    return cumulative_maps / (num_points_for_integration - 1)
+    final_value = cumulative_maps / (num_points_for_integration - 1)
+    end_time = time.time()
+    duration = end_time - start_time
+    if verbose:
+        print("Smearing maps took {:.3f} s.".format(duration))
+    return final_value
 
-def smear_maps_approximate(sky_maps, delta, lmax=None):
+def smear_maps_approximate(sky_maps, delta, lmax=None, verbose=False):
     """
     Smears the given maps (uniformly) from phi-(delta/2) to phi+(delta/2) using
     the spherical harmonic approximation.
@@ -262,10 +287,11 @@ def smear_maps_approximate(sky_maps, delta, lmax=None):
     
     returns: array of same shape as sky_maps containing smeared maps
     """
+    start_time = time.time()
     npix = sky_maps.shape[-1]
     nside = hp.pixelfunc.npix2nside(npix)
     alm = np.array(hp.sphtfunc.map2alm(sky_maps, lmax=lmax, pol=False))
-    if sky_maps.shape[0] == 1:
+    if sky_maps.ndim == 1 or sky_maps.shape[0] == 1:
         alm = alm[np.newaxis,:]
     lmax = hp.sphtfunc.Alm.getlmax(alm.shape[1])
     accounted_for = 0
@@ -274,10 +300,20 @@ def smear_maps_approximate(sky_maps, delta, lmax=None):
         alm[:,accounted_for:accounted_for+multiplicity] *=\
             np.sinc((m_value * delta) / 360.)
         accounted_for += multiplicity
-    return np.array(hp.sphtfunc.alm2map(alm, nside, pol=False, verbose=False))
+    if sky_maps.ndim == 1:
+        final_value =\
+            np.array(hp.sphtfunc.alm2map(alm[0], nside, pol=False, verbose=False))
+    else:
+        final_value =\
+            np.array(hp.sphtfunc.alm2map(alm, nside, pol=False, verbose=False))
+    end_time = time.time()
+    duration = end_time - start_time
+    if verbose:
+        print("Smearing maps approximately took {:.3f} s.".format(duration))
+    return final_value
 
 def patchy_smear_maps_approximate(sky_maps, patch_size, patch_locations,\
-    lmax=None):
+    lmax=None, verbose=False):
     """
     Smears the given maps through patches of the given size centered on the
     given locations the spherical harmonic approximation.
@@ -291,6 +327,7 @@ def patchy_smear_maps_approximate(sky_maps, patch_size, patch_locations,\
     
     returns: array of same shape as sky_maps containing smeared maps
     """
+    start_time = time.time()
     npix = sky_maps.shape[-1]
     nside = hp.pixelfunc.npix2nside(npix)
     alm = np.array(hp.sphtfunc.map2alm(sky_maps, lmax=lmax, pol=False))
@@ -309,11 +346,16 @@ def patchy_smear_maps_approximate(sky_maps, patch_size, patch_locations,\
             multiplicative_factors[m_value]
         accounted_for += multiplicity
     if sky_maps.ndim == 1:
-        return np.array(hp.sphtfunc.alm2map(alm[0], nside, pol=False,\
+        final_value = np.array(hp.sphtfunc.alm2map(alm[0], nside, pol=False,\
             verbose=False))
     else:
-        return\
+        final_value =\
             np.array(hp.sphtfunc.alm2map(alm, nside, pol=False, verbose=False))
+    end_time = time.time()
+    duration = end_time - start_time
+    if verbose:
+        print("Smearing maps approximately took {:.3f} s.".format(duration))
+    return final_value
 
 def convolve_map(beam_map, sky_map, normed=True):
     """
@@ -458,7 +500,6 @@ def conical_beam_function(p_theta, p_phi, resolution, fwhm, is_grid=False):
         return (2 * theta <= fwhm).astype(float) * np.ones_like(phi * nu)
     return custom_beam_function(p_theta, p_phi, np.ones(fwhm.size),\
         resolution, cone_func, 0., is_grid=is_grid)
-
 
 def spherical_rotator(theta, phi, psi, deg=True):
     """
@@ -749,7 +790,6 @@ def rotate_map(omap, theta, phi, psi, use_inverse=False, nest=False):
     return\
         rotate_maps(omap, theta, phi, psi, use_inverse=use_inverse, nest=nest)
 
-
 def interpolate_maps(maps, thetas, phis, nest=False, axis=-1, degrees=False):
     """
     Interpolates the given maps to the given angles.
@@ -805,7 +845,6 @@ def interpolate_maps(maps, thetas, phis, nest=False, axis=-1, degrees=False):
     else:
         return interpolated
 
-
 def rotate_maps(omaps, theta, phi, psi, use_inverse=False, nest=False,\
     axis=-1, deg=True, verbose=True):
     """
@@ -815,7 +854,6 @@ def rotate_maps(omaps, theta, phi, psi, use_inverse=False, nest=False,\
     nside=512).
     
     omaps original maps to rotate (must have the same nside as desired maps)
-    nside the nside (resolution) parameter of the map
     theta the angle through which the north pole (before rotation) will travel,
           in degrees
     phi the angle which the rotated north pole will be rotated around its
@@ -833,8 +871,6 @@ def rotate_maps(omaps, theta, phi, psi, use_inverse=False, nest=False,\
     start_time = time.time()
     npix = omaps.shape[axis]
     nside = hp.pixelfunc.npix2nside(npix)
-    # prefix 'r' stands for 'rotated'
-    rmaps = np.ndarray(omaps.shape, dtype=omaps.dtype)
     rotator_on_orig_map = spherical_rotator(theta, phi, psi, deg=deg)
     rotator_on_rotated_map = rotator_on_orig_map.get_inverse()
     if use_inverse:
@@ -845,8 +881,8 @@ def rotate_maps(omaps, theta, phi, psi, use_inverse=False, nest=False,\
     pre_slice = ((slice(None),) * axis)
     post_slice = ((slice(None),) * (omaps.ndim - axis - 1))
     pixels = np.arange(npix)
-    rot_thetas, rot_phis = hp.pixelfunc.pix2ang(nside, pixels)
-    orig_thetas, orig_phis = rotator(rot_thetas, rot_phis)
+    (rot_thetas, rot_phis) = hp.pixelfunc.pix2ang(nside, pixels, nest=nest)
+    (orig_thetas, orig_phis) = rotator(rot_thetas, rot_phis)
     return_value = interpolate_maps(omaps, orig_thetas, orig_phis, nest=nest,\
         axis=axis, degrees=False)
     end_time = time.time()
@@ -855,6 +891,38 @@ def rotate_maps(omaps, theta, phi, psi, use_inverse=False, nest=False,\
         print("Rotating maps took {:.3f} s.".format(duration))
     return return_value
 
+def rotate_maps_with_rotator(omaps, rotator, nest=False, axis=-1,\
+    verbose=True):
+    """
+    This function rotates an entire set of healpy maps using healpy's rotator
+    class. Care should be taken because this function can be considerably
+    computationally expensive (on my laptop, it takes ~5 minutes for a map with
+    nside=512).
+    
+    omaps original maps to rotate (must have the same nside as desired maps)
+    rotator the healpy Rotator object to use for rotation. It should take in
+            input angles and output output angles
+    nest True (False) if omaps in NESTED (RING) format, default False
+    axis the axis containing the pixel dimension of the data
+    
+    returns a rotated map with the same nside parameter
+    """
+    start_time = time.time()
+    npix = omaps.shape[axis]
+    nside = hp.pixelfunc.npix2nside(npix)
+    axis = (axis % omaps.ndim)
+    pre_slice = ((slice(None),) * axis)
+    post_slice = ((slice(None),) * (omaps.ndim - axis - 1))
+    pixels = np.arange(npix)
+    (rot_thetas, rot_phis) = hp.pixelfunc.pix2ang(nside, pixels, nest=nest)
+    (orig_thetas, orig_phis) = rotator.get_inverse()(rot_thetas, rot_phis)
+    return_value = interpolate_maps(omaps, orig_thetas, orig_phis, nest=nest,\
+        axis=axis, degrees=False)
+    end_time = time.time()
+    duration = end_time - start_time
+    if verbose:
+        print("Rotating maps took {:.3f} s.".format(duration))
+    return return_value
 
 def rotate_vector_map(theta_comp, phi_comp, theta, phi, psi,\
     use_inverse=False, nest=False, verbose=True):
