@@ -131,7 +131,7 @@ def smear_maps_through_LST(sky_maps, observatory, lst_start, lst_end,\
         sky_maps =\
             smear_maps_approximate(sky_maps, delta_lst_angle, verbose=verbose)
     else:
-        sky_maps = smear_maps(sky_maps, 0, delta_lst_angle, pixel_axis=-1,\
+        sky_maps = smear_maps(sky_maps, 0, -delta_lst_angle, pixel_axis=-1,\
             verbose=verbose)
     # The other thing we need to worry about is where to put the x-axis when we
     # rotated to the beam coordinates. We do this by finding negative thetahat
