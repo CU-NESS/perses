@@ -54,7 +54,7 @@ class GridMeasuredBeam(_TotalPowerBeam, Savable, Loadable):
             new_phis = beams[0].phis
             if all([(len(beam.thetas) == len(new_thetas))\
                 for beam in beams]):
-                if any([np.any(beam.thetas == new_thetas)\
+                if any([np.any(beam.thetas != new_thetas)\
                     for beam in beams]):
                     raise ValueError("beams did not have the same thetas.")
             else:
