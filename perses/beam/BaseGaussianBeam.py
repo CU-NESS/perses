@@ -8,6 +8,7 @@ Description: File containing base class for Gaussian beams. This class handles
 """
 from __future__ import division
 from types import FunctionType
+from ..util import bool_types
 import numpy as np
 from scipy.special import comb as combinations
 from distpy import Expression, GaussianDistribution, WindowedDistribution,\
@@ -78,7 +79,31 @@ class _GaussianBeam(object):
                                      "elliptical.")
         return self._fwhm
     
-    def gaussian_profile(self, frequencies, thetas, phis, sqrt_of_final=False):
+    @property
+    def include_horizon(self):
+        """
+        Property storing whether or not the horizon is included in the Gaussian
+        profile of this beam. If it is, the profile is zero when theta>pi/2
+        """
+        if not hasattr(self, '_include_horizon'):
+            raise AttributeError("include_horizon was referenced before it " +\
+                "was set.")
+        return self._include_horizon
+    
+    @include_horizon.setter
+    def include_horizon(self, value):
+        """
+        Setter determining whether horizon is included or not.
+        
+        value: True or False
+        """
+        if type(value) in bool_types:
+            self._include_horizon = value
+        else:
+            raise TypeError("include_horizon was set to a non-bool.")
+    
+    def gaussian_profile(self, frequencies, thetas, phis, sqrt_of_final=False,\
+        include_horizon=False):
         """
         Function giving the value of the Gaussian.
         
@@ -101,7 +126,11 @@ class _GaussianBeam(object):
             y_part =\
                 (thetas * np.sin(phis) / np.radians(self.y_fwhm(frequencies)))
             exponent = ((x_part ** 2) + (y_part ** 2))
-        return np.exp(-np.log(4 if sqrt_of_final else 16) * exponent)
+        profile = np.exp(-np.log(4 if sqrt_of_final else 16) * exponent)
+        if self.include_horizon:
+            return np.where(thetas >= (np.pi / 2), 0, profile)
+        else:
+            return profile
 
 def fwhm_training_set(frequencies, legendre_mean,\
     legendre_standard_deviations, num_fwhms, random=np.random, minimum_fwhm=0,\

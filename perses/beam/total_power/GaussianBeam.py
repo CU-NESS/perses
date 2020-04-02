@@ -11,7 +11,7 @@ from .IdealBeam import IdealBeam
 class GaussianBeam(IdealBeam, _GaussianBeam):
     """
     """
-    def __init__(self, x_fwhm, y_fwhm=None):
+    def __init__(self, x_fwhm, y_fwhm=None, include_horizon=False):
         """
         Initializes a new _GaussianBeam with the given FWHM information.
         
@@ -23,8 +23,11 @@ class GaussianBeam(IdealBeam, _GaussianBeam):
         y_fwhm: if supplied, it is a function of 1 argument (the frequency)
                 which returns the FWHM (in degrees) in the Y-direction (i.e.
                 the theta*np.sin(phi) direction)
+        include_horizon: True or False, determines whether beam below horizon
+                         is included (False) or not (True)
         """
         self.initialize_fwhm(x_fwhm, y_fwhm=y_fwhm)
+        self.include_horizon = include_horizon
     
     def beam_function(self, frequencies, thetas, phis):
         """
