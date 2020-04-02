@@ -39,6 +39,49 @@ class GridMeasuredBeam(_TotalPowerBeam, Savable, Loadable):
         self.phis = phis
         self.grids = beams
     
+    @staticmethod
+    def combine(*beams):
+        """
+        Combines multiple GridMeasuredBeams into one by assuming they have the
+        same number of angles and concatenating their frequencies.
+        
+        beams: sequence of GridMeasuredBeam objects
+        """
+        if all([isinstance(beam, GridMeasuredBeam) for beam in beams]):
+            new_frequencies =\
+                np.concatenate([beam.frequencies for beam in beams])
+            new_thetas = beams[0].thetas
+            new_phis = beams[0].phis
+            if all([(len(beam.thetas) == len(new_thetas))\
+                for beam in beams]):
+                if any([np.any(beam.thetas != new_thetas)\
+                    for beam in beams]):
+                    raise ValueError("beams did not have the same thetas.")
+            else:
+                raise ValueError("beams did not have the number of thetas.")
+            if all([(len(beam.phis) == len(new_phis)) for beam in beams]):
+                if any([np.any(beam.phis != new_phis) for beam in beams]):
+                    raise ValueError("beams did not have the same phis.")
+            else:
+                raise ValueError("beams did not have the number of phis.")
+            new_grids = np.concatenate([beam.grids for beam in beams], axis=-3)
+            return GridMeasuredBeam(new_frequencies, new_thetas, new_phis,\
+                new_grids)
+        else:
+            raise TypeError("Not all of beams are GridMeasuredBeam objects.")
+    
+    def __add__(self, other):
+        """
+        Adds self and other by combining them.
+        
+        other: the GridMeasuredBeam to add to this one (the frequencies of
+               other are concatenated to the frequencies of self)
+        
+        returns: a new GridMeasuredBeam containing data for self at its
+                 frequencies and other at its frequencies
+        """
+        return GridMeasuredBeam.combine(self, other)
+    
     def fill_hdf5_group(self, group, grids_link=None):
         """
         A function which fills the given hdf5 file group with information about
