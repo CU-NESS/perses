@@ -13,6 +13,68 @@ from ..beam.BeamUtilities import smear_maps, smear_maps_approximate,\
     rotator_for_spinning, rotate_maps_with_rotator
 from .ObservationUtilities import earths_celestial_north_pole, vernal_equinox
 
+def rotate_galactic_direction_to_LST(galactic_pointing, observatory,\
+    local_sidereal_time):
+    """
+    Rotates a point from galactic latitude and longitude to zenith based
+    latitude and longitude.
+    
+    galactic_pointing: tuple of form (galactic_latitude, galactic_longitude) of
+                       point to rotate, where both quantities are given in
+                       degrees
+    observatory: GroundObservatory object
+    local_sidereal_time: the local sidereal time (right ascension of the
+                         vernal equinox), given as some fraction of a day
+    
+    returns: tuple of form (zenith_based_latitude, zenith_based_longitude)
+    """
+    # Rotate map to celestial coordinates with Polaris as center.
+    first_rotation_theta = 90 - earths_celestial_north_pole[0]
+    first_rotation_phi = earths_celestial_north_pole[1]
+    first_rotation_psi = 0
+    # We have now done the theta and phi rotations, but we need the psi
+    # rotation, i.e. where to start smearing. This has to do with the LST,
+    # which is the hour angle between the vernal equinox and the location where
+    # the LST was measured.
+    first_rotator = spherical_rotator(first_rotation_theta,\
+        first_rotation_phi, first_rotation_psi).get_inverse()
+    (rotated_vernal_equinox_longitude, rotated_vernal_equinox_latitude) =\
+        first_rotator(vernal_equinox[1], vernal_equinox[0],\
+        lonlat=True)
+    # Now that we know where VE gets rotated to, we add and subtract to get psi
+    # correct. The longitude is what matters here because we're rotating psi at
+    # the north pole. The relevant longitudes are the new VE, spinning
+    # negatively with respect to the Earth's rotation, the longitude of the
+    # EDGES telescope, a positive spin, and finally the LST, which is also
+    # negative.
+    local_sidereal_time_angle = local_sidereal_time * 360.
+    amount_to_spin = observatory.longitude -\
+        (rotated_vernal_equinox_longitude + local_sidereal_time_angle)
+    second_rotator = rotator_for_spinning(amount_to_spin)
+    # The other thing we need to worry about is where to put the x-axis when we
+    # rotated to the beam coordinates. We do this by finding negative thetahat
+    # (i.e. unit vector pointing north) and keeping track of where north goes
+    # with another rotator:
+    xpart = np.cos(observatory.theta) * np.cos(observatory.phi)
+    ypart = np.cos(observatory.theta) * np.sin(observatory.phi)
+    zpart = -np.sin(observatory.theta)
+    northhat = (-1. * np.array([xpart, ypart, zpart]))
+    third_rotator = spherical_rotator(observatory.theta,\
+        observatory.phi, 0, deg=False).get_inverse()
+    rotated_northhat = third_rotator(northhat)
+    #Now we use np.arctan2 to find how far away from the x-axis new_north is:
+    #arctan2 takes y,x for arguments because it's dumb:
+    displacement =\
+        np.degrees(np.arctan2(rotated_northhat[1], rotated_northhat[0]))
+    # Rotate the map such that the beam is at the center with correct psi from
+    # above rotator:
+    fourth_rotator = rotator_for_spinning(observatory.angle - displacement)
+    full_rotator =\
+        fourth_rotator * third_rotator * second_rotator * first_rotator
+    (lst_longitude, lst_latitude) =\
+        full_rotator(galactic_pointing[1], galactic_pointing[0], lonlat=True)
+    return (lst_latitude, lst_longitude)
+
 def rotate_maps_to_LST(sky_maps, observatory, local_sidereal_time,\
     verbose=False):
     """

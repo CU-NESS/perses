@@ -132,10 +132,75 @@ class _GaussianBeam(object):
         else:
             return profile
 
+def fwhm_legendre(frequencies, legendre_coefficients):
+    """
+    Creates and returns an anonymous function that takes in frequency values
+    and outputs the value of the Legendre polynomial expansion with the given
+    coefficients.
+    
+    frequencies: frequencies to shift/scale legendre polynomial x-values
+    legendre_coefficients: coefficients of Legendre polynomials
+    
+    returns: lambda function that takes in frequency values and outputs the
+             value of the Legendre polynomial expansion with the given
+             coefficients
+    """
+    delta_frequency = frequencies[-1] - frequencies[0]
+    frequency_mean = (frequencies[-1] + frequencies[0]) / 2
+    order = len(legendre_coefficients) - 1
+    matrix_from_poly_to_norm_poly = np.ndarray((order + 1, order + 1))
+    matrix_from_norm_poly_to_legendre_poly = np.ndarray((order + 1, order + 1))
+    for row in range(order + 1):
+        for column in range(order + 1):
+            if column > row:
+                first_element = 0
+                second_element = 0
+            else:
+                first_element = frequency_mean ** (row - column)
+                first_element = first_element / ((delta_frequency / 2) ** row)
+                first_element = first_element * combinations(row, column)
+                if ((row + column) % 2) == 0:
+                    k_in_sum = (row - column) // 2
+                    second_element = (combinations(row, k_in_sum) *\
+                        combinations(row + column, row)) / (2 ** row)
+                    if (k_in_sum % 2) == 1:
+                        second_element = (-1) * second_element
+                else:
+                    first_element = (-1) * first_element
+                    second_element = 0
+            matrix_from_poly_to_norm_poly[row,column] = first_element
+            matrix_from_norm_poly_to_legendre_poly[row,column] = second_element
+    matrix_from_legendre_poly_coefficients_to_poly_coefficients = np.dot(\
+        matrix_from_norm_poly_to_legendre_poly,\
+        matrix_from_poly_to_norm_poly).T
+    poly_coefficients =\
+        np.dot(matrix_from_legendre_poly_coefficients_to_poly_coefficients,\
+        legendre_coefficients)
+    fwhm_string = 'lambda nu: ({!s})'.format('+'.join(\
+        ['({0} * (nu ** {1:d}))'.format(poly_coefficients[index], index)\
+        for index in range(order + 1)]))
+    return eval(fwhm_string)
+
 def fwhm_training_set(frequencies, legendre_mean,\
     legendre_standard_deviations, num_fwhms, random=np.random, minimum_fwhm=0,\
     maximum_fwhm=None):
     """
+    Makes a training set of anonymous fwhm functions using Legendre polynomials
+    
+    frequencies: frequencies to scale/shift to make Legendre polynomial
+                 x-values
+    legendre_mean: mean of the legendre coefficient distribution (assumed
+                   Gaussian)
+    legendre_standard_deviations: standard deviations of legendre coefficients
+                                  (assumed independent/uncorrelated)
+    num_fwhms: the number of functions to create
+    random: the random number generator to use to draw random fwhms
+    minimum_fwhm: the minimum possible fwhm value in the training set
+    maximum_fwhm: if given, the maximum possible fwhm value in the training set
+    
+    returns: list of anonymous functions that take in frequency values and
+             output fwhm values seeded from the given distribution of Legendre
+             coefficients
     """
     delta_frequency = frequencies[-1] - frequencies[0]
     frequency_mean = (frequencies[-1] + frequencies[0]) / 2

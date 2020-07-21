@@ -24,7 +24,8 @@ except:
     basestring = str
 
 redshift_buffer = 0.1
-default_parameter_bundle_names = ['mirocha2017:dpl', 'mirocha2017:flex']
+#default_parameter_bundle_names = ['mirocha2017:dpl', 'mirocha2017:flex']
+default_parameter_bundle_names = ['mirocha2017:base']
 default_simple_kwargs =\
     {'tau_redshift_bins': 1000, 'verbose': False, 'progress_bar': False}
 default_synthesis_model_kwargs =\
@@ -228,18 +229,13 @@ class AresSignalModel(LoadableModel):
                 max_redshift_output = np.max(redshift_output)
                 default_initial_redshift = 150
                 default_final_redshift = 5
-                if max_redshift_output > default_initial_redshift:
-                    raise ValueError(("The minimum output frequency " +\
-                        "corresponds to a higher redshift than the default " +\
-                        "'initial_redshift' ares keyword argument, " +\
-                        "{:.6g}.").format(default_initial_redshift))
+                self._simple_kwargs['initial_redshift'] =\
+                    max(default_initial_redshift, max_redshift_output)
                 if min_redshift_output < default_final_redshift:
                     raise ValueError(("The maximum output frequency " +\
                         "corresponds to a lower redshift than the default " +\
                         "'final_redshift' ares keyword argument, " +\
                         "{:.6g}.").format(default_final_redshift))
-                self._simple_kwargs['initial_redshift'] =\
-                    default_initial_redshift
                 self._simple_kwargs['final_redshift'] = default_final_redshift
             else:
                 raise TypeError("simple_kwargs dictionary keys were not " +\
@@ -300,7 +296,6 @@ class AresSignalModel(LoadableModel):
             self._ares_kwargs['output_frequencies'] = self.frequencies
             if type(self.synthesis_model_kwargs) is not type(None):
                 pop = SynthesisModel(**self.synthesis_model_kwargs)
-                junk = pop.L1600_per_sfr
                 self._ares_kwargs['pop_sed_by_Z{0}'] =\
                     (pop.wavelengths, pop._data_all_Z)
             sim = Global21cm(**self._ares_kwargs)

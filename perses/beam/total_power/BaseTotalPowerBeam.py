@@ -1,6 +1,7 @@
 """
 $PERSES/perses/beam/total_power/BaseTotalPowerBeam.py
 """
+from __future__ import division
 import os, subprocess, time
 from types import FunctionType
 from ..BeamUtilities import linear_to_dB, beam_sizes_from_maps, rotate_map,\
@@ -36,6 +37,99 @@ class _TotalPowerBeam(_Beam):
 
     All subclasses of this one should implement get_maps(freqs, **kwargs).
     """
+    def get_alms(self, frequencies, nside, pointing, psi, lmax=None, **kwargs):
+        """
+        Gets the spherical harmonic coefficients of the maps at the given
+        frequencies.
+        
+        frequencies: frequencies in MHz at which to compute the beam
+        nside: resolution parameter of healpy, must be power of 2
+        pointing: tuple of form (latitude, longitude) in degrees
+        psi: angle through which beam is rotated about pointing direction
+        lmax: maximum l value to use in computation of coefficients, defaults
+              to (3*nside)-1
+        **kwargs: extra keyword arguments to pass to get_maps method
+        
+        returns: complex array of shape (num_frequencies, (lmax+1)*(lmax+2)/2)
+                 each slice with constant first index is given schematically by
+                 np.concatenate([np.array([a(l,m) for l in range(m+1)])
+                     for m in range(lmax+1)])
+        """
+        bmaps = self.get_maps(frequencies, nside, pointing, psi, **kwargs)
+        return np.array([hp.sphtfunc.map2alm(bmap, lmax=lmax, mmax=None)\
+            for bmap in bmaps])
+    
+    def get_dipole_measurement_vector(self, frequencies, nside, pointing, psi,\
+        lmax=None, **kwargs):
+        """
+        Gets the dipole measurement vector of this beam.
+        
+        frequencies: frequencies in MHz at which to compute the beam
+        nside: resolution parameter of healpy, must be power of 2
+        pointing: tuple of form (latitude, longitude) in degrees
+        psi: angle through which beam is rotated about pointing direction
+        lmax: maximum l value to use in computation of coefficients, defaults
+              to (3*nside)-1
+        **kwargs: extra keyword arguments to pass to get_maps method
+        
+        returns: real array of shape (num_frequencies, 3) that, when dotted
+                 with a vector whose direction indicates the orientation of the
+                 dipole and whose magnitude indicates the spectral intensity of
+                 the dipole, gives the response of the beam to dipole sky
+                 emission
+        """
+        alms = self.get_alms(frequencies, nside, pointing, psi, lmax=lmax,\
+            **kwargs)
+        alm_len = alms.shape[1]
+        lmax = (int(round(np.sqrt(8 * alm_len + 1))) - 3) // 2
+        (a00, a10, a11) = (alms[:,0], alms[:,1], alms[:,lmax+1])
+        (a10oa00, a11oa00) = (a10 / a00, a11 / a00)
+        dipole_vector = np.stack([-np.sqrt(2) * np.real(a11oa00),\
+            np.sqrt(2) * np.imag(a11oa00), np.real(a10oa00)], axis=1)
+        return dipole_vector / np.sqrt(3)
+    
+    def get_dipole_measurements(self, frequencies, nside, pointing, psi,\
+        dipole_orientations, lmax=None, **kwargs):
+        """
+        Gets the dipole measurement factors for this beam. The actual measured
+        dipoles are the amplitude of the dipole multiplied by returned values
+        of this function.
+        
+        frequencies: frequencies in MHz at which to compute the beam
+        nside: resolution parameter of healpy, must be power of 2
+        pointing: tuple of form (latitude, longitude) in degrees
+        psi: angle through which beam is rotated about pointing direction
+        dipole_orientations: list of tuples of form (latitude, longitude) where
+                             latitude and longitude are in degrees. Must be
+                             given in same frame as beam pointing
+        lmax: maximum l value to use in computation of coefficients, defaults
+              to (3*nside)-1
+        **kwargs: extra keyword arguments to pass to get_maps method
+        
+        returns: numpy array of shape
+                 (len(dipole_orientations), num_frequencies) containing spectra
+                 that, when multiplied by dipole amplitudes, yield measured
+                 dipole spectra
+        """
+        dipole_measurement_vector = self.get_dipole_measurement_vector(\
+            frequencies, nside, pointing, psi, lmax=lmax, **kwargs)
+        dipole_measurements = []
+        for dipole_orientation in dipole_orientations:
+            dipole_orientation_theta = np.radians(90 - dipole_orientation[0])
+            dipole_orientation_phi = np.radians(dipole_orientation[1])
+            dipole_orientation_xy = np.sin(dipole_orientation_theta)
+            dipole_orientation_z = np.cos(dipole_orientation_theta)
+            dipole_orientation_x =\
+                dipole_orientation_xy * np.cos(dipole_orientation_phi)
+            dipole_orientation_y =\
+                dipole_orientation_xy * np.sin(dipole_orientation_phi)
+            dipole_orientation_vector = np.array([dipole_orientation_x,\
+                dipole_orientation_y, dipole_orientation_z])
+            dipole_measurements.append(
+                np.dot(dipole_measurement_vector, dipole_orientation_vector))
+        dipole_measurements = np.array(dipole_measurements)
+        return dipole_measurements
+    
     @property
     def symmetrized(self):
         """

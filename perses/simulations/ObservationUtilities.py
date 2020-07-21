@@ -12,6 +12,7 @@ except:
 earths_celestial_north_pole = (26.4615, 123.2805)
 earths_celestial_south_pole = (-26.4615, 303.2805)
 vernal_equinox = (-60.1886, 96.3373)
+direction_of_motion_through_CMB = (48., 264.) # (30., 276.)
 
 def full_blockage_opposite_pointing(pointing, nside):
     """
