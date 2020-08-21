@@ -1,3 +1,4 @@
+from __future__ import division
 import gc
 import time
 import numpy as np
@@ -256,7 +257,7 @@ def smear_maps(maps, angle_start, angle_end, degrees=True, pixel_axis=-1,\
     nside = hp.pixelfunc.npix2nside(npix)
     # nside is number of pixels within a pi/2 chunk of the largest rings
     pixel_width = np.pi / (2 * nside)
-    num_pixels_rotated_through = abs(angle_difference) / pixel_width
+    num_pixels_rotated_through = int(abs(angle_difference) // pixel_width)
     num_points_for_integration = max(2, (2 * num_pixels_rotated_through + 1))
     angles = np.linspace(angle_start, angle_end, num_points_for_integration)
     cumulative_maps = np.zeros_like(maps)
