@@ -306,7 +306,7 @@ def smear_maps_approximate(sky_maps, delta, center=0, lmax=None,\
         delta = np.degrees(delta)
         center_in_radians = center
     start_time = time.time()
-    npix = sky_maps.shape[-1]
+    npix = sky_maps.shape[pixel_axis]
     nside = hp.pixelfunc.npix2nside(npix)
     if (pixel_axis in [-1, sky_maps.ndim - 1]) or (sky_maps.ndim == 1):
         maps = sky_maps
@@ -332,7 +332,7 @@ def smear_maps_approximate(sky_maps, delta, center=0, lmax=None,\
     if nest:
         final_value = hp.reorder(final_value, r2n=True)
     final_value =\
-        np.reshape(final_value, (non_pixel_shape, final_value.shape[-1]))
+        np.reshape(final_value, non_pixel_shape + (final_value.shape[-1],))
     final_value = np.swapaxes(final_value, -1, pixel_axis)
     end_time = time.time()
     duration = end_time - start_time
