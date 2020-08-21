@@ -6,7 +6,7 @@ import os, subprocess, time
 from types import FunctionType
 from ..BeamUtilities import linear_to_dB, beam_sizes_from_maps, rotate_map,\
     beam_sizes_from_grids, normalize_grids, grids_from_maps, rotate_maps,\
-    convolve_maps, spin_maps, smear_maps
+    convolve_maps, spin_maps, smear_maps, smear_maps_approximate
 from ..BaseBeam import _Beam, nside_from_angular_resolution
 from ...util import real_numerical_types, make_video
 import numpy as np
@@ -146,9 +146,9 @@ class _TotalPowerBeam(_Beam):
         return self.pf['beam_symmetrized']
 
     def convolve(self, frequencies, sky_maps, pointing=(90, 0), psi=0,\
-        func_pars={}, verbose=True, include_smearing=False, angles=None,\
-        degrees=True, nest=False, horizon=False, ground_temperature=0,\
-        **kwargs):
+        func_pars={}, verbose=True, include_smearing=False,\
+        approximate_smearing=True, angles=None, degrees=True, nest=False,\
+        horizon=False, ground_temperature=0, **kwargs):
         """
         Convolves this beam with the given sky maps by taking the product of
         the beam maps and the sky maps and integrating over the entire solid
@@ -173,6 +173,13 @@ class _TotalPowerBeam(_Beam):
         verbose: boolean switch determining whether time of calculation is
                  printed
         include_smearing: if True, maps are smeared through angles
+        approximate_smearing: if True and include_smearing is True, then the
+                              smearing is approximated through the use of
+                              spherical harmonics. If False and
+                              include_smearing is True, then the smearing is
+                              approximated in pixel space (usually taking much
+                              longer). If include_smearing is False, this
+                              parameter is ignored. default, True
         angles: either None (if only one antenna rotation angle is to be used)
                 of a sequence of angles in degrees or radians
                 (see degrees argument)
@@ -225,10 +232,19 @@ class _TotalPowerBeam(_Beam):
                 left = (2 * angle_bins[0]) - angle_bins[1]
                 right = (2 * angle_bins[-1]) - angle_bins[-2]
                 angle_bins = np.concatenate([[left], angle_bins, [right]])
-                spectra = np.stack([convolve_maps(smear_maps(beam_maps,\
-                    angle_bins[iangle], angle_bins[iangle+1], degrees=degrees,\
-                    pixel_axis=-1, nest=nest), sky_maps, normed=True,\
-                    pixel_axis=-1) for iangle in range(len(angles))], axis=0)
+                if approximate_smearing:
+                    spectra = np.stack([convolve_maps(smear_maps_approximate(\
+                        beam_maps, angle_bins[iangle+1]-angle_bins[iangle],\
+                        center=(angle_bins[iangle]+angle_bins[iangle+1])/2,\
+                        degrees=degrees, pixel_axis=-1, nest=nest), sky_maps,\
+                        normed=True, pixel_axis=-1)\
+                        for iangle in range(len(angles))], axis=0)
+                else:
+                    spectra = np.stack([convolve_maps(smear_maps(beam_maps,\
+                        angle_bins[iangle], angle_bins[iangle+1],\
+                        degrees=degrees, pixel_axis=-1, nest=nest), sky_maps,\
+                        normed=True, pixel_axis=-1)\
+                        for iangle in range(len(angles))], axis=0)
             else:
                 raise ValueError("angles must be monotonically changing " +\
                                  "if smearing is to be included.")

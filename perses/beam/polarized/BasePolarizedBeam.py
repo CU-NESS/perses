@@ -17,8 +17,8 @@ import matplotlib.pyplot as pl
 from ...util import real_numerical_types, make_video
 from ..BeamUtilities import rotate_maps, rotate_vector_maps,\
     Jones_matrix_from_components, transpose, stokes_beams_from_Jones_matrix,\
-    convolve_maps, smear_maps, spin_maps, integrate_maps,\
-    Mueller_matrix_from_Jones_matrix_elements
+    convolve_maps, smear_maps, smear_maps_approximate, spin_maps,\
+    integrate_maps, Mueller_matrix_from_Jones_matrix_elements
 from ..BaseBeam import _Beam, nside_from_angular_resolution
 
 try:
@@ -124,8 +124,8 @@ class _PolarizedBeam(_Beam):
         unpol_pars={}, polarization_fraction=None,\
         polarization_fraction_pars={}, polarization_angle=None,\
         polarization_angle_pars={}, verbose=True, include_smearing=False,\
-        angles=None, degrees=True, nest=False, horizon=False,\
-        ground_temperature=0, **kwargs):
+        approximate_smearing=True, angles=None, degrees=True, nest=False,\
+        horizon=False, ground_temperature=0, **kwargs):
         """
         Simulates the Stokes parameters induced by the sky with given
         unpolarized intensity and complex electric field components in the
@@ -160,6 +160,13 @@ class _PolarizedBeam(_Beam):
         verbose: boolean switch determining whether time of calculation is
                  printed
         include_smearing: if True, maps are smeared through angles
+        approximate_smearing: if True and include_smearing is True, then the
+                              smearing is approximated through the use of
+                              spherical harmonics. If False and
+                              include_smearing is True, then the smearing is
+                              approximated in pixel space (usually taking much
+                              longer). If include_smearing is False, this
+                              parameter is ignored. default, True
         angles: either None (if only one antenna rotation angle is to be used)
                 of a sequence of angles in degrees or radians
                 (see degrees argument)
@@ -309,9 +316,17 @@ class _PolarizedBeam(_Beam):
             if polarized:
                 stokes = []
                 for iangle in range(len(angles)):
-                    smeared_Jones_product = smear_maps(Jones_product,\
-                        angle_bins[iangle], angle_bins[iangle+1],\
-                        degrees=degrees, pixel_axis=1, nest=nest)
+                    if approximate_smearing:
+                        delta = angle_bins[iangle+1] - angle_bins[iangle]
+                        center =\
+                            (angle_bins[iangle] + angle_bins[iangle+1]) / 2.
+                        smeared_Jones_product = smear_maps_approximate(\
+                            Jones_product, delta, center=center,\
+                            degrees=degrees, pixel_axis=1, nest=nest)
+                    else:
+                        smeared_Jones_product = smear_maps(Jones_product,\
+                            angle_bins[iangle], angle_bins[iangle+1],\
+                            degrees=degrees, pixel_axis=1, nest=nest)
                     these_stokes = integrate_maps(one_minus_pI *\
                         (smeared_Jones_product[...,0,0] +\
                         smeared_Jones_product[...,1,1]), pixel_axis=1)
@@ -321,6 +336,13 @@ class _PolarizedBeam(_Beam):
                     stokes.append(these_stokes)
                 del smeared_Jones_product ; gc.collect()
                 stokes = np.stack(stokes, axis=1)
+            elif approximate_smearing:
+                stokes = np.stack([integrate_maps(one_minus_pI *\
+                    smear_maps_approximate(trace_Jones_product,\
+                    angle_bins[iangle+1]-angle_bins[iangle],\
+                    center=(angle_bins[iangle]+angle_bins[iangle+1])/2,\
+                    degrees=degrees, pixel_axis=1, nest=nest), pixel_axis=1)\
+                    for iangle in range(len(angles))], axis=1)
             else:
                 stokes = np.stack([integrate_maps(one_minus_pI *\
                     smear_maps(trace_Jones_product, angle_bins[iangle],\

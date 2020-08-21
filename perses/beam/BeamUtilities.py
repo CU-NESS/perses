@@ -275,38 +275,65 @@ def smear_maps(maps, angle_start, angle_end, degrees=True, pixel_axis=-1,\
         print("Smearing maps took {:.3f} s.".format(duration))
     return final_value
 
-def smear_maps_approximate(sky_maps, delta, lmax=None, verbose=False):
+def smear_maps_approximate(sky_maps, delta, center=0, lmax=None,\
+    verbose=False, degrees=True, pixel_axis=-1, nest=False):
     """
     Smears the given maps (uniformly) from phi-(delta/2) to phi+(delta/2) using
     the spherical harmonic approximation.
     
-    sky_maps: 2D numpy.ndarray whose last axis represents healpy pixels
-    delta: the angle (centered on the current position), in degrees, through
-           which the smearing takes place
+    sky_maps: numpy.ndarray whose pixel axis is given by the pixel_axis
+              argument
+    delta: the angle (centered on the current position), in units specified by
+           degrees argument, through which the smearing takes place
+    center: rotation which should be applied before smearing, in units
+            specified by degrees argument, default 0 (meaning smearing is
+            centered on current map)
     lmax: the maximum l-value to go to in approximation.
           Default: None (uses lmax=3*nside-1)
+    verbose: if True, message is printed at the end of the calculation
+                      indicating how long it took
+    degrees: if True, delta and center are given in degrees, otherwise radians
+    pixel_axis: the index of the axis that contains pixel information,
+                default -1
+    nest: if True, maps are given and returned in NESTED format
+          otherwise, maps are given and returned in RING format
     
     returns: array of same shape as sky_maps containing smeared maps
     """
+    if degrees:
+        center_in_radians = np.radians(center)
+    else:
+        delta = np.degrees(delta)
+        center_in_radians = center
     start_time = time.time()
     npix = sky_maps.shape[-1]
     nside = hp.pixelfunc.npix2nside(npix)
-    alm = np.array(hp.sphtfunc.map2alm(sky_maps, lmax=lmax, pol=False))
-    if sky_maps.ndim == 1 or sky_maps.shape[0] == 1:
+    if (pixel_axis in [-1, sky_maps.ndim - 1]) or (sky_maps.ndim == 1):
+        maps = sky_maps
+    else:
+        maps = np.swapaxes(sky_maps, -1, pixel_axis)
+    non_pixel_shape = maps.shape[:-1]
+    maps = np.reshape(maps, (-1, maps.shape[-1]))
+    if nest:
+        maps = hp.reorder(maps, n2r=True)
+    alm = np.array(hp.sphtfunc.map2alm(maps, lmax=lmax, pol=False))
+    if maps.shape[0] == 1:
         alm = alm[np.newaxis,:]
     lmax = hp.sphtfunc.Alm.getlmax(alm.shape[1])
     accounted_for = 0
     for m_value in range(lmax + 1):
         multiplicity = (lmax - m_value + 1)
         alm[:,accounted_for:accounted_for+multiplicity] *=\
-            np.sinc((m_value * delta) / 360.)
+            (np.sinc((m_value * delta) / 360.) *\
+            np.exp(1.j * m_value * center_in_radians))
         accounted_for += multiplicity
-    if sky_maps.ndim == 1:
-        final_value =\
-            np.array(hp.sphtfunc.alm2map(alm[0], nside, pol=False, verbose=False))
-    else:
-        final_value =\
-            np.array(hp.sphtfunc.alm2map(alm, nside, pol=False, verbose=False))
+    final_value =\
+        np.array(hp.sphtfunc.alm2map(alm, nside, pol=False, verbose=False))
+    if nest:
+        final_value = hp.reorder(final_value, r2n=True)
+    final_value =\
+        np.reshape(final_value, (non_pixel_shape, final_value.shape[-1]))
+    final_value = np.swapaxes(final_value, -1, pixel_axis)
     end_time = time.time()
     duration = end_time - start_time
     if verbose:
