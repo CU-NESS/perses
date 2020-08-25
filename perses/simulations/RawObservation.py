@@ -394,16 +394,9 @@ class RawObservation(object):
     @property
     def num_rotation_angles(self):
         if not hasattr(self, '_num_rotation_angles'):
-            self._num_rotation_angles = len(self.rotation_angles)
+            self._num_rotation_angles =\
+                len(self.rotation_angles) - int(include_smearing)
         return self._num_rotation_angles
-    
-    @property
-    def num_rotations(self):
-        if not hasattr(self, '_num_rotations'):
-            first, last, second_to_last = self.rotation_angles[[0, -1, -2]]
-            total_rotation = (2 * last) - (first + second_to_last)
-            self._num_rotations = total_rotation / 360.
-        return self._num_rotations
     
     @property
     def frequencies(self):
