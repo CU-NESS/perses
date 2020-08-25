@@ -235,7 +235,7 @@ def rotator_for_spinning(angle, degrees=True):
     return spherical_rotator(0, 0, -angle, deg=degrees)
 
 def smear_maps(maps, angle_start, angle_end, degrees=True, pixel_axis=-1,\
-    nest=False, verbose=False):
+    max_points_per_pixel=5, nest=False, verbose=False):
     """
     Smears the given maps (uniformly) between the given angles.
     
@@ -253,12 +253,15 @@ def smear_maps(maps, angle_start, angle_end, degrees=True, pixel_axis=-1,\
     pixel_axis = (pixel_axis % maps.ndim)
     average_angle = (angle_start + angle_end) / 2.
     angle_difference = (angle_end - angle_start)
+    if degrees:
+        angle_difference = np.radians(angle_difference)
     npix = maps.shape[pixel_axis]
     nside = hp.pixelfunc.npix2nside(npix)
     # nside is number of pixels within a pi/2 chunk of the largest rings
     pixel_width = np.pi / (2 * nside)
     num_pixels_rotated_through = int(abs(angle_difference) // pixel_width)
-    num_points_for_integration = max(2, (2 * num_pixels_rotated_through + 1))
+    num_points_for_integration =\
+        max(2, (max_points_per_pixel * num_pixels_rotated_through))
     angles = np.linspace(angle_start, angle_end, num_points_for_integration)
     cumulative_maps = np.zeros_like(maps)
     for angle in angles:

@@ -40,86 +40,6 @@ class _PolarizedBeam(_Beam):
     array of the shape (4, nfreq, npix) where the 4 elements (in order) are
     JthetaX, JthetaY, JphiX, and JphiY.
     """
-    def old_convolve(self, frequencies, unpol_int, pointing=(90,0), psi=0,\
-        unpol_pars={}, verbose=True, include_smearing=True, angles=None,\
-        degrees=True, nest=False, **kwargs):
-        """
-        Simulates the Stokes parameters induced by the sky with given
-        unpolarized intensity and complex electric field components in the
-        theta and phi directions.
-        
-        frequencies: frequencies at which to convolve this beam with the
-                     sky_maps
-        unpol_int: the unpolarized intensity of the sky as a function of pixel
-                   number and frequency. unpol_int can either be a real
-                   numpy.ndarray of shape (nfreq,npix) or a function which
-                   takes frequencies and outputs maps of shape (npix,)
-        pointing: the direction in which the beam is pointing (lat, lon) in deg
-                  default (90, 0)
-        psi: angle through which beam is rotated about its axis in deg
-             default 0
-        unpol_pars: if unpol_int is a function which creates sky maps, these
-                   pars are passed as kwargs into it.
-        verbose: boolean switch determining whether time of calculation is
-                 printed
-        kwargs: keyword arguments to pass on to self.get_maps
-        
-        returns Stokes parameters measured by the antennas as a function of
-                frequency in the form of a numpy.ndarray of shape (4, nfreq),
-                or (4, nangle, nfreq) if len(angles) is not 1
-        """
-        if type(angles) is type(None):
-            angles = np.zeros(1)
-        elif type(angles) in real_numerical_types:
-            angles = np.ones(1) * angles
-        ti = time.time()
-        nfreq = len(frequencies)
-        (theta, phi) = (90. - pointing[0], pointing[1])
-        if type(unpol_int) is FunctionType:
-            unpol_int = [unpol_int(freq, **unpol_pars) for freq in frequencies]
-            unpol_int = np.stack(unpol_int, axis=-1)
-        else:
-            unpol_int = unpol_int.T
-        unpol_int = rotate_maps(unpol_int, theta, phi, psi, use_inverse=True,\
-            nest=nest, axis=0)
-        nside = hp.pixelfunc.npix2nside(unpol_int.shape[0])
-        JtX, JtY, JpX, JpY = transpose(self.get_maps(frequencies, nside,\
-            (90., 0.), 0., **kwargs))
-        stokes = stokes_beams_from_Jones_matrix(JtX, JtY, JpX, JpY)
-        norm = np.sum(stokes[0], axis=0)[np.newaxis,...]
-        if len(angles) != 1:
-            norm = norm[np.newaxis,...]
-        unpol_int = unpol_int[np.newaxis,...] # add Stokes dimension
-        if len(angles) == 1:
-            stokes = convolve_maps(spin_maps(stokes, angles[0],\
-                degrees=degrees, pixel_axis=1, nest=nest), unpol_int,\
-                normed=False, pixel_axis=1)
-        elif include_smearing:
-            print("using smearing") # TODO remove this
-            if np.all(angles[1:] - angles[:-1] < 0) or\
-                np.all(angles[1:] - angles[:-1] > 0):
-                angle_bins = (angles[1:] + angles[:-1]) / 2.
-                left = (2 * angles[0]) - angles[1]
-                right = (2 * angles[-1]) - angles[-2]
-                angle_bins = np.concatenate([[left], angle_bins, [right]])
-                stokes = np.stack([convolve_maps(smear_maps(stokes,\
-                    angle_bins[iangle], angle_bins[iangle+1], degrees=degrees,\
-                    pixel_axis=1, nest=nest), unpol_int, normed=False,\
-                    pixel_axis=1) for iangle in range(len(angles))], axis=1)
-            else:
-                raise ValueError("angles must be monotonically changing " +\
-                                 "if smearing is to be included.")
-        else:
-            stokes = np.stack([convolve_maps(spin_maps(stokes, angle,\
-                degrees=degrees, pixel_axis=1, nest=nest), unpol_int,\
-                normed=False, pixel_axis=1) for angle in angles], axis=1)
-        stokes = stokes / norm
-        tf = time.time()
-        if verbose:
-            print(("Estimated stokes parameters from unpolarized emission " +\
-                "in {:.4g} s.").format(tf - ti))
-        return stokes
-    
     def convolve(self, frequencies, unpol_int, pointing=(90,0), psi=0,\
         unpol_pars={}, polarization_fraction=None,\
         polarization_fraction_pars={}, polarization_angle=None,\
@@ -128,8 +48,7 @@ class _PolarizedBeam(_Beam):
         horizon=False, ground_temperature=0, **kwargs):
         """
         Simulates the Stokes parameters induced by the sky with given
-        unpolarized intensity and complex electric field components in the
-        theta and phi directions.
+        unpolarized intensity, polarization fraction, and polarization angle.
         
         frequencies: frequencies at which to convolve this beam with the
                      sky_maps
@@ -169,7 +88,10 @@ class _PolarizedBeam(_Beam):
                               parameter is ignored. default, True
         angles: either None (if only one antenna rotation angle is to be used)
                 of a sequence of angles in degrees or radians
-                (see degrees argument)
+                (see degrees argument). If include_smearing is True, then
+                angles must be the edges of angle bins, i.e. there is one fewer
+                angle bin than bin edge and the final center angles are the
+                averages of adjacent elements of angles.
         degrees: True (default) if angles are in degrees, False if angles are
                  in radians
         nest: False if healpix maps in RING format (default), True otherwise
@@ -304,49 +226,82 @@ class _PolarizedBeam(_Beam):
             if len(angles) == 1:
                 raise ValueError("smearing cannot be included if only one " +\
                     "angle is given.")
-            if np.all(angles[1:] - angles[:-1] < 0) or\
-                np.all(angles[1:] - angles[:-1] > 0):
-                left = (2 * angles[0]) - angles[1]
-                right = (2 * angles[-1]) - angles[-2]
-                angle_bins = np.concatenate([[left], angles, [right]])
-                angle_bins = (angle_bins[1:] + angle_bins[:-1]) / 2.
-            else:
+            deltas = angles[1:] - angles[:-1]
+            centers = (angles[1:] + angles[:-1]) / 2
+            if not (np.all(deltas < 0) or np.all(deltas > 0)):
                 raise ValueError("angles must be monotonically changing " +\
                     "for smearing to be performed.")
+            deltas_equal = np.allclose(deltas, deltas[0])
             if polarized:
                 stokes = []
-                for iangle in range(len(angles)):
+                if deltas_equal:
                     if approximate_smearing:
-                        delta = angle_bins[iangle+1] - angle_bins[iangle]
-                        center =\
-                            (angle_bins[iangle] + angle_bins[iangle+1]) / 2.
-                        smeared_Jones_product = smear_maps_approximate(\
-                            Jones_product, delta, center=center,\
-                            degrees=degrees, pixel_axis=1, nest=nest)
+                        in_place_smeared_Jones_product =\
+                            smear_maps_approximate(Jones_product,\
+                            deltas[0], center=0, degrees=degrees,\
+                            pixel_axis=1, nest=nest)
                     else:
-                        smeared_Jones_product = smear_maps(Jones_product,\
-                            angle_bins[iangle], angle_bins[iangle+1],\
+                        in_place_smeared_Jones_product = smear_maps(\
+                            Jones_product, -deltas[0]/2, deltas[0]/2,\
                             degrees=degrees, pixel_axis=1, nest=nest)
-                    these_stokes = integrate_maps(one_minus_pI *\
-                        (smeared_Jones_product[...,0,0] +\
-                        smeared_Jones_product[...,1,1]), pixel_axis=1)
-                    these_stokes = these_stokes + integrate_maps(\
-                        np.sum(pIvvT2 * smeared_Jones_product,\
-                        axis=(-2, -1)), pixel_axis=1)
-                    stokes.append(these_stokes)
+                    for center in centers:
+                        spun_Jones_product = spin_maps(\
+                            in_place_smeared_Jones_product, center,\
+                            degrees=degrees, pixel_axis=1, nest=nest)
+                        these_stokes = integrate_maps(one_minus_pI *\
+                            (spun_Jones_product[...,0,0] +\
+                            spun_Jones_product[...,1,1]), pixel_axis=1)
+                        these_stokes = these_stokes + integrate_maps(np.sum(\
+                            pIvvT2 * spun_Jones_product, axis=(-2, -1)),\
+                            pixel_axis=1)
+                        stokes.append(these_stokes)
+                else:
+                    for iangle in range(len(angles) - 1):
+                        if approximate_smearing:
+                            delta = deltas[iangle]
+                            center = centers[iangle]
+                            smeared_Jones_product = smear_maps_approximate(\
+                                Jones_product, delta, center=center,\
+                                degrees=degrees, pixel_axis=1, nest=nest)
+                        else:
+                            smeared_Jones_product = smear_maps(Jones_product,\
+                                angles[iangle], angles[iangle+1],\
+                                degrees=degrees, pixel_axis=1, nest=nest)
+                        these_stokes = integrate_maps(one_minus_pI *\
+                            (smeared_Jones_product[...,0,0] +\
+                            smeared_Jones_product[...,1,1]), pixel_axis=1)
+                        these_stokes = these_stokes + integrate_maps(\
+                            np.sum(pIvvT2 * smeared_Jones_product,\
+                            axis=(-2, -1)), pixel_axis=1)
+                        stokes.append(these_stokes)
                 del smeared_Jones_product ; gc.collect()
                 stokes = np.stack(stokes, axis=1)
+            elif deltas_equal:
+                if approximate_smearing:
+                    in_place_smeared_trace_Jones_product =\
+                        smear_maps_approximate(trace_Jones_product, deltas[0],\
+                        center=0, degrees=degrees, pixel_axis=1, nest=nest)
+                else:
+                    in_place_smeared_trace_Jones_product = smear_maps(\
+                        trace_Jones_product, -deltas[0]/2, deltas[0]/2,\
+                        degrees=degrees, pixel_axis=1, nest=nest)
+                stokes = np.stack([integrate_maps(one_minus_pI *\
+                    spin_maps(in_place_smeared_trace_Jones_product,\
+                    center, degrees=degrees, pixel_axis=1, nest=nest),\
+                    pixel_axis=1) for center in centers], axis=1)
+                del in_place_smeared_trace_Jones_product ; gc.collect()
             elif approximate_smearing:
                 stokes = np.stack([integrate_maps(one_minus_pI *\
                     smear_maps_approximate(trace_Jones_product,\
-                    angle_bins[iangle+1]-angle_bins[iangle],\
-                    center=(angle_bins[iangle]+angle_bins[iangle+1])/2,\
-                    degrees=degrees, pixel_axis=1, nest=nest), pixel_axis=1)\
-                    for iangle in range(len(angles))], axis=1)
+                    angles[iangle+1]-angles[iangle],\
+                    center=(angles[iangle]+angles[iangle+1])/2,\
+                    degrees=degrees, pixel_axis=1, nest=nest),\
+                    pixel_axis=1) for iangle in range(len(angles))],\
+                    axis=1)
             else:
                 stokes = np.stack([integrate_maps(one_minus_pI *\
-                    smear_maps(trace_Jones_product, angle_bins[iangle],\
-                    angle_bins[iangle+1], degrees=degrees, pixel_axis=1,\
+                    smear_maps(trace_Jones_product, angles[iangle],\
+                    angles[iangle+1], degrees=degrees, pixel_axis=1,\
                     nest=nest), pixel_axis=1)\
                     for iangle in range(len(angles))], axis=1)
         elif polarized:

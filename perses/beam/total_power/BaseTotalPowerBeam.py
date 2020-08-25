@@ -182,7 +182,10 @@ class _TotalPowerBeam(_Beam):
                               parameter is ignored. default, True
         angles: either None (if only one antenna rotation angle is to be used)
                 of a sequence of angles in degrees or radians
-                (see degrees argument)
+                (see degrees argument). If include_smearing is True, then
+                angles must be the edges of angle bins, i.e. there is one fewer
+                angle bin than bin edge and the final center angles are the
+                averages of adjacent elements of angles.
         degrees: True (default) if angles are in degrees, False if angles are
                  in radians
         nest: False if healpix maps in RING format (default), True otherwise
@@ -226,28 +229,41 @@ class _TotalPowerBeam(_Beam):
                 degrees=degrees, pixel_axis=-1, nest=nest), sky_maps,\
                 normed=True, pixel_axis=-1)
         elif include_smearing:
-            if np.all(angles[1:] - angles[:-1] < 0) or\
-                np.all(angles[1:] - angles[:-1] > 0):
-                angle_bins = (angles[1:] + angles[:-1]) / 2.
-                left = (2 * angle_bins[0]) - angle_bins[1]
-                right = (2 * angle_bins[-1]) - angle_bins[-2]
-                angle_bins = np.concatenate([[left], angle_bins, [right]])
-                if approximate_smearing:
-                    spectra = np.stack([convolve_maps(smear_maps_approximate(\
-                        beam_maps, angle_bins[iangle+1]-angle_bins[iangle],\
-                        center=(angle_bins[iangle]+angle_bins[iangle+1])/2,\
-                        degrees=degrees, pixel_axis=-1, nest=nest), sky_maps,\
-                        normed=True, pixel_axis=-1)\
-                        for iangle in range(len(angles))], axis=0)
-                else:
-                    spectra = np.stack([convolve_maps(smear_maps(beam_maps,\
-                        angle_bins[iangle], angle_bins[iangle+1],\
-                        degrees=degrees, pixel_axis=-1, nest=nest), sky_maps,\
-                        normed=True, pixel_axis=-1)\
-                        for iangle in range(len(angles))], axis=0)
-            else:
+            if len(angles) == 1:
+                raise ValueError("smearing cannot be included if only one " +\
+                    "angle is given.")
+            deltas = angles[1:] - angles[:-1]
+            centers = (angles[1:] + angles[:-1]) / 2
+            if not (np.all(deltas < 0) or np.all(deltas > 0)):
                 raise ValueError("angles must be monotonically changing " +\
                                  "if smearing is to be included.")
+            deltas_equal = np.allclose(deltas, deltas[0])
+            if deltas_equal:
+                if approximate_smearing:
+                    in_place_smeared_beam_maps = smear_maps_approximate(\
+                        beam_maps, deltas[0], center=0, degrees=degrees,\
+                        pixel_axis=-1, nest=nest)
+                else:
+                    in_place_smeared_beam_maps = smear_maps(beam_maps,\
+                        -deltas[0]/2, deltas[0]/2, degrees=degrees,\
+                        pixel_axis=-1, nest=nest)
+                spectra = np.stack([convolve_maps(spin_maps(\
+                    in_place_smeared_beam_maps, center, degrees=degrees,\
+                    pixel_axis=-1, nest=nest), sky_maps, normed=True,\
+                    pixel_axis=-1) for center in centers], axis=0)
+            elif approximate_smearing:
+                spectra = np.stack([convolve_maps(smear_maps_approximate(\
+                    beam_maps, angle_bins[iangle+1]-angle_bins[iangle],\
+                    center=(angle_bins[iangle]+angle_bins[iangle+1])/2,\
+                    degrees=degrees, pixel_axis=-1, nest=nest), sky_maps,\
+                    normed=True, pixel_axis=-1)\
+                    for iangle in range(len(angles))], axis=0)
+            else:
+                spectra = np.stack([convolve_maps(smear_maps(beam_maps,\
+                    angle_bins[iangle], angle_bins[iangle+1],\
+                    degrees=degrees, pixel_axis=-1, nest=nest), sky_maps,\
+                    normed=True, pixel_axis=-1)\
+                    for iangle in range(len(angles))], axis=0)
         else:
             spectra = np.stack([convolve_maps(spin_maps(beam_maps, angle,\
                 degrees=degrees, pixel_axis=-1, nest=nest), sky_maps,\
