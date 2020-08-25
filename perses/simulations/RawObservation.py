@@ -395,7 +395,7 @@ class RawObservation(object):
     def num_rotation_angles(self):
         if not hasattr(self, '_num_rotation_angles'):
             self._num_rotation_angles =\
-                len(self.rotation_angles) - int(include_smearing)
+                len(self.rotation_angles) - int(self.include_smearing)
         return self._num_rotation_angles
     
     @property
