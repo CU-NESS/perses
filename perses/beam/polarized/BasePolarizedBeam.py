@@ -236,17 +236,15 @@ class _PolarizedBeam(_Beam):
                 stokes = []
                 if deltas_equal:
                     if approximate_smearing:
-                        in_place_smeared_Jones_product =\
-                            smear_maps_approximate(Jones_product,\
-                            deltas[0], center=0, degrees=degrees,\
-                            pixel_axis=1, nest=nest)
-                    else:
-                        in_place_smeared_Jones_product = smear_maps(\
-                            Jones_product, -deltas[0]/2, deltas[0]/2,\
+                        Jones_product[...] = smear_maps_approximate(\
+                            Jones_product, deltas[0], center=0,\
                             degrees=degrees, pixel_axis=1, nest=nest)
+                    else:
+                        Jones_product[...] = smear_maps(Jones_product,\
+                            -deltas[0]/2, deltas[0]/2, degrees=degrees,\
+                            pixel_axis=1, nest=nest)
                     for center in centers:
-                        spun_Jones_product = spin_maps(\
-                            in_place_smeared_Jones_product, center,\
+                        spun_Jones_product = spin_maps(Jones_product, center,\
                             degrees=degrees, pixel_axis=1, nest=nest)
                         these_stokes = integrate_maps(one_minus_pI *\
                             (spun_Jones_product[...,0,0] +\
@@ -278,18 +276,17 @@ class _PolarizedBeam(_Beam):
                 stokes = np.stack(stokes, axis=1)
             elif deltas_equal:
                 if approximate_smearing:
-                    in_place_smeared_trace_Jones_product =\
-                        smear_maps_approximate(trace_Jones_product, deltas[0],\
-                        center=0, degrees=degrees, pixel_axis=1, nest=nest)
+                    trace_Jones_product[...] = smear_maps_approximate(\
+                        trace_Jones_product, deltas[0], center=0,\
+                        degrees=degrees, pixel_axis=1, nest=nest, verbose=True)
                 else:
-                    in_place_smeared_trace_Jones_product = smear_maps(\
-                        trace_Jones_product, -deltas[0]/2, deltas[0]/2,\
-                        degrees=degrees, pixel_axis=1, nest=nest)
-                stokes = np.stack([integrate_maps(one_minus_pI *\
-                    spin_maps(in_place_smeared_trace_Jones_product,\
-                    center, degrees=degrees, pixel_axis=1, nest=nest),\
-                    pixel_axis=1) for center in centers], axis=1)
-                del in_place_smeared_trace_Jones_product ; gc.collect()
+                    trace_Jones_product[...] = smear_maps(trace_Jones_product,\
+                        -deltas[0]/2, deltas[0]/2, degrees=degrees,\
+                        pixel_axis=1, nest=nest, verbose=True)
+                stokes = np.stack([integrate_maps(one_minus_pI * spin_maps(\
+                    trace_Jones_product, center, degrees=degrees,\
+                    pixel_axis=1, nest=nest), pixel_axis=1)\
+                    for center in centers], axis=1)
             elif approximate_smearing:
                 stokes = np.stack([integrate_maps(one_minus_pI *\
                     smear_maps_approximate(trace_Jones_product,\

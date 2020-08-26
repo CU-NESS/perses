@@ -240,17 +240,16 @@ class _TotalPowerBeam(_Beam):
             deltas_equal = np.allclose(deltas, deltas[0])
             if deltas_equal:
                 if approximate_smearing:
-                    in_place_smeared_beam_maps = smear_maps_approximate(\
+                    beam_maps[...] = smear_maps_approximate(\
                         beam_maps, deltas[0], center=0, degrees=degrees,\
                         pixel_axis=-1, nest=nest)
                 else:
-                    in_place_smeared_beam_maps = smear_maps(beam_maps,\
+                    beam_maps[...] = smear_maps(beam_maps,\
                         -deltas[0]/2, deltas[0]/2, degrees=degrees,\
                         pixel_axis=-1, nest=nest)
-                spectra = np.stack([convolve_maps(spin_maps(\
-                    in_place_smeared_beam_maps, center, degrees=degrees,\
-                    pixel_axis=-1, nest=nest), sky_maps, normed=True,\
-                    pixel_axis=-1) for center in centers], axis=0)
+                spectra = np.stack([convolve_maps(spin_maps(beam_maps, center,\
+                    degrees=degrees, pixel_axis=-1, nest=nest), sky_maps,\
+                    normed=True, pixel_axis=-1) for center in centers], axis=0)
             elif approximate_smearing:
                 spectra = np.stack([convolve_maps(smear_maps_approximate(\
                     beam_maps, angle_bins[iangle+1]-angle_bins[iangle],\
