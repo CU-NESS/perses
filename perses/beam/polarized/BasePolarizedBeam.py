@@ -54,8 +54,9 @@ class _PolarizedBeam(_Beam):
                      sky_maps
         unpol_int: the unpolarized intensity of the sky as a function of pixel
                    number and frequency. unpol_int can either be a real
-                   numpy.ndarray of shape (nfreq,npix) or a function which
-                   takes frequencies and outputs maps of shape (npix,)
+                   numpy.ndarray of shape (nfreq,npix), a real numpy.ndarray of
+                   shape (nmaps, nfreq, npix), or a function which takes
+                   frequencies and outputs maps of shape (npix,)
         pointing: the direction in which the beam is pointing (lat, lon) in deg
                   default (90, 0)
         psi: angle through which beam is rotated about its axis in deg
@@ -64,15 +65,15 @@ class _PolarizedBeam(_Beam):
                    pars are passed as kwargs into it.
         polarization_fraction: the fraction of total intensity that is
                                intrinsically polarized as a function of
-                               pixel number and frequency. Must be real
-                               numpy.ndarray objects of shape (nfreq,npix)
-                               with values between 0 and 1 (inclusive)
+                               pixel number and frequency. Must be same
+                               type/shape as unpol_int
         polarization_fraction_pars: if polarization_fraction is a function
                                     which creates sky maps, these pars are
                                     passed as kwargs into it.
         polarization_angle: the angle (with respect to +-theta hat direction)
                             of polarization direction as a function of
-                            pixel number and frequency. Should be within [0,pi]
+                            pixel number and frequency. Should be within
+                            [0,pi]. Must be same type/shape as unpol_int
         polarization_angle_pars: if polarization_angle is a function which
                                  creates sky maps, these pars are passed as
                                  kwargs to it
@@ -102,31 +103,49 @@ class _PolarizedBeam(_Beam):
         kwargs: keyword arguments to pass on to self.get_maps
         
         returns Stokes parameters measured by the antennas as a function of
-                frequency in the form of a numpy.ndarray of shape (4, nfreq)
-                if angles is None or has length 1 or shape (4,nangle,nfreq) if
-                angles is an array with more than one element)
+                frequency in the form of a numpy.ndarray of shape
+                (map_shape + (4,) + angle_shape + (nfreq,)) where:
+                     maps_shape is () if one galaxy map is given (i.e.
+                                unpol_int, polarization_fraction, and
+                                polarization_angle are 2-dimensional or
+                                functions) or (nmaps,) if nmaps sky maps are
+                                given (i.e. unpol_int, polarization_fraction,
+                                and polarization_angle are 3-dimensional)
+                     angle_shape is () if one angle is given (or if angles is
+                                 None) or (num_angles,) if num_angles angles
+                                 are given
         """
         if type(angles) is type(None):
             angles = np.zeros(1)
         elif type(angles) in real_numerical_types:
             angles = np.ones(1) * angles
-        ti = time.time()
+        initial_time = time.time()
         nfreq = len(frequencies)
         (theta, phi) = (90. - pointing[0], pointing[1])
         if type(unpol_int) is FunctionType:
             unpol_int = [unpol_int(freq, **unpol_pars) for freq in frequencies]
-            unpol_int = np.stack(unpol_int, axis=-1)
+            unpol_int = np.stack(unpol_int, axis=-1)[np.newaxis,...]
+        elif unpol_int.ndim == 2:
+            unpol_int = unpol_int.T[np.newaxis,...]
+        elif unpol_int.ndim == 3:
+            unpol_int = np.swapaxes(unpol_int, -2, -1)
         else:
-            unpol_int = unpol_int.T
-        unpol_int = rotate_maps(unpol_int, theta, phi, psi, use_inverse=True,\
-            nest=nest, axis=0, verbose=False)
-        npix = unpol_int.shape[0]
+            raise ValueError("unpol_int must be either 2- or 3-dimensional.")
+        num_maps = unpol_int.shape[0]
+        npix = unpol_int.shape[1]
         nside = hp.pixelfunc.npix2nside(npix)
+        map_nfreq = unpol_int.shape[2]
+        if unpol_int.shape[-1] != nfreq:
+            raise ValueError("unpol_int did not have the same number of " +\
+                "frequencies as implied by the given frequencies array.")
+        unpol_int = rotate_maps(unpol_int, theta, phi, psi, use_inverse=True,\
+            nest=nest, axis=1, verbose=False)
         if horizon:
             map_thetas =\
                 hp.pixelfunc.pix2ang(nside, np.arange(npix), nest=nest)[0]
             ground_slice = (map_thetas > (np.pi / 2))
-            unpol_int[ground_slice,:] = ground_temperature
+            unpol_int[:,ground_slice,:] = ground_temperature
+        # unpol_int shape is (nmaps, npix, nfreq)
         if (type(polarization_fraction) is type(None)) or\
             (type(polarization_angle) is type(None)):
             polarized = False
@@ -137,23 +156,43 @@ class _PolarizedBeam(_Beam):
                 polarization_fraction = [polarization_fraction(freq,\
                     **polarization_fraction_pars) for freq in frequencies]
                 polarization_fraction =\
-                    np.stack(polarization_fraction, axis=-1)
+                    np.stack(polarization_fraction, axis=-1)[np.newaxis,...]
+            elif polarization_fraction.ndim == 2:
+                polarization_fraction = polarization_fraction.T[np.newaxis,...]
+            elif polarization_fraction.ndim == 3:
+                polarization_fraction =\
+                    np.swapaxes(polarization_fraction, -2, -1)
             else:
-                polarization_fraction = polarization_fraction.T
+                raise ValueError("polarization_fraction must be either 2- " +\
+                    "or 3-dimensional.")
+            if polarization_fraction.shape != unpol_int.shape:
+                raise ValueError("polarization_fraction did not have the " +\
+                    "same shape as unpol_int.")
             polarization_fraction = rotate_maps(polarization_fraction, theta,\
-                phi, psi, use_inverse=True, nest=nest, axis=0, verbose=False)
+                phi, psi, use_inverse=True, nest=nest, axis=1, verbose=False)
             if horizon:
-                polarization_fraction[ground_slice] = 0
+                polarization_fraction[:,ground_slice,:] = 0
+            # polarization_fraction shape is (nmaps, npix, nfreq)
             if type(polarization_angle) is FunctionType:
                 polarization_angle = [polarization_angle(freq,\
                     **polarization_angle_pars) for freq in frequencies]
-                polarization_angle = np.stack(polarization_angle, axis=-1)
+                polarization_angle =\
+                    np.stack(polarization_angle, axis=-1)[np.newaxis,...]
+            elif polarization_angle.ndim == 2:
+                polarization_angle = polarization_angle.T[np.newaxis,...]
+            elif polarization_angle.ndim == 3:
+                polarization_angle = np.swapaxes(polarization_angle, -2, -1)
             else:
-                polarization_angle = polarization_angle.T
+                raise ValueError("polarization_angle must be either 2- or " +\
+                    "3-dimensional")
+            if polarization_angle.shape != unpol_int.shape:
+                raise ValueError("polarization_fraction did not have the " +\
+                    "same shape as unpol_int.")
             polarization_unit_vector = np.stack(rotate_vector_maps(\
                 theta_comp=np.cos(polarization_angle),\
                 phi_comp=np.sin(polarization_angle), theta=theta, phi=phi,\
-                psi=psi, use_inverse=True, axis=0, verbose=False), axis=-1)
+                psi=psi, use_inverse=True, axis=1, verbose=False), axis=-1)
+            # polarization_unit_vector shape is (nmaps, npix, nfreq, 2)
         else:
             raise ValueError("One of polarization_fraction and " +\
                 "polarization_angle was None. Either both must be None or " +\
@@ -193,8 +232,10 @@ class _PolarizedBeam(_Beam):
             del JtYastJpX, JtXastJpY, JtX, JtY, JpX, JpY ; gc.collect()
             Jones_product[...,1,0] = np.conj(Jones_product[...,0,1])
             Jones_product = np.real(Jones_product)
-            norm = integrate_maps(Jones_product[0,...,0,0] +\
-                Jones_product[0,...,1,1], pixel_axis=0, keepdims=False)
+            Jones_product = Jones_product[np.newaxis,...]
+            # Jones_product shape is (1, 4, npix, nfreq, 2, 2)
+            norm = integrate_maps(Jones_product[:,0,...,0,0] +\
+                Jones_product[:,0,...,1,1], pixel_axis=1, keepdims=False)
         else:
             Jones_matrix = Jones_matrix_from_components(JtX, JtY, JpX, JpY)
             trace_Jones_product = np.ndarray((4,) + Jones_matrix.shape[:-2])
@@ -206,22 +247,31 @@ class _PolarizedBeam(_Beam):
             trace_Jones_product[1,...] = Jx_squared - Jy_squared
             trace_Jones_product[2,...] = np.real(UpiV_quantity)
             trace_Jones_product[3,...] = np.imag(UpiV_quantity)
-            norm = integrate_maps(trace_Jones_product[0], pixel_axis=0,\
+            trace_Jones_product = trace_Jones_product[np.newaxis,...]
+            # trace_Jones_product shape is (1, 4, npix, nfreq)
+            norm = integrate_maps(trace_Jones_product[:,0,...], pixel_axis=1,\
                 keepdims=False)
         norm = norm[np.newaxis,:]
+        # norm shape is (1, 1, nfreq)
+        # first axis is for galaxy maps, second axis is for Stokes parameters
         if len(angles) != 1:
             norm = norm[np.newaxis,...]
+            # norm shape if more than one angle is (1, 1, 1, nfreq)
+            # first axis is for galaxy maps, second axis is for Stokes
+            # parameters, third axis is for rotation angles
         if polarized:
             one_minus_pI = unpol_int * (1 - polarization_fraction)
             pIvvT2 = np.sqrt(2 * polarization_fraction * unpol_int)
-            pIvvT2 = pIvvT2[:,:,np.newaxis] * polarization_unit_vector
-            pIvvT2 = pIvvT2[np.newaxis,...]
+            pIvvT2 = pIvvT2[:,:,:,np.newaxis] * polarization_unit_vector
+            pIvvT2 = pIvvT2[:,np.newaxis,...]
             pIvvT2 = pIvvT2[...,np.newaxis,:] * pIvvT2[...,:,np.newaxis]
             # pIvvT2 is the polarization unit vector's outer product times 2pI
-            # shape of pIvvT2 is (1,npix,nfreq,2,2)
+            # shape of pIvvT2 is (nmaps, 1, npix, nfreq, 2, 2)
         else:
             one_minus_pI = unpol_int
-        one_minus_pI = one_minus_pI[np.newaxis,:]
+        one_minus_pI = one_minus_pI[:,np.newaxis,...]
+        # one_minus_pI is the unpolarized power
+        # shape of one_minus_pI is (nmaps, 1, npix, nfreq)
         if include_smearing:
             if len(angles) == 1:
                 raise ValueError("smearing cannot be included if only one " +\
@@ -238,20 +288,20 @@ class _PolarizedBeam(_Beam):
                     if approximate_smearing:
                         Jones_product[...] = smear_maps_approximate(\
                             Jones_product, deltas[0], center=0,\
-                            degrees=degrees, pixel_axis=1, nest=nest)
+                            degrees=degrees, pixel_axis=2, nest=nest)
                     else:
                         Jones_product[...] = smear_maps(Jones_product,\
                             -deltas[0]/2, deltas[0]/2, degrees=degrees,\
-                            pixel_axis=1, nest=nest)
+                            pixel_axis=2, nest=nest)
                     for center in centers:
                         spun_Jones_product = spin_maps(Jones_product, center,\
-                            degrees=degrees, pixel_axis=1, nest=nest)
+                            degrees=degrees, pixel_axis=2, nest=nest)
                         these_stokes = integrate_maps(one_minus_pI *\
                             (spun_Jones_product[...,0,0] +\
-                            spun_Jones_product[...,1,1]), pixel_axis=1)
+                            spun_Jones_product[...,1,1]), pixel_axis=2)
                         these_stokes = these_stokes + integrate_maps(np.sum(\
                             pIvvT2 * spun_Jones_product, axis=(-2, -1)),\
-                            pixel_axis=1)
+                            pixel_axis=2)
                         stokes.append(these_stokes)
                 else:
                     for iangle in range(len(angles) - 1):
@@ -260,66 +310,66 @@ class _PolarizedBeam(_Beam):
                             center = centers[iangle]
                             smeared_Jones_product = smear_maps_approximate(\
                                 Jones_product, delta, center=center,\
-                                degrees=degrees, pixel_axis=1, nest=nest)
+                                degrees=degrees, pixel_axis=2, nest=nest)
                         else:
                             smeared_Jones_product = smear_maps(Jones_product,\
                                 angles[iangle], angles[iangle+1],\
-                                degrees=degrees, pixel_axis=1, nest=nest)
+                                degrees=degrees, pixel_axis=2, nest=nest)
                         these_stokes = integrate_maps(one_minus_pI *\
                             (smeared_Jones_product[...,0,0] +\
-                            smeared_Jones_product[...,1,1]), pixel_axis=1)
+                            smeared_Jones_product[...,1,1]), pixel_axis=2)
                         these_stokes = these_stokes + integrate_maps(\
                             np.sum(pIvvT2 * smeared_Jones_product,\
-                            axis=(-2, -1)), pixel_axis=1)
+                            axis=(-2, -1)), pixel_axis=2)
                         stokes.append(these_stokes)
                 del smeared_Jones_product ; gc.collect()
-                stokes = np.stack(stokes, axis=1)
+                stokes = np.stack(stokes, axis=2)
             elif deltas_equal:
                 if approximate_smearing:
                     trace_Jones_product[...] = smear_maps_approximate(\
                         trace_Jones_product, deltas[0], center=0,\
-                        degrees=degrees, pixel_axis=1, nest=nest, verbose=True)
+                        degrees=degrees, pixel_axis=2, nest=nest, verbose=True)
                 else:
                     trace_Jones_product[...] = smear_maps(trace_Jones_product,\
                         -deltas[0]/2, deltas[0]/2, degrees=degrees,\
-                        pixel_axis=1, nest=nest, verbose=True)
+                        pixel_axis=2, nest=nest, verbose=True)
                 stokes = np.stack([integrate_maps(one_minus_pI * spin_maps(\
                     trace_Jones_product, center, degrees=degrees,\
-                    pixel_axis=1, nest=nest), pixel_axis=1)\
-                    for center in centers], axis=1)
+                    pixel_axis=2, nest=nest), pixel_axis=2)\
+                    for center in centers], axis=2)
             elif approximate_smearing:
                 stokes = np.stack([integrate_maps(one_minus_pI *\
                     smear_maps_approximate(trace_Jones_product,\
                     angles[iangle+1]-angles[iangle],\
                     center=(angles[iangle]+angles[iangle+1])/2,\
-                    degrees=degrees, pixel_axis=1, nest=nest),\
-                    pixel_axis=1) for iangle in range(len(angles))],\
-                    axis=1)
+                    degrees=degrees, pixel_axis=2, nest=nest),\
+                    pixel_axis=2) for iangle in range(len(angles))],\
+                    axis=2)
             else:
                 stokes = np.stack([integrate_maps(one_minus_pI *\
                     smear_maps(trace_Jones_product, angles[iangle],\
-                    angles[iangle+1], degrees=degrees, pixel_axis=1,\
-                    nest=nest), pixel_axis=1)\
-                    for iangle in range(len(angles))], axis=1)
+                    angles[iangle+1], degrees=degrees, pixel_axis=2,\
+                    nest=nest), pixel_axis=2)\
+                    for iangle in range(len(angles))], axis=2)
         elif polarized:
             stokes = []
             for angle in angles:
                 spun_Jones_product = spin_maps(Jones_product, angle,\
-                    degrees=degrees, pixel_axis=1, nest=nest)
+                    degrees=degrees, pixel_axis=2, nest=nest)
                 these_stokes = integrate_maps(one_minus_pI *\
                     (spun_Jones_product[...,0,0] +\
-                    spun_Jones_product[...,1,1]), pixel_axis=1)
+                    spun_Jones_product[...,1,1]), pixel_axis=2)
                 these_stokes = these_stokes + integrate_maps(np.sum(\
-                    pIvvT2 * spun_Jones_product, axis=(-2, -1)), pixel_axis=1)
+                    pIvvT2 * spun_Jones_product, axis=(-2, -1)), pixel_axis=2)
                 stokes.append(these_stokes)
             del spun_Jones_product ; gc.collect()
-            stokes = np.stack(stokes, axis=1)
+            stokes = np.stack(stokes, axis=2)
         else:
             stokes = np.stack([integrate_maps(one_minus_pI * spin_maps(\
-                trace_Jones_product, angle, degrees=degrees, pixel_axis=1,\
-                nest=nest), pixel_axis=1) for angle in angles], axis=1)
+                trace_Jones_product, angle, degrees=degrees, pixel_axis=2,\
+                nest=nest), pixel_axis=2) for angle in angles], axis=2)
         if len(angles) == 1:
-            stokes = stokes[:,0,...]
+            stokes = stokes[:,:,0,...]
         if polarized:
             del Jones_product ; gc.collect()
             extra_string = 'both polarized and '
@@ -327,10 +377,14 @@ class _PolarizedBeam(_Beam):
             del trace_Jones_product ; gc.collect()
             extra_string = ''
         stokes = stokes / norm
-        tf = time.time()
+        if num_maps == 1:
+            stokes = stokes[0,...]
+        final_time = time.time()
+        duration = final_time - initial_time
         if verbose:
-            print(("Estimated stokes parameters from {0!s}unpolarized " +\
-                "emission in {1:.4g} s.").format(extra_string, tf - ti))
+            print(("Estimated stokes parameters from {0:d} map{1!s} of " +\
+                "{2!s}unpolarized emission in {3:.4g} s.").format(num_maps,\
+                's' if (num_maps > 1) else '', extra_string, duration))
         return stokes
     
     def Mueller_matrix(self, frequencies, nside, pointing, psi, **kwargs):
