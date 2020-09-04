@@ -82,7 +82,7 @@ def rotate_maps_to_LST(sky_maps, observatory, local_sidereal_time,\
     of them from a zenith pointing telescope at the given observatory at the
     given sidereal time.
     
-    sky_maps: 2D numpy.ndarray of shape (nfreq, npix)
+    sky_maps: numpy.ndarray whose last axis represents pixels
     observatory: GroundObservatory object
     local_sidereal_time: the local sidereal time (right ascension of the
                          vernal equinox), given as some fraction of a day
@@ -142,7 +142,7 @@ def smear_maps_through_LST(sky_maps, observatory, lst_start, lst_end,\
     """
     Smears maps through the given LST's.
     
-    sky_maps: 2D numpy.ndarray of shape (nfreq, npix)
+    sky_maps: numpy.ndarray whose last axis represents pixels
     observatory: GroundObservatory object 
     lst_start: starting local sidereal time given in fraction of sidereal days
                (can be offset by any integer amount of days)
@@ -190,8 +190,8 @@ def smear_maps_through_LST(sky_maps, observatory, lst_start, lst_end,\
     sky_maps = rotate_maps_with_rotator(sky_maps, first_full_rotator, axis=-1,\
         verbose=verbose)
     if approximate:
-        sky_maps =\
-            smear_maps_approximate(sky_maps, delta_lst_angle, verbose=verbose)
+        sky_maps = smear_maps_approximate(sky_maps, delta_lst_angle,\
+            pixel_axis=-1, verbose=verbose)
     else:
         sky_maps = smear_maps(sky_maps, 0, -delta_lst_angle, pixel_axis=-1,\
             verbose=verbose)
@@ -226,7 +226,7 @@ def smear_maps_through_LST_patches(sky_maps, observatory, lst_locations,\
     approximation in spherical harmonic coefficient space)! It is analogous to
     the smear_maps_through_LST with approximate set to True.
     
-    sky_maps: 2D numpy.ndarray of shape (nfreq, npix)
+    sky_maps: numpy.ndarray whose last axis represents pixels
     observatory: GroundObservatory object 
     lst_locations: the LST values at which patches are smeared (given in
                    fraction of sidereal day)
@@ -265,7 +265,7 @@ def smear_maps_through_LST_patches(sky_maps, observatory, lst_locations,\
     patch_size = (360. * lst_duration)
     patch_locations = (360. * lst_locations)
     sky_maps = patchy_smear_maps_approximate(sky_maps, patch_size,\
-        patch_locations, verbose=verbose)
+        patch_locations, pixel_axis=-1, verbose=verbose)
     # The other thing we need to worry about is where to put the x-axis when we
     # rotated to the beam coordinates. We do this by finding negative thetahat
     # (i.e. unit vector pointing north) and keeping track of where north goes

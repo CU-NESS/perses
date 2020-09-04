@@ -7,10 +7,11 @@ Description: File containing class which creates sets of foreground curves
              generated through a zenith pointing driftscan at an Earth-based
              observatory described by GroundObservatory objects.
 """
+from __future__ import division
 import os, time, h5py
 import numpy as np
 from distpy import create_hdf5_dataset, get_hdf5_value
-from ..util import bool_types, sequence_types
+from ..util import bool_types, sequence_types, int_types
 from .GroundObservatory import GroundObservatory
 from .DriftscanSet import DriftscanSet
 try:
@@ -158,7 +159,7 @@ class DriftscanSetCreator(object):
         """
         if type(value) is type(None):
             pass
-        elif isinstance(value, int):
+        elif type(value) in int_types:
             if value > 0:
                 self._nobservatories = value
             else:
@@ -210,7 +211,7 @@ class DriftscanSetCreator(object):
         """
         if type(value) is type(None):
             pass
-        elif isinstance(value, int):
+        elif type(value) in int_types:
             if value > 0:
                 self._nbeams = value
             else:
@@ -262,13 +263,57 @@ class DriftscanSetCreator(object):
         """
         if type(value) is type(None):
             pass
-        elif isinstance(value, int):
+        elif type(value) in int_types:
             if value > 0:
                 self._nmaps = value
             else:
                 raise ValueError("nmaps was set to a non-positive integer.")
         else:
             raise TypeError("nmaps was set to a non-int.")
+    
+    @property
+    def map_block_size(self):
+        """
+        Property storing the map block size, which is the amount of foreground
+        maps which are convolved with the beam at a time.
+        """
+        if not hasattr(self, '_map_block_size'):
+            raise AttributeError("map_block_size was referenced before it " +\
+                "was set.")
+        return self._map_block_size
+    
+    @map_block_size.setter
+    def map_block_size(self, value):
+        """
+        Setter for the number of maps to compute with at a time. This number
+        should be as high as is possible given memory (RAM) constraints.
+        
+        value: a non-negative integer
+        """
+        if type(value) is type(None):
+            self._map_block_size = 1
+        elif type(value) in int_types:
+            if value > 0:
+                self._map_block_size = value
+            else:
+                raise ValueError("map_block_size was set to a non-positive " +\
+                    "integer.")
+        else:
+            raise TypeError("map_block_size was neither None (which " +\
+                "defaults the value of the property to 1) nor an integer.")
+    
+    @property
+    def nblocks(self):
+        """
+        Property storing the number of foreground map blocks needed to complete
+        set.
+        """
+        if not hasattr(self, '_nblocks'):
+            if (self.nmaps % self.map_block_size) == 0:
+                self._nblocks = (self.nmaps // self.map_block_size)
+            else:
+                self._nblocks = (self.nmaps // self.map_block_size) + 1
+        return self._nblocks
     
     @property
     def num_driftscans(self):
@@ -358,36 +403,75 @@ class DriftscanSetCreator(object):
                         continue
                     beam = self.beam_function(ibeam, *beam_args[ibeam],\
                         **beam_kwargs[ibeam])
-                    for imaps in range(self.nmaps):
+                    for iblock in range(self.nblocks):
+                        maps_done_till_now = (iblock * self.map_block_size)
+                        if (iblock + 1) == self.nblocks:
+                            block_size = self.nmaps - maps_done_till_now
+                        else:
+                            block_size = self.map_block_size
                         if ((((iobservatory * self.nbeams) + ibeam) *\
-                            self.nmaps) + imaps) < completed:
+                            self.nmaps) + (iblock * self.map_block_size)) <\
+                            completed:
                             continue
                         if continuing:
                             if self.verbose:
-                                print(("Starting convolution #{0:d}/{1:d} " +\
-                                    "at {2!s}.").format(completed + 1,\
-                                    self.num_driftscans, time.ctime()))
+                                if block_size == 1:
+                                    print(("Starting convolution " +\
+                                        "#{0:d}/{1:d} at {2!s}.").format(\
+                                        completed + 1, self.num_driftscans,\
+                                        time.ctime()))
+                                else:
+                                    print(("Starting convolutions " +\
+                                        "#{0:d}-{1:d} of {2:d} at " +\
+                                        "{3!s}.").format(completed + 1,\
+                                        completed + block_size,\
+                                        self.num_driftscans, time.ctime()))
                             continuing = False
-                        maps = self.maps_function(imaps, *maps_args[imaps],\
-                            **maps_kwargs[imaps])
+                        maps = np.array([self.maps_function(imaps,\
+                            *maps_args[imaps], **maps_kwargs[imaps])\
+                            for imaps in range(maps_done_till_now,\
+                            maps_done_till_now + block_size)])
+                        if block_size == 1:
+                            maps = maps[0,...]
                         for ilst in range(self.nlst_intervals):
-                            this_spectrum = self.simulate_single_spectrum(\
-                                observatory, beam, maps, ilst, **kwargs)
+                            these_spectra = self.simulate_spectra(observatory,\
+                                beam, maps, ilst, **kwargs)
                             if ilst == 0:
-                                convolution = np.ndarray(\
-                                    (self.nlst_intervals,) +\
-                                    this_spectrum.shape)
-                            convolution[ilst,...] = this_spectrum
-                        create_hdf5_dataset(self.file['temperatures'],\
-                            'observatory_{0:d}_beam_{1:d}_maps_{2:d}'.format(\
-                            iobservatory, ibeam, imaps), data=convolution)
-                        completed += 1
+                                if block_size == 1:
+                                    convolutions = np.ndarray(\
+                                        (self.nlst_intervals,) +\
+                                        these_spectra.shape)
+                                else:
+                                    convolutions = np.ndarray((block_size,\
+                                        self.nlst_intervals) +\
+                                        these_spectra.shape[1:])
+                            if block_size == 1:
+                                convolutions[ilst,...] = these_spectra
+                            else:
+                                convolutions[:,ilst,...] = these_spectra
+                        for imaps in range(block_size):
+                            name = ("observatory_{0:d}_beam_{1:d}_" +\
+                                "maps_{2:d}").format(iobservatory, ibeam,\
+                                imaps + maps_done_till_now)
+                            if block_size == 1:
+                                create_hdf5_dataset(self.file['temperatures'],\
+                                    name, data=convolutions)
+                            else:
+                                create_hdf5_dataset(self.file['temperatures'],\
+                                    name, data=convolutions[imaps])
+                        completed += block_size
                         self.file.attrs['next_index'] = completed
                         self.close()
                         if self.verbose:
-                            print(("Finished convolution #{0:d}/{1:d} at " +\
-                                "{2!s}.").format(completed,\
-                                self.num_driftscans, time.ctime()))
+                            if block_size == 1:
+                                print(("Finished convolution #{0:d}/{1:d} " +\
+                                    "at {2!s}.").format(completed,\
+                                    self.num_driftscans, time.ctime()))
+                            else:
+                                print(("Finished convolutions #{0:d}-{1:d} " +\
+                                    "of {2:d} at {3!s}.").format(\
+                                    completed - block_size + 1, completed,\
+                                    self.num_driftscans, time.ctime()))
         except KeyboardInterrupt:
             if self.verbose:
                 print(("Stopping convolutions due to KeyboardInterrupt at " +\

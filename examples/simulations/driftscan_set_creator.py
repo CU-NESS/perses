@@ -29,6 +29,8 @@ nconvolutions = 300
 nlst_intervals = 128
 approximate = True
 nmaps = 10
+map_block_size = 2
+verbose = True
 frequencies = np.linspace(50, 100, 51)
 ################################################################################
 ################################################################################
@@ -69,7 +71,8 @@ lsts = np.linspace(lst_start_in_days, lst_end_in_days, nlst_intervals)
 
 driftscan_set_creator = InstantaneousDriftscanSetCreator(file_name,\
     frequencies, lsts, observatories, nobservatories, beams, nbeams,\
-    generate_maps_realization, nmaps)
+    generate_maps_realization, nmaps, map_block_size=map_block_size,\
+    verbose=verbose)
 driftscan_set_creator.generate(verbose=False)
 
 nchannel = (len(frequencies) * (len(lsts)))

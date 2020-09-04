@@ -19,7 +19,7 @@ class UniformDriftscanSetCreator(DriftscanSetCreator):
     def __init__(self, file_name, frequencies, left_lst_edges,\
         right_lst_edges, observatory_function, nobservatories, beam_function,\
         nbeams, maps_function, nmaps, observatory_names=None, beam_names=None,\
-        map_names=None, verbose=True):
+        map_names=None, map_block_size=None, verbose=True):
         """
         Creates a set of foreground curves with the given beams and maps at the
         given local sidereal times.
@@ -51,6 +51,10 @@ class UniformDriftscanSetCreator(DriftscanSetCreator):
                     beams are listed as 'beam_{:d}'.format(ibeam)
         map_names: None or a list of nmaps unique strings. If None (default),
                   maps are listed as 'galaxy_map_{:d}'.format(imap) 
+        map_block_size: an integer determining the number of maps that are
+                        computed with at a time. This should be as large as
+                        possible (not larger than nmaps) without violating
+                        memory (RAM) constraints.
         verbose: boolean determining if message is printed after each
                  convolution (i.e. pair of beam+maps)
         """
@@ -68,6 +72,7 @@ class UniformDriftscanSetCreator(DriftscanSetCreator):
         self.observatory_names = observatory_names
         self.beam_names = beam_names
         self.map_names = map_names
+        self.map_block_size = map_block_size
     
     @property
     def left_lst_edges(self):
@@ -135,14 +140,15 @@ class UniformDriftscanSetCreator(DriftscanSetCreator):
                 naive_centers, np.mod(naive_centers + 0.5, 1))
         return self._nominal_lsts
     
-    def simulate_single_spectrum(self, observatory, beam, maps, ilst,\
+    def simulate_spectra(self, observatory, beam, maps, ilst,\
         approximate=True, **kwargs):
         """
         Simulates single spectrum for this driftscan set.
         
         observatory: the observatory to use in making this spectrum
         beam: the beam to use in making this spectrum
-        maps: the sequence of galaxy maps to use in making this spectrum
+        maps: the sequence of galaxy maps to use in making this spectrum, can
+              be of shape (nfreq, npix) or (nmaps, nfreq, npix)
         ilst: index of the LST interval to simulate, must be a non-negative
               integer less than nlst_intervals
         approximate: if approximation should be used in smearing the maps
