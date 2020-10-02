@@ -226,6 +226,9 @@ class _TotalPowerBeam(_Beam):
         nmaps = sky_maps.shape[0]
         numfreqs = sky_maps.shape[1]
         npix = sky_maps.shape[2]
+        if not ((numfreqs == 1) or (numfreqs == len(frequencies))):
+            raise ValueError("sky_maps did not have the same number of " +\
+                "frequencies as implied by the given frequencies array.")
         # sky_maps shape is (nmaps, nfreq, npix)
         nside = hp.pixelfunc.npix2nside(npix)
         if horizon:

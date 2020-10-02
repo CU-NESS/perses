@@ -135,7 +135,7 @@ class _PolarizedBeam(_Beam):
         npix = unpol_int.shape[1]
         nside = hp.pixelfunc.npix2nside(npix)
         map_nfreq = unpol_int.shape[2]
-        if unpol_int.shape[-1] != nfreq:
+        if not ((map_nfreq == 1) or (map_nfreq == nfreq)):
             raise ValueError("unpol_int did not have the same number of " +\
                 "frequencies as implied by the given frequencies array.")
         unpol_int = rotate_maps(unpol_int, theta, phi, psi, use_inverse=True,\
