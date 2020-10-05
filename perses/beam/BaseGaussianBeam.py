@@ -118,12 +118,12 @@ class _GaussianBeam(object):
         """
         if self.circular:
             exponent = thetas * np.ones_like(phis)
-            fwhms = np.array(list(map(self.fwhm, frequencies)))
+            fwhms = np.vectorize(self.fwhm)(frequencies)
             exponent = exponent / np.radians(fwhms)
             exponent = exponent ** 2
         else:
-            x_fwhms = np.array(list(map(self.x_fwhm, frequencies)))
-            y_fwhms = np.array(list(map(self.y_fwhm, frequencies)))
+            x_fwhms = np.vectorize(self.x_fwhm)(frequencies)
+            y_fwhms = np.vectorize(self.y_fwhm)(frequencies)
             x_part = (thetas * np.cos(phis) / np.radians(self.x_fwhms))
             y_part = (thetas * np.sin(phis) / np.radians(self.y_fwhms))
             exponent = ((x_part ** 2) + (y_part ** 2))
