@@ -18,4 +18,5 @@ from perses.foregrounds.HaslamHarmonicPowerLawGalaxy import\
     HaslamHarmonicPowerLawGalaxy
 from perses.foregrounds.GuzmanHarmonicPowerLawGalaxy import\
     GuzmanHarmonicPowerLawGalaxy
+from perses.foregrounds.GSMGalaxy import GSMGalaxy
 
