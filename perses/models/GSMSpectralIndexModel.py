@@ -73,10 +73,27 @@ class GSMSpectralIndexModel(object):
 			self._master_spectral_index = healpy.pixelfunc.ud_grade(self._master_spectral_index, self.nside)
 		return self._master_spectral_index
 
+	@property
+	def npix(self):
+		"""
+		The number of pixels in this spectral index model.
+		"""
+		if not hasattr(self, '_npix'):
+			self._npix = healpy.pixelfunc.nside2npix(self.nside)
+		return self._npix
+
+	@property
+	def offset_distribution(self):
+		"""
+		The Gaussian offset distribution used to perturb each pixel, with
+		the variance set by the error and a mean of 0.
+		"""
+		if not hasattr(self, '_offset_distribution'):
+			self._offset_distribution = GaussianDistribution(0, (self.error)**2)
+		return self._offset_distribution
+
 	def __call__(self, pars):
 		seed = pars[0]
-		npix = healpy.pixelfunc.nside2npix(self.nside)		
-		offset_distribution = GaussianDistribution(0, (self.error)**2)
-		noise_offset = offset_distribution.draw(npix, random=np.random.RandomState(seed=seed))
+		noise_offset = self.offset_distribution.draw(self.npix, random=np.random.RandomState(seed=seed))
 		spectral_index = self.master_spectral_index + noise_offset
 		return spectral_index
