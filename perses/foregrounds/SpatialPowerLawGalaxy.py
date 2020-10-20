@@ -17,6 +17,31 @@ class SpatialPowerLawGalaxy(Galaxy):
     Class representing a Galaxy whose spectral dependence is given by a
     (possibly spatially-dependent) power law.
     """
+    def __init__(self, reference_map, reference_frequency, spectral_index):
+        """
+        Initializes a new SpatialPowerLawGalaxy using the given reference
+        temperature, reference frequency, and spectral index.
+        
+        reference_map: the temperatures which apply at reference_frequency,
+                       should be a 1D numpy array of length npix, where npix is
+                       a valid HEALPIX map size
+        reference_frequency: the frequency at which the temperatures are given
+                             by reference map regardless of spectral index,
+                             should be a single positive number
+        spectral_index: number(s) indicating the power law with which the
+                        reference map should be extrapolated to frequencies
+                        other than reference_frequency, should be either a
+                        single (negative) number or a 1D array containing a map
+                        at native resolution. Can also be a function which
+                        takes either 1 or 2 parameters. In the former case, the
+                        parameter is an array of theta values in radians. In
+                        the latter case, the parameters are an array of theta
+                        values in radians and an array of phi values in radians
+        """
+        self.reference_map = reference_map
+        self.reference_frequency = reference_frequency
+        self.spectral_index = spectral_index
+    
     @property
     def reference_map(self):
         """

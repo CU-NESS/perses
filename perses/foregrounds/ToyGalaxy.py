@@ -46,14 +46,13 @@ class ToyGalaxy(SpatialPowerLawGalaxy):
         verbose: if True, time it took to prepare the Haslam map is printed
         """
         self.nside = nside
-        self.reference_frequency = 408.
         self.in_plane_temperature_function = in_plane_temperature_function
         self.off_plane_temperature = off_plane_temperature
         self.hwhm_function = hwhm_function
-        self.reference_map = self.two_temp_map
-        self.spectral_index = spectral_index
         self.thermal_background = thermal_background
         self.verbose = verbose
+        SpatialPowerLawGalaxy.__init__(self, self.two_temp_map, 408.,\
+            spectral_index)
     
     @property
     def in_plane_temperature_function(self):
