@@ -42,10 +42,10 @@ class GuzmanExtrapolatedHaslamGalaxy(SpatialPowerLawGalaxy):
                             Default: 2.725 (CMB temperature)
         """
         self.nside = nside
-        self.thermal_background = thermal_background
         self.spectral_index_in_hole = spectral_index_in_hole
         SpatialPowerLawGalaxy.__init__(self, self.haslam_map_408, 408.,\
-            self.interpolated_spectral_index)
+            self.interpolated_spectral_index,\
+            thermal_background=thermal_background)
     
     @property
     def map(self):

@@ -49,10 +49,9 @@ class ToyGalaxy(SpatialPowerLawGalaxy):
         self.in_plane_temperature_function = in_plane_temperature_function
         self.off_plane_temperature = off_plane_temperature
         self.hwhm_function = hwhm_function
-        self.thermal_background = thermal_background
         self.verbose = verbose
         SpatialPowerLawGalaxy.__init__(self, self.two_temp_map, 408.,\
-            spectral_index)
+            spectral_index, thermal_background=thermal_background)
     
     @property
     def in_plane_temperature_function(self):

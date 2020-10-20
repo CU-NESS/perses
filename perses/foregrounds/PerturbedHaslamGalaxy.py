@@ -49,9 +49,8 @@ class PerturbedHaslamGalaxy(SpatialPowerLawGalaxy):
         self.additive_error_level = additive_error_level
         self.additive_noise_level = additive_noise_level
         self.nside = nside
-        self.thermal_background = thermal_background
         SpatialPowerLawGalaxy.__init__(self, self.perturbed_haslam_map_408,\
-            408., spectral_index)
+            408., spectral_index, thermal_background=thermal_background)
     
     @property
     def seed(self):

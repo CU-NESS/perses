@@ -35,9 +35,8 @@ class GuzmanGalaxy(SpatialPowerLawGalaxy):
                             Default: 2.725 (CMB temperature)
         """
         self.nside = nside
-        self.thermal_background = thermal_background
         SpatialPowerLawGalaxy.__init__(self, self.guzman_map_45, 45.,\
-            spectral_index)
+            spectral_index, thermal_background=thermal_background)
     
     @property
     def map(self):

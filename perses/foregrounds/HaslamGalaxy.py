@@ -37,10 +37,9 @@ class HaslamGalaxy(SpatialPowerLawGalaxy):
         verbose: if True, time it took to prepare the Haslam map is printed
         """
         self.nside = nside
-        self.thermal_background = thermal_background
         self.verbose = verbose
         SpatialPowerLawGalaxy.__init__(self, self.haslam_map_408, 408.,\
-            spectral_index)
+            spectral_index, thermal_background=thermal_background)
     
     @property
     def map(self):
