@@ -10,6 +10,7 @@ from ..BeamUtilities import linear_to_dB, beam_sizes_from_maps, rotate_map,\
 from ..BaseBeam import _Beam, nside_from_angular_resolution
 from ...util import real_numerical_types, make_video
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as pl
 try:
     import healpy as hp
@@ -344,7 +345,50 @@ class _TotalPowerBeam(_Beam):
         if show:
             pl.show()
         return bmap
-        
+
+    def plot_map_3D(self, title, frequency, nside, pointing, psi, map_kwargs={},\
+        plot_kwargs={}, show=False):
+        """
+        Plots a 3D map of this _Beam at the given frequency where the beam is
+        pointing in the given direction.
+
+        title: the title of the plot
+        frequency: the frequency at which to plot the map
+        nside: the nside parameter to use within healpy
+        pointing: the pointing direction (in latitude and longitude)
+        psi: the angle through which the beam is rotated about its axis
+        map_kwargs: extra keyword
+        plot_kwargs: additional keyword arguments to pass to pl.plot_surface
+                     (other than title)
+        """
+        bmap = self.get_map(frequency, nside, pointing, psi, **map_kwargs)
+        thetas = np.linspace(0, np.pi, 100)
+        phis = np.linspace(0, 2*np.pi, 100)
+        PHIS, THETAS = np.meshgrid(phis, thetas)
+        grid_pix = hp.ang2pix(nside, THETAS, PHIS)
+        grid_map = bmap[grid_pix]
+        r = 10*np.log10(4*np.pi*grid_map)
+        r_norm = (r - np.amin(r))/(np.amax(r) - np.amin(r))
+        normalize = matplotlib.colors.Normalize(vmin=np.amin(r), vmax=np.amax(r))
+        x = r_norm*np.sin(THETAS)*np.cos(PHIS)
+        y = r_norm*np.sin(THETAS)*np.sin(PHIS)
+        z = r_norm*np.cos(THETAS)
+        fig = pl.figure()
+        ax = fig.add_subplot(1,1,1, projection='3d')
+        ax.plot_surface(x, y, z, facecolors=matplotlib.cm.viridis(normalize(r)),\
+            cmap='viridis', **plot_kwargs)
+        m = matplotlib.cm.ScalarMappable(cmap='viridis', norm=normalize)
+        m.set_array([])
+        cbar = pl.colorbar(m, shrink=0.75)
+        cbar.set_label('dBi')
+        pl.title(title)
+        ax.grid(False)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_zticks([])
+        if show:
+            pl.show()
+    
         
     def make_map_video(self, name, frequencies, nside, pointing, psi,\
         slowdown=1, file_extension='mp4', frequencies_per_second=5,\

@@ -48,64 +48,64 @@ class GSMGalaxy(SpatialPowerLawGalaxy):
         self.verbose = verbose
 
     def create_map(self, low_resolution=True):
-	"""
-	gsm_frequency: frequency of the desired GSM map in MHz
-	low_resolution: desired resolution of the output gsm_map, either 
-		    low or high resolution.
+        """
+        gsm_frequency: frequency of the desired GSM map in MHz
+        low_resolution: desired resolution of the output gsm_map, either 
+                    low or high resolution.
 		    High resolution should be used for gsm_frequencies 
 		    above 10 GHz, otherwise low resolution is used as the 
 		    default.
 	
 	"""
-	input_path = '{!s}/input/gsm2016/data'.format(os.environ['PERSES'])
-	labels = ['Synchrotron', 'CMB', 'HI', 'Dust1', 'Dust2', 'Free-Free']
-	n_comp = len(labels)
-	kB = 1.38065e-23
-	C = 2.99792e8
-	h = 6.62607e-34
-	T = 2.725
-	hoverk = h / kB
-	reference_frequency_in_GHz = self.reference_frequency/1000
-	freq = reference_frequency_in_GHz
-	unit = 'TRJ'
+        input_path = '{!s}/input/gsm2016/data'.format(os.environ['PERSES'])
+        labels = ['Synchrotron', 'CMB', 'HI', 'Dust1', 'Dust2', 'Free-Free']
+        n_comp = len(labels)
+        kB = 1.38065e-23
+        C = 2.99792e8
+        h = 6.62607e-34
+        T = 2.725
+        hoverk = h / kB
+        reference_frequency_in_GHz = self.reference_frequency/1000
+        freq = reference_frequency_in_GHz
+        unit = 'TRJ'
 
-	def K_RJ2MJysr(K_RJ, nu):#in Kelvin and Hz
-	    conversion_factor = 2 * (nu / C)**2 * kB
-	    return  K_RJ * conversion_factor * 1e20#1e-26 for Jy and 1e6 for MJy
+        def K_RJ2MJysr(K_RJ, nu):#in Kelvin and Hz
+            conversion_factor = 2 * (nu / C)**2 * kB
+            return  K_RJ * conversion_factor * 1e20#1e-26 for Jy and 1e6 for MJy
 
-	if low_resolution == True:
-		map_ni = np.loadtxt('{!s}/lowres_maps.txt'.format(input_path))
-	else:
-		map_ni = np.array([np.fromfile('{0!s}/highres_{1!s}_map.bin'.format(\
-            input_path, lb), dtype='float32') for lb in labels])
+        if low_resolution == True:
+            map_ni = np.loadtxt('{!s}/lowres_maps.txt'.format(input_path))
+        else:
+            map_ni = np.array([np.fromfile('{0!s}/highres_{1!s}_map.bin'.format(\
+                input_path, lb), dtype='float32') for lb in labels])
 
-	spec_nf = np.loadtxt(input_path + '/spectra.txt')
-	nfreq = spec_nf.shape[1]
-	
-	left_index = -1
-	for i in range(nfreq - 1):
-	    if freq >= spec_nf[0, i] and freq <= spec_nf[0, i + 1]:
-		left_index = i
-		break
-	if left_index < 0:
-	    print ("FREQUENCY ERROR: {0:.2e} GHz is outside supported " +\
+        spec_nf = np.loadtxt(input_path + '/spectra.txt')
+        nfreq = spec_nf.shape[1]
+        
+        left_index = -1
+        for i in range(nfreq - 1):
+            if freq >= spec_nf[0, i] and freq <= spec_nf[0, i + 1]:
+                left_index = i
+                break
+        if left_index < 0:
+            print ("FREQUENCY ERROR: {0:.2e} GHz is outside supported " +\
             "frequency range of {1:.2e} GHz to {2:.2e} GHz.").format(freq,\
             spec_nf[0, 0], spec_nf[0, -1])
 
-	interp_spec_nf = np.copy(spec_nf)
-	interp_spec_nf[0:2] = np.log10(interp_spec_nf[0:2])
-	x1 = interp_spec_nf[0, left_index]
-	x2 = interp_spec_nf[0, left_index + 1]
-	y1 = interp_spec_nf[1:, left_index]
-	y2 = interp_spec_nf[1:, left_index + 1]
-	x = np.log10(freq)
-	interpolated_vals = (x * (y2 - y1) + x2 * y1 - x1 * y2) / (x2 - x1)
-	result = np.sum(10.**interpolated_vals[0] * (interpolated_vals[1:, None] * map_ni), axis=0)
-	conversion = 1. / K_RJ2MJysr(1., 1e9 * freq)
-	result *= conversion
-	result = hp.reorder(result, n2r=True)
-	
-	return result
+        interp_spec_nf = np.copy(spec_nf)
+        interp_spec_nf[0:2] = np.log10(interp_spec_nf[0:2])
+        x1 = interp_spec_nf[0, left_index]
+        x2 = interp_spec_nf[0, left_index + 1]
+        y1 = interp_spec_nf[1:, left_index]
+        y2 = interp_spec_nf[1:, left_index + 1]
+        x = np.log10(freq)
+        interpolated_vals = (x * (y2 - y1) + x2 * y1 - x1 * y2) / (x2 - x1)
+        result = np.sum(10.**interpolated_vals[0] * (interpolated_vals[1:, None] * map_ni), axis=0)
+        conversion = 1. / K_RJ2MJysr(1., 1e9 * freq)
+        result *= conversion
+        result = hp.reorder(result, n2r=True)
+        
+        return result
 
     @property
     def map(self):
