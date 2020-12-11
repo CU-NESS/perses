@@ -98,7 +98,10 @@ class _PolarizedBeam(_Beam):
         nest: False if healpix maps in RING format (default), True otherwise
         horizon: if True (default False), ideal horizon is included in
                  simulation and the ground temperature given by
-                 ground_temperature is used when masking below it
+                 ground_temperature is used when masking below it.
+                 horizon can also be a healpy mask where below the horizon is
+                 marked by either 0 or False (make sure it is in the format
+                 described by the nest parameter)
         ground_temperature: (default 0) temperature to use below the horizon
         kwargs: keyword arguments to pass on to self.get_maps
         
@@ -140,10 +143,19 @@ class _PolarizedBeam(_Beam):
                 "frequencies as implied by the given frequencies array.")
         unpol_int = rotate_maps(unpol_int, theta, phi, psi, use_inverse=True,\
             nest=nest, axis=1, verbose=False)
-        if horizon:
-            map_thetas =\
-                hp.pixelfunc.pix2ang(nside, np.arange(npix), nest=nest)[0]
-            ground_slice = (map_thetas > (np.pi / 2))
+        has_horizon = ((type(horizon) in array_types) or\
+            ((type(horizon) in bool_types) and horizon))
+        if has_horizon:
+            if type(horion) in bool_types:
+                map_thetas =\
+                    hp.pixelfunc.pix2ang(nside, np.arange(npix), nest=nest)[0]
+                ground_slice = (map_thetas > (np.pi / 2))
+            else:
+                if horizon.shape != (npix,):
+                    raise ValueError("horizon did not have the same length " +\
+                        "as the galaxy maps (it may have a different " +\
+                        "healpix resolution).")
+                ground_slice = (horizon == 0)
             unpol_int[:,ground_slice,:] = ground_temperature
         # unpol_int shape is (nmaps, npix, nfreq)
         if (type(polarization_fraction) is type(None)) or\
@@ -170,7 +182,7 @@ class _PolarizedBeam(_Beam):
                     "same shape as unpol_int.")
             polarization_fraction = rotate_maps(polarization_fraction, theta,\
                 phi, psi, use_inverse=True, nest=nest, axis=1, verbose=False)
-            if horizon:
+            if has_horizon:
                 polarization_fraction[:,ground_slice,:] = 0
             # polarization_fraction shape is (nmaps, npix, nfreq)
             if type(polarization_angle) is FunctionType:

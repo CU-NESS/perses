@@ -192,7 +192,10 @@ class _TotalPowerBeam(_Beam):
         nest: False if healpix maps in RING format (default), True otherwise
         horizon: if True (default False), ideal horizon is included in
                  simulation and the ground temperature given by
-                 ground_temperature is used when masking below it
+                 ground_temperature is used when masking below it.
+                 horizon can also be a healpy mask where below the horizon is
+                 marked by either 0 or False (make sure it is in the format
+                 described by the nest parameter)
         ground_temperature: (default 0) temperature to use below the horizon
         kwargs: keyword arguments to pass on to self.get_maps
 
@@ -231,10 +234,19 @@ class _TotalPowerBeam(_Beam):
                 "frequencies as implied by the given frequencies array.")
         # sky_maps shape is (nmaps, nfreq, npix)
         nside = hp.pixelfunc.npix2nside(npix)
-        if horizon:
-            map_thetas =\
-                hp.pixelfunc.pix2ang(nside, np.arange(npix), nest=nest)[0]
-            ground_slice = (map_thetas > (np.pi / 2))
+        has_horizon = ((type(horizon) in array_types) or\
+            ((type(horizon) in bool_types) and horizon))
+        if has_horizon:
+            if type(horion) in bool_types:
+                map_thetas =\
+                    hp.pixelfunc.pix2ang(nside, np.arange(npix), nest=nest)[0]
+                ground_slice = (map_thetas > (np.pi / 2))
+            else:
+                if horizon.shape != (npix,):
+                    raise ValueError("horizon did not have the same length " +\
+                        "as the galaxy maps (it may have a different " +\
+                        "healpix resolution).")
+                ground_slice = (horizon == 0)
             sky_maps[:,:,ground_slice] = ground_temperature
         beam_maps = self.get_maps(frequencies, nside, (90., 0.), 0.,\
             **kwargs)[np.newaxis,...]
