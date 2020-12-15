@@ -8,7 +8,7 @@ from ..BeamUtilities import linear_to_dB, beam_sizes_from_maps, rotate_map,\
     beam_sizes_from_grids, normalize_grids, grids_from_maps, rotate_maps,\
     convolve_maps, spin_maps, smear_maps, smear_maps_approximate
 from ..BaseBeam import _Beam, nside_from_angular_resolution
-from ...util import real_numerical_types, sequence_type, bool_type,\
+from ...util import real_numerical_types, sequence_types, bool_types,\
     make_video
 import numpy as np
 import matplotlib
