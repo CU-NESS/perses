@@ -8,7 +8,8 @@ from ..BeamUtilities import linear_to_dB, beam_sizes_from_maps, rotate_map,\
     beam_sizes_from_grids, normalize_grids, grids_from_maps, rotate_maps,\
     convolve_maps, spin_maps, smear_maps, smear_maps_approximate
 from ..BaseBeam import _Beam, nside_from_angular_resolution
-from ...util import real_numerical_types, make_video
+from ...util import real_numerical_types, sequence_type, bool_type,\
+    make_video
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as pl
@@ -235,10 +236,10 @@ class _TotalPowerBeam(_Beam):
                 "frequencies as implied by the given frequencies array.")
         # sky_maps shape is (nmaps, nfreq, npix)
         nside = hp.pixelfunc.npix2nside(npix)
-        has_horizon = ((type(horizon) in array_types) or\
+        has_horizon = ((type(horizon) in sequence_types) or\
             ((type(horizon) in bool_types) and horizon))
         if has_horizon:
-            if type(horion) in bool_types:
+            if type(horizon) in bool_types:
                 map_thetas =\
                     hp.pixelfunc.pix2ang(nside, np.arange(npix), nest=nest)[0]
                 ground_slice = (map_thetas > (np.pi / 2))

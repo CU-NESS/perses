@@ -14,7 +14,8 @@ from types import FunctionType
 import os, time, gc
 import numpy as np
 import matplotlib.pyplot as pl
-from ...util import real_numerical_types, make_video
+from ...util import real_numerical_types, sequence_types, bool_types,\
+    make_video
 from ..BeamUtilities import rotate_maps, rotate_vector_maps,\
     Jones_matrix_from_components, transpose, stokes_beams_from_Jones_matrix,\
     convolve_maps, smear_maps, smear_maps_approximate, spin_maps,\
@@ -143,10 +144,10 @@ class _PolarizedBeam(_Beam):
                 "frequencies as implied by the given frequencies array.")
         unpol_int = rotate_maps(unpol_int, theta, phi, psi, use_inverse=True,\
             nest=nest, axis=1, verbose=False)
-        has_horizon = ((type(horizon) in array_types) or\
+        has_horizon = ((type(horizon) in sequence_types) or\
             ((type(horizon) in bool_types) and horizon))
         if has_horizon:
-            if type(horion) in bool_types:
+            if type(horizon) in bool_types:
                 map_thetas =\
                     hp.pixelfunc.pix2ang(nside, np.arange(npix), nest=nest)[0]
                 ground_slice = (map_thetas > (np.pi / 2))
