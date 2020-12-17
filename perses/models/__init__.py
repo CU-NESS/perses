@@ -31,5 +31,11 @@ from perses.models.ThroughReceiverModel import ThroughReceiverModel
 from perses.models.ThroughReceiverRankDecider import ThroughReceiverRankDecider
 from perses.models.GSMSpectralIndexModel import GSMSpectralIndexModel
 from perses.models.LWASpectralIndexModel import LWASpectralIndexModel
-
-
+from perses.models.GuzmanHaslamSpectralIndexModel import\
+    GuzmanHaslamSpectralIndexModel
+from perses.models.ConstantSpectralIndexModel import ConstantSpectralIndexModel
+from perses.models.GaussianSpectralIndexModel import GaussianSpectralIndexModel
+from perses.models.SineSquaredSpectralIndexModel import\
+    SineSquaredSpectralIndexModel
+from perses.models.PerturbedSineSquaredSpectralIndexModel import\
+    PerturbedSineSquaredSpectralIndexModel
