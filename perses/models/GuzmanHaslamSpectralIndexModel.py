@@ -71,10 +71,19 @@ class GuzmanHaslamSpectralIndexModel(object):
 			self._master_spectral_index = healpy.pixelfunc.ud_grade(self._master_spectral_index, self.nside)
 		return self._master_spectral_index
 
-	def __call__(self, pars):
+	def __call__(self, pars, noise_smoothed=False, kernel_FWHM=7.):
+		"""
+		noise_smoothed: if True, then the noise offset realization is first smoothed
+						using the healpy 'smoothing' function with the given
+						kernel_FWHM.
+		kernel_FWHM: The FWHM of the smoothing kernel, in degrees. Default is 7 deg.
+		"""
 		seed = pars[0]
 		npix = healpy.pixelfunc.nside2npix(self.nside)		
 		offset_distribution = GaussianDistribution(0, (self.error)**2)
 		noise_offset = offset_distribution.draw(npix, random=np.random.RandomState(seed=seed))
+		if noise_smoothed:
+			FWHM_in_rad = (kernel_FWHM*np.pi) / 180.
+			noise_offset = healpy.sphtfunc.smoothing(noise_offset, fwhm = FWHM_in_rad)
 		spectral_index = self.master_spectral_index + noise_offset
 		return spectral_index

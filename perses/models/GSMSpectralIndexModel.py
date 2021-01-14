@@ -92,8 +92,17 @@ class GSMSpectralIndexModel(object):
 			self._offset_distribution = GaussianDistribution(0, (self.error)**2)
 		return self._offset_distribution
 
-	def __call__(self, pars):
+	def __call__(self, pars, noise_smoothed=False, kernel_FWHM=7.):
+		"""
+		noise_smoothed: if True, then the noise offset realization is first smoothed
+						using the healpy 'smoothing' function with the given
+						kernel_FWHM.
+		kernel_FWHM: The FWHM of the smoothing kernel, in degrees. Default is 7 deg.
+		"""
 		seed = pars[0]
 		noise_offset = self.offset_distribution.draw(self.npix, random=np.random.RandomState(seed=seed))
+		if noise_smoothed:
+			FWHM_in_rad = (kernel_FWHM*np.pi) / 180.
+			noise_offset = healpy.sphtfunc.smoothing(noise_offset, fwhm = FWHM_in_rad)
 		spectral_index = self.master_spectral_index + noise_offset
 		return spectral_index
