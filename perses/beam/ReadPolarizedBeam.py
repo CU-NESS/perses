@@ -166,24 +166,24 @@ def read_polarized_beam(file_names, frequencies, ntheta=181, nphi=360,\
                                  "for 0th phi before moving on to 1st phi.")
             if take_sqrt:
                 if linear:
-                    data[0,ifreq,:,:] = np.sqrt(fdata[:,:,3]) *\
+                    data[Jtheta_ind,ifreq,:,:] = np.sqrt(fdata[:,:,3]) *\
                         np.exp(1.j * np.radians(fdata[:,:,4]))
-                    data[1,ifreq,:,:] = np.sqrt(fdata[:,:,5]) *\
+                    data[Jphi_ind,ifreq,:,:] = np.sqrt(fdata[:,:,5]) *\
                         np.exp(1.j * np.radians(fdata[:,:,6]))
                 else:
-                    data[0,ifreq,:,:] = (10 ** (fdata[:,:,3] / 20)) *\
+                    data[Jtheta_ind,ifreq,:,:] = (10 ** (fdata[:,:,3] / 20)) *\
                         np.exp(1.j * np.radians(fdata[:,:,4]))
-                    data[1,ifreq,:,:] = (10 ** (fdata[:,:,5] / 20)) *\
+                    data[Jphi_ind,ifreq,:,:] = (10 ** (fdata[:,:,5] / 20)) *\
                         np.exp(1.j * np.radians(fdata[:,:,6]))
             else:
                 if linear:
-                    data[0,ifreq,:,:] = fdata[:,:,3] *\
+                    data[Jtheta_ind,ifreq,:,:] = fdata[:,:,3] *\
                         np.exp(1.j * np.radians(fdata[:,:,4]))
-                    data[1,ifreq,:,:] = fdata[:,:,5] *\
+                    data[Jphi_ind,ifreq,:,:] = fdata[:,:,5] *\
                         np.exp(1.j * np.radians(fdata[:,:,6]))
                 else:
-                    data[0,ifreq,:,:] = (10 ** (fdata[:,:,3] / 10)) *\
+                    data[Jtheta_ind,ifreq,:,:] = (10 ** (fdata[:,:,3] / 10)) *\
                         np.exp(1.j * np.radians(fdata[:,:,4]))
-                    data[1,ifreq,:,:] = (10 ** (fdata[:,:,5] / 10)) *\
+                    data[Jphi_ind,ifreq,:,:] = (10 ** (fdata[:,:,5] / 10)) *\
                         np.exp(1.j * np.radians(fdata[:,:,6]))
     return data
