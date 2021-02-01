@@ -12,17 +12,19 @@ import pandas as pd
 from .BeamUtilities import spin_grids
 
 def read_Jones_vector(file_names, frequencies, ntheta=181, nphi=360,\
-    take_sqrt=True):
+    take_sqrt=True, linear=False):
     """
     Reads in a polarized beam from the given files.
     
-    file_names a numpy.ndarray of dtype object and shape (2, nfreq) where the
-               2 represents prefix/suffix
-    frequencies the frequencies at which the beam applies
-    ntheta, nphi number of theta and phi coordinates, respectively
+    file_names: a numpy.ndarray of dtype object and shape (2, nfreq) where
+                the 2 represents prefix/suffix
+    frequencies: the frequencies at which the beam applies
+    ntheta, nphi: number of theta and phi coordinates, respectively
     take_sqrt: if True, it is assumed that Abs(phi) and Abs(theta) are the
                squared magnitudes of the Jones matrix, not the magnitudes
-               themselves.
+               themselves
+    linear: if True, it is assumed that Abs(phi) and Abs(theta) are in
+            linear units rather than dB
     
     returns a numpy.ndarray of shape (2, nfreq, ntheta, nphi) containing
             Jtheta, Jphi
@@ -59,19 +61,31 @@ def read_Jones_vector(file_names, frequencies, ntheta=181, nphi=360,\
                 "not as expected. The rows are expected to list off all " +\
                 "theta values for 0th phi before moving on to 1st phi.")
         if take_sqrt:
-            data[0,ifreq,:,:] = (10 ** (fdata[:,:,3] / 20)) *\
-                np.exp(1.j * np.radians(fdata[:,:,4]))
-            data[1,ifreq,:,:] = (10 ** (fdata[:,:,5] / 20)) *\
-                np.exp(1.j * np.radians(fdata[:,:,6]))
+            if linear:
+                data[0,ifreq,:,:] = np.sqrt(fdata[:,:,3]) *\
+                    np.exp(1.j * np.radians(fdata[:,:,4]))
+                data[1,ifreq,:,:] = np.sqrt(fdata[:,:,5]) *\
+                    np.exp(1.j * np.radians(fdata[:,:,6]))
+            else:
+                data[0,ifreq,:,:] = (10 ** (fdata[:,:,3] / 20)) *\
+                    np.exp(1.j * np.radians(fdata[:,:,4]))
+                data[1,ifreq,:,:] = (10 ** (fdata[:,:,5] / 20)) *\
+                    np.exp(1.j * np.radians(fdata[:,:,6]))
         else:
-            data[0,ifreq,:,:] = (10 ** (fdata[:,:,3] / 10)) *\
-                np.exp(1.j * np.radians(fdata[:,:,4]))
-            data[1,ifreq,:,:] = (10 ** (fdata[:,:,5] / 10)) *\
-                np.exp(1.j * np.radians(fdata[:,:,6]))
+            if linear:
+                data[0,ifreq,:,:] = fdata[:,:,3] *\
+                    np.exp(1.j * np.radians(fdata[:,:,4]))
+                data[1,ifreq,:,:] = fdata[:,:,5] *\
+                    np.exp(1.j * np.radians(fdata[:,:,6]))
+            else:
+                data[0,ifreq,:,:] = (10 ** (fdata[:,:,3] / 10)) *\
+                    np.exp(1.j * np.radians(fdata[:,:,4]))
+                data[1,ifreq,:,:] = (10 ** (fdata[:,:,5] / 10)) *\
+                    np.exp(1.j * np.radians(fdata[:,:,6]))
     return data
 
 def read_polarized_beam_assumed_symmetry(file_names, frequencies, ntheta=181,\
-    nphi=360, take_sqrt=True):
+    nphi=360, take_sqrt=True, linear=False):
     """
     Reads in a polarized beam by assuming that the Jones matrix elements for
     the Y antenna are simply the same as the Jones matrix elements for the X
@@ -84,18 +98,20 @@ def read_polarized_beam_assumed_symmetry(file_names, frequencies, ntheta=181,\
     take_sqrt: if True, it is assumed that Abs(phi) and Abs(theta) are the
                squared magnitudes of the Jones matrix, not the magnitudes
                themselves.
+    linear: if True, it is assumed that Abs(phi) and Abs(theta) are in
+            linear units rather than dB
     
     returns a numpy.ndarray of shape (4, nfreq, ntheta, nphi) containing
             JthetaX, JthetaY, JphiX, JphiY
     """
     (JthetaX, JphiX) = read_Jones_vector(file_names, frequencies,\
-        ntheta=ntheta, nphi=nphi, take_sqrt=take_sqrt)
+        ntheta=ntheta, nphi=nphi, take_sqrt=take_sqrt, linear=linear)
     JthetaY = spin_grids(JthetaX, 90, degrees=True, phi_axis=-1)
     JphiY = spin_grids(JphiX, 90, degrees=True, phi_axis=-1)
     return np.array([JthetaX, JthetaY, JphiX, JphiY])
 
 def read_polarized_beam(file_names, frequencies, ntheta=181, nphi=360,\
-    take_sqrt=True):
+    take_sqrt=True, linear=False):
     """
     Reads in a polarized beam from the given files.
     
@@ -107,6 +123,8 @@ def read_polarized_beam(file_names, frequencies, ntheta=181, nphi=360,\
     take_sqrt: if True, it is assumed that Abs(phi) and Abs(theta) are the
                squared magnitudes of the Jones matrix, not the magnitudes
                themselves.
+    linear: if True, it is assumed that Abs(phi) and Abs(theta) are in
+            linear units rather than dB
     
     returns a numpy.ndarray of shape (4, nfreq, ntheta, nphi) containing
             JthetaX, JthetaY, JphiX, JphiY
@@ -147,14 +165,25 @@ def read_polarized_beam(file_names, frequencies, ntheta=181, nphi=360,\
                                  "expected to list off all theta values " +\
                                  "for 0th phi before moving on to 1st phi.")
             if take_sqrt:
-                data[Jtheta_ind,ifreq,:,:] = (10 ** (fdata[:,:,3] / 20)) *\
-                    np.exp(1.j * np.radians(fdata[:,:,4]))
-                data[Jphi_ind,ifreq,:,:] = (10 ** (fdata[:,:,5] / 20)) *\
-                    np.exp(1.j * np.radians(fdata[:,:,6]))
+                if linear:
+                    data[0,ifreq,:,:] = np.sqrt(fdata[:,:,3]) *\
+                        np.exp(1.j * np.radians(fdata[:,:,4]))
+                    data[1,ifreq,:,:] = np.sqrt(fdata[:,:,5]) *\
+                        np.exp(1.j * np.radians(fdata[:,:,6]))
+                else:
+                    data[0,ifreq,:,:] = (10 ** (fdata[:,:,3] / 20)) *\
+                        np.exp(1.j * np.radians(fdata[:,:,4]))
+                    data[1,ifreq,:,:] = (10 ** (fdata[:,:,5] / 20)) *\
+                        np.exp(1.j * np.radians(fdata[:,:,6]))
             else:
-                data[Jtheta_ind,ifreq,:,:] = (10 ** (fdata[:,:,3] / 10)) *\
-                    np.exp(1.j * np.radians(fdata[:,:,4]))
-                data[Jphi_ind,ifreq,:,:] = (10 ** (fdata[:,:,5] / 10)) *\
-                    np.exp(1.j * np.radians(fdata[:,:,6]))
+                if linear:
+                    data[0,ifreq,:,:] = fdata[:,:,3] *\
+                        np.exp(1.j * np.radians(fdata[:,:,4]))
+                    data[1,ifreq,:,:] = fdata[:,:,5] *\
+                        np.exp(1.j * np.radians(fdata[:,:,6]))
+                else:
+                    data[0,ifreq,:,:] = (10 ** (fdata[:,:,3] / 10)) *\
+                        np.exp(1.j * np.radians(fdata[:,:,4]))
+                    data[1,ifreq,:,:] = (10 ** (fdata[:,:,5] / 10)) *\
+                        np.exp(1.j * np.radians(fdata[:,:,6]))
     return data
-
