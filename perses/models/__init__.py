@@ -8,6 +8,8 @@ Description: Imports for the perses.models module.
 from perses.models.DipoleImpedanceModel import DipoleImpedanceModel
 from perses.models.DipoleReflectionCoefficientModel import\
     DipoleReflectionCoefficientModel
+from perses.models.InverseChebyshevFilterGainModel import\
+    InverseChebyshevFilterGainModel
 from perses.models.FlattenedGaussianModel import FlattenedGaussianModel,\
     bowman_2018_parameters
 from perses.models.LRCResonanceModel import LRCResonanceModel
