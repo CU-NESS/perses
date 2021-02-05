@@ -132,7 +132,7 @@ class InverseChebyshevFilterGainModel(LoadableModel):
         Fills the given hdf5 group with information about this model so that it
         can be recreated later.
         """
-        group.attrs['class'] = InverseChebyshevFilterGainModel
+        group.attrs['class'] = 'InverseChebyshevFilterGainModel'
         group.attrs['import_string'] =\
             'from perses.models import InverseChebyshevFilterGainModel'
         create_hdf5_dataset(group, 'frequencies', data=self.frequencies)
