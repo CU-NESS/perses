@@ -1,7 +1,7 @@
 """
-File: 
+File: perses/models/FilterGainModel.py
 Author: Keith Tauscher
-Date: 5 Feb 2020
+Date: 5 Feb 2021
 
 Description: File containing an abstract class that represents a
              FilterGainModel that can be either a high-pass, low-pass, or

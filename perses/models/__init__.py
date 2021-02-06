@@ -9,6 +9,9 @@ from perses.models.DipoleImpedanceModel import DipoleImpedanceModel
 from perses.models.DipoleReflectionCoefficientModel import\
     DipoleReflectionCoefficientModel
 from perses.models.FilterGainModel import FilterGainModel
+from perses.models.FilterGainModelWithOrder import FilterGainModelWithOrder
+from perses.models.ButterworthFilterGainModel import ButterworthFilterGainModel
+from perses.models.ChebyshevFilterGainModel import ChebyshevFilterGainModel
 from perses.models.InverseChebyshevFilterGainModel import\
     InverseChebyshevFilterGainModel
 from perses.models.FlattenedGaussianModel import FlattenedGaussianModel,\
