@@ -8,8 +8,8 @@ from ..BeamUtilities import linear_to_dB, beam_sizes_from_maps, rotate_map,\
     beam_sizes_from_grids, normalize_grids, grids_from_maps, rotate_maps,\
     convolve_maps, spin_maps, smear_maps, smear_maps_approximate
 from ..BaseBeam import _Beam, nside_from_angular_resolution
-from ...util import real_numerical_types, sequence_types, bool_types,\
-    make_video
+from ...util import real_numerical_types, sequence_types, int_types,\
+    bool_types, make_video
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as pl
@@ -197,7 +197,9 @@ class _TotalPowerBeam(_Beam):
                  ground_temperature is used when masking below it.
                  horizon can also be a healpy mask where below the horizon is
                  marked by either 0 or False (make sure it is in the format
-                 described by the nest parameter)
+                 described by the nest parameter). Can also be a float between
+                 0 and 1 indicating how much of the sky is visible in that
+                 pixel.
         ground_temperature: (default 0) temperature to use below the horizon
         kwargs: keyword arguments to pass on to self.get_maps
 
@@ -242,14 +244,20 @@ class _TotalPowerBeam(_Beam):
             if type(horizon) in bool_types:
                 map_thetas =\
                     hp.pixelfunc.pix2ang(nside, np.arange(npix), nest=nest)[0]
-                ground_slice = (map_thetas > (np.pi / 2))
+                sky_maps[:,:,(map_thetas > (np.pi / 2))] = ground_temperature
             else:
+                horizon = np.array(horizon)
                 if horizon.shape != (npix,):
                     raise ValueError("horizon did not have the same length " +\
                         "as the galaxy maps (it may have a different " +\
                         "healpix resolution).")
-                ground_slice = (horizon == 0)
-            sky_maps[:,:,ground_slice] = ground_temperature
+                if horizon.dtype in (int_types + bool_types):
+                    ground_slice = (horizon == 0)
+                    sky_maps[:,:,ground_slice] = ground_temperature
+                else:
+                    sky_maps = (sky_maps * horizon[np.newaxis,np.newaxis,:]) +\
+                        (ground_temperature *\
+                        (1 - horizon[np.newaxis,np.newaxis,:]))
         beam_maps = self.get_maps(frequencies, nside, (90., 0.), 0.,\
             **kwargs)[np.newaxis,...]
         # beam_maps shape is (1, nfreq, npix)
