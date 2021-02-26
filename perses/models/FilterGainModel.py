@@ -111,7 +111,7 @@ class FilterGainModel(LoadableModel):
         group: hdf5 group into which this model should be saved
         """
         create_hdf5_dataset(group, 'frequencies', data=self.frequencies)
-        group.attrs['kind'] = kind
+        group.attrs['kind'] = self.kind
     
     def fill_hdf5_group(self, group):
         """
@@ -263,7 +263,7 @@ class FilterGainModel(LoadableModel):
             prototype_gradient = self.base_function_parameter_gradient(\
                 x_values, other_parameters)
             return np.concatenate([prototype_gradient,\
-                [reference_frequency_derivative]], axis=0)
+                reference_frequency_derivative[:,np.newaxis]], axis=1)
         else:
             high_pass_other_parameters =\
                 parameters[:self.num_prototype_parameters]
@@ -293,12 +293,13 @@ class FilterGainModel(LoadableModel):
                 self.base_function_frequency_derivative(high_pass_x_values,\
                 high_pass_other_parameters) / self.frequencies
             low_pass_gradient = np.concatenate([low_pass_prototype_gradient,\
-                [low_pass_reference_frequency_derivative]], axis=0)
+                low_pass_reference_frequency_derivative[:,np.newaxis]], axis=1)
             high_pass_gradient = np.concatenate([high_pass_prototype_gradient,\
-                [high_pass_reference_frequency_derivative]], axis=0)
+                high_pass_reference_frequency_derivative[:,np.newaxis]],\
+                axis=1)
             return np.concatenate([\
-                high_pass_gradient * low_pass_part[np.newaxis,:],\
-                low_pass_gradient * high_pass_part[np.newaxis,:]], axis=0)
+                high_pass_gradient * low_pass_part[:,np.newaxis],\
+                low_pass_gradient * high_pass_part[:,np.newaxis]], axis=1)
     
     @property
     def hessian_computable(self):

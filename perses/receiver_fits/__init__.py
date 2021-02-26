@@ -1,2 +1,3 @@
 from perses.receiver_fits.ReceiverFit import ReceiverFit
 from perses.receiver_fits.LinearReceiverFit import LinearReceiverFit
+from perses.receiver_fits.NonlinearReceiverFit import NonlinearReceiverFit

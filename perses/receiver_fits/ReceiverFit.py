@@ -14,7 +14,8 @@ import matplotlib.pyplot as pl
 from matplotlib.colors import SymLogNorm
 from distpy import triangle_plot, Distribution, GaussianDistribution
 from pylinex import Model, BasisModel, SumModel, ProductModel,\
-    ConditionalFitGaussianLoglikelihood, Sampler, BurnRule, NLFitter
+    MultiConditionalFitModel, ConditionalFitGaussianLoglikelihood, Sampler,\
+    BurnRule, NLFitter
 from ..util import sequence_types, real_numerical_types
 
 try:
@@ -369,13 +370,23 @@ class ReceiverFit(object):
         beam-weighted foreground, and signal.
         """
         if not hasattr(self, '_full_model'):
-            ideal_model = SumModel(['signal', 'foreground'],\
-                [self.signal_model, self.foreground_model])
-            multiplicative_model =\
-                ProductModel(['gain', 'ideal'], [self.gain_model, ideal_model])
-            self._full_model = SumModel(['multiplicative', 'offset'],\
-                [multiplicative_model, self.offset_model])
+            from_antenna_model = SumModel(['signal', 'foreground', 'offset'],\
+                [self.signal_model, self.foreground_model, self.offset_model])
+            self._full_model = ProductModel(['gain', 'from_antenna'],\
+                [self.gain_model, from_antenna_model])
         return self._full_model
+    
+    @property
+    def conditional_fit_model(self):
+        """
+        Property storing the ConditionalFitModel that performs the
+        marginalization.
+        """
+        if not hasattr(self, '_conditional_fit_model'):
+            self._conditional_fit_model = MultiConditionalFitModel(\
+                self.full_model, self.data, self.error,\
+                self.marginalized_name_chains, priors=self.marginalized_priors)
+        return self._conditional_fit_model
     
     @property
     def conditional_fit_gaussian_loglikelihood(self):
@@ -490,13 +501,20 @@ class ReceiverFit(object):
         """
         return self.fitter.plot_chain(**kwargs)
     
-    def plot_full_covariance(self, normalize_by_variances=False, fig=None,\
-        ax=None, title=None, fontsize=24, show=False, **kwargs):
+    def plot_full_covariance(self, normalize_by_variances=False,\
+        correction_factors=None, fig=None, ax=None, title=None, fontsize=24,\
+        show=False, **kwargs):
         """
         Plots the full covariance (or correlation) matrix.
         
         normalize_by_variances: if True, the correlation matrix is plotted
                                 instead of the covariance matrix
+        correction_factors: (only used if normalize_by_variances is False) a 1D
+                            array of numbers by which to multiply the standard
+                            deviations of each parameter. Each row will be
+                            divided by the corresponding element of this
+                            array and each column will be divided by the
+                            corresponding element of this array
         fig: matplotlib Figure on which to plot if it already exists (only used
              if ax is None)
         ax: matplotlib Axes on which to plot if it already exists
@@ -529,7 +547,11 @@ class ReceiverFit(object):
         if normalize_by_variances:
             image = ax.imshow(self.full_correlation, **imshow_kwargs)
         else:
-            image = ax.imshow(self.full_covariance, **imshow_kwargs)
+            to_plot = self.full_covariance
+            if type(correction_factors) is not type(None):
+                to_plot = to_plot / (correction_factors[:,np.newaxis] *\
+                    correction_factors[np.newaxis,:])
+            image = ax.imshow(to_plot, **imshow_kwargs)
         cbar = pl.colorbar(image)
         limits = [-0.5, self.full_model.num_parameters - 0.5]
         for number in np.cumsum([self.gain_model.num_parameters,\
@@ -725,8 +747,8 @@ class ReceiverFit(object):
             return fig
     
     def plot_offset_curve_sample(self, input_curve=None, x_values=None,\
-        further_thin=100, alpha=0.05, xlabel='$x$', ylabel='$O$ [mK]',\
-        scale_factor=1e3, residual_ylabel='$O-<O>$ [mK]',\
+        further_thin=100, alpha=0.05, xlabel='$x$', ylabel='$O$ [K]',\
+        scale_factor=1, residual_ylabel='$O-<O>$ [mK]',\
         residual_scale_factor=1e3, title='Offset curve sample', fig=None,\
         fontsize=24, show=False):
         """
@@ -1075,18 +1097,24 @@ class ReceiverFit(object):
         raise cannot_instantiate_error
     
     @property
-    def conditional_fit_model(self):
-        """
-        Property storing the ConditionalFitModel that performs the
-        marginalization.
-        """
-        raise cannot_instantiate_error
-    
-    @property
     def prior_distribution_set(self):
         """
         Property storing the prior distribution set for the MCMC that will be
         performed for this fit.
+        """
+        raise cannot_instantiate_error
+    
+    @property
+    def marginalized_name_chains(self):
+        """
+        Property storing the name chains to marginalize in this fit.
+        """
+        raise cannot_instantiate_error
+    
+    @property
+    def marginalized_priors(self):
+        """
+        Property storing the priors on the marginalized components of this fit.
         """
         raise cannot_instantiate_error
 

@@ -75,7 +75,7 @@ class InverseChebyshevFilterGainModel(FilterGainModelWithOrder):
         """
         gain = self.base_function(x_values, prototype_parameters)
         return\
-            ((2 / prototype_parameters[0]) * gain * (1 - gain))[np.newaxis,:]
+            ((2 / prototype_parameters[0]) * gain * (1 - gain))[:,np.newaxis]
     
     def base_function_frequency_derivative(self, x_values,\
         prototype_parameters):

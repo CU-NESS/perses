@@ -9,14 +9,15 @@ Description: File containing a class representing a Galaxy map with both
 
 Based on:
 
-Zheng, Tegmark, Dillon, Kim, Liu, Neben, Jonas, Reich, Reich 2017. An Improved Model
-of Diffuse Galactic Radio Emission from 10 MHz to 5 THz. MNRAS 464, 3486-3497.
+Zheng, Tegmark, Dillon, Kim, Liu, Neben, Jonas, Reich, Reich 2017. An Improved
+Model of Diffuse Galactic Radio Emission from 10 MHz to 5 THz. MNRAS 464,
+3486-3497.
 """
 from __future__ import division
 import os, time
 import numpy as np
 import healpy as hp
-from ..util import bool_types, real_numerical_types
+from ..util import bool_types
 from .SpatialPowerLawGalaxy import SpatialPowerLawGalaxy
 
 class GSMGalaxy(SpatialPowerLawGalaxy):
@@ -41,22 +42,20 @@ class GSMGalaxy(SpatialPowerLawGalaxy):
         verbose: if True, time it took to prepare the GSM map is printed
         """
         self.nside = nside
-        self.reference_frequency = reference_frequency
-        self.reference_map = self.gsm_map
-        self.spectral_index = spectral_index
-        self.thermal_background = thermal_background
         self.verbose = verbose
+        self.reference_frequency = reference_frequency
+        SpatialPowerLawGalaxy.__init__(self, self.gsm_map,\
+            self.reference_frequency, spectral_index,\
+            thermal_background=thermal_background)
 
     def create_map(self, low_resolution=True):
         """
         gsm_frequency: frequency of the desired GSM map in MHz
         low_resolution: desired resolution of the output gsm_map, either 
-                    low or high resolution.
-		    High resolution should be used for gsm_frequencies 
-		    above 10 GHz, otherwise low resolution is used as the 
-		    default.
-	
-	"""
+                        low or high resolution. High resolution should be used
+                        for gsm_frequencies above 10 GHz, otherwise low
+                        resolution is used as the default.
+        """
         input_path = '{!s}/input/gsm2016/data'.format(os.environ['PERSES'])
         labels = ['Synchrotron', 'CMB', 'HI', 'Dust1', 'Dust2', 'Free-Free']
         n_comp = len(labels)
@@ -70,14 +69,16 @@ class GSMGalaxy(SpatialPowerLawGalaxy):
         unit = 'TRJ'
 
         def K_RJ2MJysr(K_RJ, nu):#in Kelvin and Hz
-            conversion_factor = 2 * (nu / C)**2 * kB
-            return  K_RJ * conversion_factor * 1e20#1e-26 for Jy and 1e6 for MJy
+            conversion_factor = 2 * ((nu / C) ** 2) * kB
+            #1e20 below comes from 1e-26 for Jy and 1e6 for MJy
+            return  K_RJ * conversion_factor * 1e20
 
         if low_resolution == True:
             map_ni = np.loadtxt('{!s}/lowres_maps.txt'.format(input_path))
         else:
-            map_ni = np.array([np.fromfile('{0!s}/highres_{1!s}_map.bin'.format(\
-                input_path, lb), dtype='float32') for lb in labels])
+            map_ni = np.array([\
+                np.fromfile('{0!s}/highres_{1!s}_map.bin'.format(input_path,\
+                lb), dtype='float32') for lb in labels])
 
         spec_nf = np.loadtxt(input_path + '/spectra.txt')
         nfreq = spec_nf.shape[1]
@@ -100,7 +101,8 @@ class GSMGalaxy(SpatialPowerLawGalaxy):
         y2 = interp_spec_nf[1:, left_index + 1]
         x = np.log10(freq)
         interpolated_vals = (x * (y2 - y1) + x2 * y1 - x1 * y2) / (x2 - x1)
-        result = np.sum(10.**interpolated_vals[0] * (interpolated_vals[1:, None] * map_ni), axis=0)
+        result = np.sum(10.**interpolated_vals[0] *\
+            (interpolated_vals[1:, None] * map_ni), axis=0)
         conversion = 1. / K_RJ2MJysr(1., 1e9 * freq)
         result *= conversion
         result = hp.reorder(result, n2r=True)
@@ -113,27 +115,6 @@ class GSMGalaxy(SpatialPowerLawGalaxy):
         Returns 'GSM'
         """
         return 'GSM'
-    
-    @property
-    def reference_frequency(self):
-        """
-        Frequency at which map is created.
-        """
-        if not hasattr(self, '_reference_frequency'):
-            raise AttributeError("reference_frequency was referenced before it was set.")
-        return self._reference_frequency
-    
-    @reference_frequency.setter
-    def reference_frequency(self, value):
-        """
-        Setter for the reference_frequency property.
-        
-        value: positive number in MHz
-        """
-        if type(value) in real_numerical_types:
-            self._reference_frequency = value
-        else:
-            raise ValueError("reference_frequency was set to a non-number.")
     
     @property
     def verbose(self):
@@ -159,8 +140,8 @@ class GSMGalaxy(SpatialPowerLawGalaxy):
     @property
     def gsm_map(self):
         """
-        Property storing the GSM map at the reference frequency in MHz in Galactic coordinates at
-        native resolution.
+        Property storing the GSM map at the reference frequency in MHz in
+        Galactic coordinates at native resolution.
         """
         if not hasattr(self, '_gsm_map'):
             t1 = time.time()

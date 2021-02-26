@@ -69,7 +69,7 @@ class ButterworthFilterGainModel(FilterGainModelWithOrder):
         Computes and returns the derivatives of the prototype function at the
         given frequency ratios with respect to the prototype parameters.
         """
-        return np.zeros((0, self.num_channels))
+        return np.zeros((self.num_channels, 0))
     
     def base_function_frequency_derivative(self, x_values,\
         prototype_parameters):

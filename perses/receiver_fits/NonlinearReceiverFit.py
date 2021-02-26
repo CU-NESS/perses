@@ -1,5 +1,5 @@
 """
-File: perses/receiver_fits/LinearReceiverFit.py
+File: perses/receiver_fits/NonlinearReceiverFit.py
 Author: Keith Tauscher
 Date: 30 Jan 2020
 
@@ -11,11 +11,11 @@ Description: File containing class representing a fit with a receiver where the
 from __future__ import division
 import numpy as np
 import scipy.linalg as scila
-from distpy import GaussianDistribution, DistributionSet
-from pylinex import BasisModel
+from distpy import Distribution, GaussianDistribution, DistributionSet
+from pylinex import Model
 from .ReceiverFit import ReceiverFit
 
-class LinearReceiverFit(ReceiverFit):
+class NonlinearReceiverFit(ReceiverFit):
     """
     Class representing a fit with a receiver where the foreground, receiver
     offset, and signal all have linear models. In this case, the posterior can
@@ -27,7 +27,7 @@ class LinearReceiverFit(ReceiverFit):
         Property storing the knowledge that signal_model must be a BasisModel
         for this ReceiverFit.
         """
-        return BasisModel
+        return Model
     
     @property
     def signal_prior_class(self):
@@ -35,7 +35,7 @@ class LinearReceiverFit(ReceiverFit):
         Property storing the knowledge that signal_prior must be a
         GaussianDistribution for this ReceiverFit.
         """
-        return GaussianDistribution
+        return Distribution
     
     @property
     def marginalized_name_chains(self):
@@ -44,8 +44,8 @@ class LinearReceiverFit(ReceiverFit):
         marginalized over.
         """
         if not hasattr(self, '_marginalized_name_chains'):
-            self._marginalized_name_chains = [['from_antenna', name]\
-                for name in ['signal', 'foreground', 'offset']]
+            self._marginalized_name_chains =\
+                [['from_antenna', name] for name in ['foreground', 'offset']]
         return self._marginalized_name_chains
     
     @property
@@ -57,7 +57,7 @@ class LinearReceiverFit(ReceiverFit):
         """
         if not hasattr(self, '_marginalized_priors'):
             self._marginalized_priors =\
-                [self.signal_prior, self.foreground_prior, self.offset_prior]
+                [self.foreground_prior, self.offset_prior]
         return self._marginalized_priors
     
     @property
@@ -67,9 +67,13 @@ class LinearReceiverFit(ReceiverFit):
         performed for this fit.
         """
         if not hasattr(self, '_prior_distribution_set'):
-            self._prior_distribution_set = DistributionSet([(self.gain_prior,\
+            self._prior_distribution_set = DistributionSet()
+            self._prior_distribution_set.add_distribution(self.gain_prior,\
                 ['gain_{!s}'.format(parameter)\
-                for parameter in self.gain_model.parameters])])
+                for parameter in self.gain_model.parameters])
+            self._prior_distribution_set.add_distribution(self.signal_prior,\
+                ['from_antenna_signal_{!s}'.format(parameter)\
+                for parameter in self.signal_model.parameters])
         return self._prior_distribution_set
     
     def _build_sample(self):
@@ -84,20 +88,21 @@ class LinearReceiverFit(ReceiverFit):
         self._offset_parameter_sample = []
         self._foreground_parameter_sample = []
         self._signal_parameter_sample = []
-        signal_slice = slice(None, self.signal_model.num_parameters)
-        foreground_slice = slice(self.signal_model.num_parameters,\
-            -self.offset_model.num_parameters)
+        gain_slice = slice(None, self.gain_model.num_parameters)
+        signal_slice = slice(-self.signal_model.num_parameters, None)
+        foreground_slice = slice(None, self.foreground_model.num_parameters)
         offset_slice = slice(-self.offset_model.num_parameters, None)
-        running_covariance = np.zeros((self.signal_model.num_parameters +\
-            self.foreground_model.num_parameters +\
+        running_covariance = np.zeros((self.foreground_model.num_parameters +\
             self.offset_model.num_parameters,) * 2)
         num_conditional_distributions = 0
         full_means = []
         for element in np.reshape(self.fitter.chain[:,::thin,:],\
-            (-1, self.gain_model.num_parameters)):
-            #self._gain_parameter_sample.append(\
-            #    element[np.newaxis,:] * np.ones((samples_per_element, 1)))
-            self._gain_parameter_sample.append(element[np.newaxis,:])
+            (-1, self.gain_model.num_parameters +\
+            self.signal_model.num_parameters)):
+            gain_element = element[gain_slice]
+            signal_element = element[signal_slice]
+            self._gain_parameter_sample.append(gain_element[np.newaxis,:])
+            self._signal_parameter_sample.append(signal_element[np.newaxis,:])
             (recreation, conditional_mean, conditional_covariance) =\
                 self.conditional_fit_model(element,\
                 return_conditional_mean=True,\
@@ -108,17 +113,17 @@ class LinearReceiverFit(ReceiverFit):
             num_conditional_distributions += 1
             conditional_distribution =\
                 GaussianDistribution(conditional_mean, conditional_covariance)
-            sfo_sample = conditional_distribution.draw(samples_per_element)
-            self._signal_parameter_sample.append(sfo_sample[:,signal_slice])
+            fo_sample = conditional_distribution.draw(samples_per_element)
             self._foreground_parameter_sample.append(\
-                sfo_sample[:,foreground_slice])
-            self._offset_parameter_sample.append(sfo_sample[:,offset_slice])
+                fo_sample[:,foreground_slice])
+            self._offset_parameter_sample.append(fo_sample[:,offset_slice])
         running_covariance = running_covariance / num_conditional_distributions
         # now, running_covariance is the component of sfo covariance due solely
         # to the sizes/shapes of the conditional distributions of sfo at
         # constant gain
         running_covariance = scila.block_diag(np.zeros(\
-            (self.gain_model.num_parameters,) * 2), running_covariance)
+            (self.gain_model.num_parameters +\
+            self.signal_model.num_parameters,) * 2), running_covariance)
         # now, running_covariance is the component of the full (gsfo)
         # covariance due solely to the sizes/shapes of the conditional
         # distributions of sfo at constant gain
