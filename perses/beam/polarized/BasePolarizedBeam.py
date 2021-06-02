@@ -104,7 +104,9 @@ class _PolarizedBeam(_Beam):
                  marked by either 0 or False (make sure it is in the format
                  described by the nest parameter). Can also be a float between
                  0 and 1 indicating how much of the sky is visible in that
-                 pixel.
+                 pixel. The horizon may also vary spectrally, in which case
+                 it will be an array of healpy masks for each frequency.
+
         ground_temperature: (default 0) temperature to use below the horizon
         kwargs: keyword arguments to pass on to self.get_maps
         
@@ -151,34 +153,68 @@ class _PolarizedBeam(_Beam):
             (type(horizon[0]) in (int_types + bool_types)))
         has_fractional_horizon = (type(horizon) in sequence_types) and\
             (not has_bool_sequence_horizon)
+        has_bool_sequence_spectral_horizon =\
+            (type(horizon) in sequence_types) and\
+            (type(horizon[0]) in sequence_types) and\
+            (type(horizon[0][0]) in (int_types + bool_types))
+        has_fractional_spectral_horizon =\
+            (type(horizon) in sequence_types) and\
+            (type(horizon[0]) in sequence_types) and\
+            (not has_bool_sequence_spectral_horizon)
         has_horizon = (has_bool_horizon or has_bool_sequence_horizon or\
-            has_fractional_horizon)
+            has_fractional_horizon or has_bool_sequence_spectral_horizon or\
+            has_fractional_spectral_horizon)
+        has_spectral_horizon = (has_bool_sequence_spectral_horizon or\
+            has_fractional_spectral_horizon)
         if has_horizon:
-            if has_bool_horizon:
-                map_thetas =\
-                    hp.pixelfunc.pix2ang(nside, np.arange(npix), nest=nest)[0]
-                ground_slice = (map_thetas > (np.pi / 2))
-                unpol_int[:,ground_slice,:] = ground_temperature
-            else:
-                if horizon.shape != (npix,):
-                    raise ValueError("horizon did not have the same length " +\
-                        "as the galaxy maps (it may have a different " +\
-                        "healpix resolution).")
-                if has_bool_sequence_horizon:
+            if has_spectral_horizon:
+                horizon = np.array(horizon)
+                if horizon.shape != (nfreq, npix):
+                    raise ValueError("horizon did not have the" +\
+                        "correct shape. If horizon varies spectrally " +\
+                        "it must have shape (nfreq, npix)")
+                if has_bool_sequence_spectral_horizon:
                     ground_slice = (horizon == 0)
-                    unpol_int[:,ground_slice,:] = ground_temperature
+                    unpol_int[:,ground_slice.T] = ground_temperature
                 else:
                     if (type(polarization_fraction) is not type(None)) and\
                         (type(polarization_angle) is not type(None)):
                         polarization_fraction_correction =\
-                            horizon[np.newaxis,:,np.newaxis] /\
-                            (horizon[np.newaxis,:,np.newaxis] +\
-                            (((1 - horizon[np.newaxis,:,np.newaxis]) *\
+                            horizon.T[np.newaxis,:] /\
+                            (horizon.T[np.newaxis,:] +\
+                            (((1 - horizon.T[np.newaxis,:]) *\
                             ground_temperature) / unpol_int))
                     unpol_int =\
-                        (unpol_int * horizon[np.newaxis,:,np.newaxis]) +\
+                        (unpol_int * horizon.T[np.newaxis,:]) +\
                         (ground_temperature *\
-                        (1 - horizon[np.newaxis,:,np.newaxis]))
+                        (1 - horizon.T[np.newaxis,:]))
+            else:
+                if has_bool_horizon:
+                    map_thetas =\
+                        hp.pixelfunc.pix2ang(nside, np.arange(npix),\
+                            nest=nest)[0]
+                    ground_slice = (map_thetas > (np.pi / 2))
+                    unpol_int[:,ground_slice,:] = ground_temperature
+                else:
+                    if horizon.shape != (npix,):
+                        raise ValueError("horizon did not have the same " +\
+                            "length as the galaxy maps (it may have a " +\
+                            "different healpix resolution).")
+                    if has_bool_sequence_horizon:
+                        ground_slice = (horizon == 0)
+                        unpol_int[:,ground_slice,:] = ground_temperature
+                    else:
+                        if (type(polarization_fraction) is not type(None)) and\
+                            (type(polarization_angle) is not type(None)):
+                            polarization_fraction_correction =\
+                                horizon[np.newaxis,:,np.newaxis] /\
+                                (horizon[np.newaxis,:,np.newaxis] +\
+                                (((1 - horizon[np.newaxis,:,np.newaxis]) *\
+                                ground_temperature) / unpol_int))
+                        unpol_int =\
+                            (unpol_int * horizon[np.newaxis,:,np.newaxis]) +\
+                            (ground_temperature *\
+                            (1 - horizon[np.newaxis,:,np.newaxis]))
         # unpol_int shape is (nmaps, npix, nfreq)
         if (type(polarization_fraction) is type(None)) or\
             (type(polarization_angle) is type(None)):
@@ -206,7 +242,9 @@ class _PolarizedBeam(_Beam):
                 phi, psi, use_inverse=True, nest=nest, axis=1, verbose=False)
             if has_bool_horizon or has_bool_sequence_horizon:
                 polarization_fraction[:,ground_slice,:] = 0
-            elif has_fractional_horizon:
+            elif has_bool_sequence_spectral_horizon:
+                polarization_fraction[:,ground_slice.T] = 0
+            elif has_fractional_horizon or has_fractional_spectral_horizon:
                 polarization_fraction =\
                     polarization_fraction * polarization_fraction_correction
             # polarization_fraction shape is (nmaps, npix, nfreq)

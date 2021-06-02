@@ -199,7 +199,8 @@ class _TotalPowerBeam(_Beam):
                  marked by either 0 or False (make sure it is in the format
                  described by the nest parameter). Can also be a float between
                  0 and 1 indicating how much of the sky is visible in that
-                 pixel.
+                 pixel. The horizon may also vary spectrally, in which case
+                 it will be an array of healpy masks for each frequency.
         ground_temperature: (default 0) temperature to use below the horizon
         kwargs: keyword arguments to pass on to self.get_maps
 
@@ -240,24 +241,40 @@ class _TotalPowerBeam(_Beam):
         nside = hp.pixelfunc.npix2nside(npix)
         has_horizon = ((type(horizon) in sequence_types) or\
             ((type(horizon) in bool_types) and horizon))
+        has_spectral_horizon = (type(horizon) in sequence_types) and\
+            (type(horizon[0]) in sequence_types)
         if has_horizon:
-            if type(horizon) in bool_types:
-                map_thetas =\
-                    hp.pixelfunc.pix2ang(nside, np.arange(npix), nest=nest)[0]
-                sky_maps[:,:,(map_thetas > (np.pi / 2))] = ground_temperature
-            else:
+            if has_spectral_horizon:
                 horizon = np.array(horizon)
-                if horizon.shape != (npix,):
-                    raise ValueError("horizon did not have the same length " +\
-                        "as the galaxy maps (it may have a different " +\
-                        "healpix resolution).")
+                if horizon.shape != (nfreq, npix):
+                    raise ValueError("horizon did not have the" +\
+                        "correct shape. If horizon varies spectrally " +\
+                        "it must have shape (nfreq, npix)")
                 if horizon.dtype in (int_types + bool_types):
                     ground_slice = (horizon == 0)
-                    sky_maps[:,:,ground_slice] = ground_temperature
+                    sky_maps[:,ground_slice] = ground_temperature
                 else:
-                    sky_maps = (sky_maps * horizon[np.newaxis,np.newaxis,:]) +\
+                    sky_maps = (sky_maps * horizon[np.newaxis,:]) +\
                         (ground_temperature *\
-                        (1 - horizon[np.newaxis,np.newaxis,:]))
+                        (1 - horizon[np.newaxis,:]))
+            else:
+                if type(horizon) in bool_types:
+                    map_thetas =\
+                        hp.pixelfunc.pix2ang(nside, np.arange(npix), nest=nest)[0]
+                    sky_maps[:,:,(map_thetas > (np.pi / 2))] = ground_temperature
+                else:
+                    horizon = np.array(horizon)
+                    if horizon.shape != (npix,):
+                        raise ValueError("horizon did not have the same length " +\
+                            "as the galaxy maps (it may have a different " +\
+                            "healpix resolution).")
+                    if horizon.dtype in (int_types + bool_types):
+                        ground_slice = (horizon == 0)
+                        sky_maps[:,:,ground_slice] = ground_temperature
+                    else:
+                        sky_maps = (sky_maps * horizon[np.newaxis,np.newaxis,:]) +\
+                            (ground_temperature *\
+                            (1 - horizon[np.newaxis,np.newaxis,:]))
         beam_maps = self.get_maps(frequencies, nside, (90., 0.), 0.,\
             **kwargs)[np.newaxis,...]
         # beam_maps shape is (1, nfreq, npix)
