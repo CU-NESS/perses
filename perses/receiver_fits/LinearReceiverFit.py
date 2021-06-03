@@ -22,6 +22,14 @@ class LinearReceiverFit(ReceiverFit):
     be explored by numerically exploring only the gain parameters.
     """
     @property
+    def signal_model_type_string(self):
+        """
+        Property storing the string describing the signal model ('L' for
+        linear).
+        """
+        return 'L'
+    
+    @property
     def signal_model_class(self):
         """
         Property storing the knowledge that signal_model must be a BasisModel

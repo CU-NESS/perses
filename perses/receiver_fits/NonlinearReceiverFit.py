@@ -22,6 +22,14 @@ class NonlinearReceiverFit(ReceiverFit):
     be explored by numerically exploring only the gain parameters.
     """
     @property
+    def signal_model_type_string(self):
+        """
+        Property storing the string describing the signal model ('NL' for
+        nonlinear).
+        """
+        return 'NL'
+    
+    @property
     def signal_model_class(self):
         """
         Property storing the knowledge that signal_model must be a BasisModel
@@ -83,7 +91,7 @@ class NonlinearReceiverFit(ReceiverFit):
         gain_parameter_sample, offset_parameter_sample,
         foreground_parameter_sample, and offset_parameter_sample properties.
         """
-        (thin, samples_per_element) = (100, 100)
+        (thin, samples_per_element) = (10, 10)
         self._gain_parameter_sample = []
         self._offset_parameter_sample = []
         self._foreground_parameter_sample = []

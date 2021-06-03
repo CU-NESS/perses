@@ -45,3 +45,5 @@ from perses.models.SineSquaredSpectralIndexModel import\
     SineSquaredSpectralIndexModel
 from perses.models.PerturbedSineSquaredSpectralIndexModel import\
     PerturbedSineSquaredSpectralIndexModel
+from perses.models.Full21cmModel import Full21cmModel
+

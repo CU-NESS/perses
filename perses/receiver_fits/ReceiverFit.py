@@ -8,10 +8,13 @@ Description: File containing abstract class representing a fit to total power
              receiver gain, receiver offset, beam-weighted foregruond, and
              21-cm signal respectively.
 """
+from __future__ import division
 import os
 import numpy as np
 import matplotlib.pyplot as pl
-from matplotlib.colors import SymLogNorm
+from matplotlib.ticker import NullLocator, NullFormatter, FixedLocator,\
+    FixedFormatter
+from matplotlib.colors import BoundaryNorm, Normalize, SymLogNorm, ListedColormap
 from distpy import triangle_plot, Distribution, GaussianDistribution
 from pylinex import Model, BasisModel, SumModel, ProductModel,\
     MultiConditionalFitModel, ConditionalFitGaussianLoglikelihood, Sampler,\
@@ -539,19 +542,39 @@ class ReceiverFit(object):
             ax = fig.add_subplot(111)
         imshow_kwargs = {'cmap': 'bwr'}
         if normalize_by_variances:
-            imshow_kwargs['vmin'] = -1
-            imshow_kwargs['vmax'] = 1
-        else:
-            imshow_kwargs['norm'] = SymLogNorm(1)
-        imshow_kwargs.update(kwargs)
-        if normalize_by_variances:
+            to_plot = self.full_correlation
             image = ax.imshow(self.full_correlation, **imshow_kwargs)
         else:
             to_plot = self.full_covariance
             if type(correction_factors) is not type(None):
                 to_plot = to_plot / (correction_factors[:,np.newaxis] *\
                     correction_factors[np.newaxis,:])
-            image = ax.imshow(to_plot, **imshow_kwargs)
+        if normalize_by_variances:
+            imshow_kwargs['norm'] = Normalize(vmin=-1, vmax=1)
+        else:
+            max_to_plot = np.max(np.abs(to_plot))
+            #imshow_kwargs['norm'] = SymLogNorm(1, base=10, linscale=0.5,\
+            #    vmin=-max_to_plot, vmax=max_to_plot)
+            max_order_of_magnitude = int(np.ceil(np.log10(max_to_plot)))
+            cmap = pl.get_cmap('coolwarm')
+            cmap_bin_edges_internal =\
+                np.linspace(0, 1, (2 * max_order_of_magnitude) + 1)
+            tick_locations = np.power(10, max_order_of_magnitude) * ((2 *\
+                np.linspace(0, 1, 2 * (max_order_of_magnitude + 1))) - 1)
+            cmap_bin_edges_external = np.concatenate([\
+                -(10 ** np.arange(max_order_of_magnitude + 1)[-1::-1]),\
+                10 ** np.arange(max_order_of_magnitude + 1)])
+            cmap_bin_edges_strings = ['$-10^{{{:d}}}$'.format(index)\
+                for index in np.arange(max_order_of_magnitude + 1)[-1::-1]] +\
+                ['$10^{{{:d}}}$'.format(index)\
+                for index in range(max_order_of_magnitude + 1)]
+            cmap = ListedColormap([cmap(point)\
+                for point in cmap_bin_edges_internal])
+            imshow_kwargs['norm'] =\
+                BoundaryNorm(cmap_bin_edges_external, cmap.N)
+            imshow_kwargs['cmap'] = cmap
+        imshow_kwargs.update(kwargs)
+        image = ax.imshow(to_plot, **imshow_kwargs)
         cbar = pl.colorbar(image)
         limits = [-0.5, self.full_model.num_parameters - 0.5]
         for number in np.cumsum([self.gain_model.num_parameters,\
@@ -559,8 +582,30 @@ class ReceiverFit(object):
             self.foreground_model.num_parameters]):
             ax.plot(limits, [number - 0.5] * 2, color='k', linestyle='-')
             ax.plot([number - 0.5] * 2, limits, color='k', linestyle='-')
+        ticks = []
+        current_tick = (self.gain_model.num_parameters - 1) / 2
+        ticks.append(current_tick)
+        current_tick += (self.gain_model.num_parameters +\
+            self.signal_model.num_parameters) / 2
+        ticks.append(current_tick)
+        current_tick += (self.signal_model.num_parameters +\
+            self.foreground_model.num_parameters) / 2
+        ticks.append(current_tick)
+        current_tick += (self.foreground_model.num_parameters +\
+            self.offset_model.num_parameters) / 2
+        ticks.append(current_tick)
+        ticklabels = ['${\\bf\zeta}_G$',\
+            '${{\\bf\zeta}}_s^{{{!s}}}$'.format(\
+            self.signal_model_type_string), '${\\bf\zeta}_f$',\
+            '${\\bf\zeta}_o$']
         ax.set_xlim(limits)
         ax.set_ylim(limits[-1::-1])
+        ax.xaxis.set_major_locator(FixedLocator(ticks))
+        ax.xaxis.set_major_formatter(FixedFormatter(ticklabels))
+        ax.xaxis.set_minor_locator(NullLocator())
+        ax.yaxis.set_major_locator(FixedLocator(ticks))
+        ax.yaxis.set_major_formatter(FixedFormatter(ticklabels))
+        ax.yaxis.set_minor_locator(NullLocator())
         ax.tick_params(labelsize=fontsize, width=2.5, length=7.5,\
             which='major')
         ax.tick_params(labelsize=fontsize, width=1.5, length=4.5,\
@@ -569,11 +614,14 @@ class ReceiverFit(object):
             which='major')
         cbar.ax.tick_params(labelsize=fontsize, width=1.5, length=4.5,\
             which='minor')
+        if not normalize_by_variances:
+            cbar.ax.yaxis.set_major_locator(FixedLocator(tick_locations))
+            cbar.ax.yaxis.set_major_formatter(FixedFormatter(cmap_bin_edges_strings))
         if type(title) is type(None):
             if normalize_by_variances:
                 title = 'Parameter correlation'
             else:
-                title = 'Parameter covariance'
+                title = 'Scaled parameter covariance'
         ax.set_title(title, size=fontsize)
         if show:
             pl.show()
@@ -682,7 +730,7 @@ class ReceiverFit(object):
         return self._signal_curve_sample
     
     def plot_gain_curve_sample(self, input_curve=None, x_values=None,\
-        further_thin=100, alpha=0.05, xlabel='$x$', ylabel='$G$',\
+        max_num_curves=100, alpha=0.05, xlabel='$x$', ylabel='$G$',\
         scale_factor=1, residual_ylabel='$G-<G>$ [ppm]',\
         residual_scale_factor=1e6, title='Gain curve sample', fig=None,\
         fontsize=24, show=False):
@@ -692,8 +740,7 @@ class ReceiverFit(object):
         input_curve: the input curve to plot alongside the posterior
         x_values: values to plot on the x-axis, defaults to integers starting
                   at 0
-        further_thin: thinning factor by which parameter sample is reduced
-                      before being evaluated
+        max_num_curves: the maximum number of curves to include, default 100
         alpha: the opacity of the curves
         xlabel: the label corresponding to the x values
         ylabel: the label corresponding to the y values
@@ -715,7 +762,17 @@ class ReceiverFit(object):
             fig = pl.figure(figsize=(16,18))
         if type(x_values) is type(None):
             x_values = np.arange(self.gain_curve_sample.shape[-1])
+        if len(self.gain_curve_sample) <= max_num_curves:
+            further_thin = 1
+            to_cut = 0
+        else:
+            further_thin =\
+                (len(self.gain_curve_sample) - 1) // (max_num_curves - 1)
+            to_cut = ((len(self.gain_curve_sample) - 1) // further_thin) -\
+                (max_num_curves - 1)
         to_plot = self.gain_curve_sample[::further_thin,:]
+        if to_cut != 0:
+            to_plot = to_plot[:-to_cut,:]
         ax = fig.add_subplot(211)
         ax.plot(x_values, scale_factor * to_plot.T, color='k', alpha=alpha)
         if type(input_curve) is not type(None):
@@ -747,7 +804,7 @@ class ReceiverFit(object):
             return fig
     
     def plot_offset_curve_sample(self, input_curve=None, x_values=None,\
-        further_thin=100, alpha=0.05, xlabel='$x$', ylabel='$O$ [K]',\
+        max_num_curves=100, alpha=0.05, xlabel='$x$', ylabel='$O$ [K]',\
         scale_factor=1, residual_ylabel='$O-<O>$ [mK]',\
         residual_scale_factor=1e3, title='Offset curve sample', fig=None,\
         fontsize=24, show=False):
@@ -757,8 +814,7 @@ class ReceiverFit(object):
         input_curve: the input curve to plot alongside the posterior
         x_values: values to plot on the x-axis, defaults to integers starting
                   at 0
-        further_thin: thinning factor by which parameter sample is reduced
-                      before being evaluated
+        max_num_curves: the maximum number of curves to include, default 100
         alpha: the opacity of the curves
         xlabel: the label corresponding to the x values
         ylabel: the label corresponding to the y values
@@ -780,7 +836,17 @@ class ReceiverFit(object):
             fig = pl.figure(figsize=(16,18))
         if type(x_values) is type(None):
             x_values = np.arange(self.offset_curve_sample.shape[-1])
+        if len(self.offset_curve_sample) <= max_num_curves:
+            further_thin = 1
+            to_cut = 0
+        else:
+            further_thin =\
+                (len(self.offset_curve_sample) - 1) // (max_num_curves - 1)
+            to_cut = ((len(self.offset_curve_sample) - 1) // further_thin) -\
+                (max_num_curves - 1)
         to_plot = self.offset_curve_sample[::further_thin,:]
+        if to_cut != 0:
+            to_plot = to_plot[:-to_cut,:]
         ax = fig.add_subplot(211)
         ax.plot(x_values, scale_factor * to_plot.T, color='k', alpha=alpha)
         if type(input_curve) is not type(None):
@@ -812,9 +878,10 @@ class ReceiverFit(object):
             return fig
     
     def plot_foreground_curve_sample(self, input_curve=None, x_values=None,\
-        further_thin=100, alpha=0.05, xlabel='$x$', ylabel='$T_b$ [K]',\
+        max_num_curves=100, alpha=0.05, xlabel='$x$', ylabel='$T_b$ [K]',\
         scale_factor=1, residual_ylabel='$T_b-<T_b>$ [mK]',\
-        residual_scale_factor=1e3, title='Foreground curve sample', fig=None,\
+        residual_scale_factor=1e3, title='Foreground curve sample',\
+        breakpoints=None, xtick_locator=None, xtick_formatter=None, fig=None,\
         fontsize=24, show=False):
         """
         Plots a sample of foreground curves.
@@ -822,8 +889,7 @@ class ReceiverFit(object):
         input_curve: the input curve to plot alongside the posterior
         x_values: values to plot on the x-axis, defaults to integers starting
                   at 0
-        further_thin: thinning factor by which parameter sample is reduced
-                      before being evaluated
+        max_num_curves: the maximum number of curves to include, default 100
         alpha: the opacity of the curves
         xlabel: the label corresponding to the x values
         ylabel: the label corresponding to the y values
@@ -834,6 +900,12 @@ class ReceiverFit(object):
                                plotting in bottom panel (should be reflected in
                                residual_ylabel)
         title: title to place at top of figure
+        breakpoints: either a list of indices describing segments to break the
+                     curves into or None if it should be just one segment. Each
+                     element should be the first index not in the segment
+                     corresponding to the list element
+        xtick_locator: Locator object determining where xticks should be placed
+        xtick_formtter: Formatter object determining the labels on the xticks
         fig: the matplotlib Figure object to plot on if it already exists
         fontsize: size of fonts for axis and tick labels
         show: if True, matplotlib.pyplot.show is called before this method
@@ -845,26 +917,106 @@ class ReceiverFit(object):
             fig = pl.figure(figsize=(16,18))
         if type(x_values) is type(None):
             x_values = np.arange(self.foreground_curve_sample.shape[-1])
+        if len(self.foreground_curve_sample) <= max_num_curves:
+            further_thin = 1
+            to_cut = 0
+        else:
+            further_thin =\
+                (len(self.foreground_curve_sample) - 1) // (max_num_curves - 1)
+            to_cut =\
+                ((len(self.foreground_curve_sample) - 1) // further_thin) -\
+                (max_num_curves - 1)
         to_plot = self.foreground_curve_sample[::further_thin,:]
+        if to_cut != 0:
+            to_plot = to_plot[:-to_cut,:]
         ax = fig.add_subplot(211)
-        ax.plot(x_values, scale_factor * to_plot.T, color='k', alpha=alpha)
-        if type(input_curve) is not type(None):
-            ax.plot(x_values, scale_factor * input_curve, color='r', alpha=1)
+        if type(breakpoints) is type(None):
+            ax.plot(x_values, scale_factor * to_plot.T, color='k',\
+                linestyle='-', alpha=alpha)
+            if type(input_curve) is not type(None):
+                ax.plot(x_values, scale_factor * input_curve, color='r',\
+                    linestyle='-', alpha=1)
+            ylim = ax.get_ylim()
+        else:
+            current_index = 0
+            for breakpoint in breakpoints:
+                this_slice = slice(current_index, breakpoint)
+                ax.plot(x_values[this_slice],\
+                    scale_factor * to_plot[:,this_slice].T, color='k',\
+                    linestyle='-', alpha=alpha)
+                if type(input_curve) is not type(None):
+                    ax.plot(x_values[this_slice],\
+                        scale_factor * input_curve[this_slice], color='r',\
+                        linestyle='-', alpha=1)
+                current_index = breakpoint
+            ax.plot(x_values[current_index:],\
+                scale_factor * to_plot[:,current_index:].T, color='k',\
+                linestyle='-', alpha=alpha)
+            if type(input_curve) is not type(None):
+                ax.plot(x_values[current_index:],\
+                    scale_factor * input_curve[current_index:], color='r',\
+                    linestyle='-', alpha=1)
+            ylim = ax.get_ylim()
+            current_index = 0
+            for breakpoint in breakpoints:
+                this_slice = slice(current_index, breakpoint)
+                ax.plot([breakpoint - 0.5] * 2, ylim, color='k',\
+                    linestyle='--', alpha=1)
+                current_index = breakpoint
         ax.set_xlim((x_values[0], x_values[-1]))
+        ax.set_ylim(ylim)
         ax.set_ylabel(ylabel, size=fontsize)
         ax.set_title(title, size=fontsize)
+        if type(xtick_locator) is not type(None):
+            ax.xaxis.set_major_locator(xtick_locator)
+        if type(xtick_formatter) is not type(None):
+            ax.xaxis.set_major_formatter(xtick_formatter)
         ax.tick_params(labelsize=fontsize, width=2.5, length=7.5,\
             which='major')
         ax.tick_params(labelsize=fontsize, width=1.5, length=4.5,\
             which='minor')
         ax = fig.add_subplot(212)
         mean_to_plot = np.mean(to_plot, axis=0)
-        ax.plot(x_values, residual_scale_factor *\
-            (to_plot - mean_to_plot[np.newaxis,:]).T, color='k', alpha=alpha)
-        if type(input_curve) is not type(None):
+        if type(breakpoints) is type(None):
             ax.plot(x_values, residual_scale_factor *\
-                (input_curve - mean_to_plot), color='r', alpha=1)
+                (to_plot - mean_to_plot[np.newaxis,:]).T, color='k',\
+                alpha=alpha)
+            if type(input_curve) is not type(None):
+                ax.plot(x_values, residual_scale_factor *\
+                    (input_curve - mean_to_plot), color='r', alpha=1)
+            ylim = ax.get_ylim()
+        else:
+            current_index = 0
+            for breakpoint in breakpoints:
+                this_slice = slice(current_index, breakpoint)
+                ax.plot(x_values[this_slice], residual_scale_factor *\
+                    (to_plot - mean_to_plot[np.newaxis,:])[:,this_slice].T,\
+                    color='k', alpha=alpha, linestyle='-')
+                if type(input_curve) is not type(None):
+                    ax.plot(x_values[this_slice], residual_scale_factor *\
+                        (input_curve - mean_to_plot)[this_slice], color='r',\
+                        alpha=1, linestyle='-')
+                current_index = breakpoint
+            ax.plot(x_values[current_index:], residual_scale_factor *\
+                (to_plot - mean_to_plot[np.newaxis,:])[:,current_index:].T,\
+                color='k', alpha=alpha, linestyle='-')
+            if type(input_curve) is not type(None):
+                ax.plot(x_values[current_index:], residual_scale_factor *\
+                    (input_curve - mean_to_plot)[current_index:], color='r',\
+                    alpha=1, linestyle='-')
+            ylim = ax.get_ylim()
+            current_index = 0
+            for breakpoint in breakpoints:
+                this_slice = slice(current_index, breakpoint)
+                ax.plot([breakpoint - 0.5] * 2, ylim, color='k',\
+                    linestyle='--', alpha=1)
+                current_index = breakpoint
         ax.set_xlim((x_values[0], x_values[-1]))
+        ax.set_ylim(ylim)
+        if type(xtick_locator) is not type(None):
+            ax.xaxis.set_major_locator(xtick_locator)
+        if type(xtick_formatter) is not type(None):
+            ax.xaxis.set_major_formatter(xtick_formatter)
         ax.set_xlabel(xlabel, size=fontsize)
         ax.set_ylabel(residual_ylabel, size=fontsize)
         ax.tick_params(labelsize=fontsize, width=2.5, length=7.5,\
@@ -877,8 +1029,9 @@ class ReceiverFit(object):
             return fig
     
     def plot_signal_curve_sample(self, input_curve=None, x_values=None,\
-        further_thin=100, alpha=0.05, xlabel='$x$', ylabel='$\delta T_b$ [mK]',\
-        scale_factor=1e3, residual_ylabel='$\delta T_b-<\delta T_b>$ [mK]',\
+        max_num_curves=100, alpha=0.05, xlabel='$x$',\
+        ylabel='$\delta T_b$ [mK]', scale_factor=1e3,\
+        residual_ylabel='$\delta T_b-<\delta T_b>$ [mK]',\
         residual_scale_factor=1e3, title='Signal curve sample', fig=None,\
         fontsize=24, show=False):
         """
@@ -887,8 +1040,7 @@ class ReceiverFit(object):
         input_curve: the input curve to plot alongside the posterior
         x_values: values to plot on the x-axis, defaults to integers starting
                   at 0
-        further_thin: thinning factor by which parameter sample is reduced
-                      before being evaluated
+        max_num_curves: the maximum number of curves to include, default 100
         alpha: the opacity of the curves
         xlabel: the label corresponding to the x values
         ylabel: the label corresponding to the y values
@@ -910,7 +1062,17 @@ class ReceiverFit(object):
             fig = pl.figure(figsize=(16,18))
         if type(x_values) is type(None):
             x_values = np.arange(self.signal_curve_sample.shape[-1])
+        if len(self.signal_curve_sample) <= max_num_curves:
+            further_thin = 1
+            to_cut = 0
+        else:
+            further_thin =\
+                (len(self.signal_curve_sample) - 1) // (max_num_curves - 1)
+            to_cut = ((len(self.signal_curve_sample) - 1) // further_thin) -\
+                (max_num_curves - 1)
         to_plot = self.signal_curve_sample[::further_thin,:]
+        if to_cut != 0:
+            to_plot = to_plot[:-to_cut,:]
         ax = fig.add_subplot(211)
         ax.plot(x_values, scale_factor * to_plot.T, color='k', alpha=alpha)
         if type(input_curve) is not type(None):
@@ -1115,6 +1277,14 @@ class ReceiverFit(object):
     def marginalized_priors(self):
         """
         Property storing the priors on the marginalized components of this fit.
+        """
+        raise cannot_instantiate_error
+    
+    @property
+    def signal_model_type_string(self):
+        """
+        Property storing the string describing the signal model (either 'L' or
+        'NL').
         """
         raise cannot_instantiate_error
 
