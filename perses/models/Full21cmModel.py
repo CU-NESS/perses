@@ -2,7 +2,7 @@
 Module containing a class representing a full model of the data of 21-cm
 measurements made with an arbitrary number of receiver channels. Calling it
 produces an output that is equivalent to an array of shape
-\\(N_t,N_\\nu,N_c^2\\) that has been flattened, where \\(N_t\\) is the number
+\\((N_t,N_\\nu,N_c^2)\\) that has been flattened, where \\(N_t\\) is the number
 of time bins, \\(N_\\nu\\) is the number of frequency channels, and \\(N_c\\)
 is the number of receiver channels. The last axis corresponds to the number of
 real correlation quantities that can be formed from pairwise products of the
@@ -30,7 +30,7 @@ class Full21cmModel(LoadableModel):
     """
     Class representing a full model of the data of 21-cm measurements made with
     an arbitrary number of receiver channels. Calling it produces an output
-    that is equivalent to an array of shape \\(N_t,N_\\nu,N_c^2\\) that has
+    that is equivalent to an array of shape \\((N_t,N_\\nu,N_c^2)\\) that has
     been flattened, where \\(N_t\\) is the number of time bins, \\(N_\\nu\\) is
     the number of frequency channels, and \\(N_c\\) is the number of receiver
     channels. The last axis corresponds to the number of real correlation
@@ -58,13 +58,13 @@ class Full21cmModel(LoadableModel):
         Parameters
         ----------
         gain_models : sequence
-            length-\\(N_c\\) list of complex voltage gain
+            length \\(N_c\\) list of complex voltage gain
             `pylinex.model.Model.Model` objects that each return 1D
             `numpy.ndarray` objects corresponding to flattened arrays of shape
             \\((N_t,N_{\\nu},2)\\) (the last axis of this shape corresponds to
             the real and imaginary components of the gain)
         offset_models : sequence
-            length-\\(N_c\\) list of noise temperature
+            length \\(N_c\\) list of noise temperature
             `pylinex.model.Model.Model` objects that each return 1D
             `numpy.ndarray` objects corresponding to flattened arrays of shape
             \\((N_t,N_{\\nu})\\)
@@ -315,6 +315,7 @@ class Full21cmModel(LoadableModel):
                 for parameter in self.foreground_model.parameters])
             parameters.extend(['signal_{!s}'.format(parameter)\
                 for parameter in self.signal_model.parameters])
+            self._parameters = parameters
         return self._parameters
     
     def _make_parameter_slices(self):
@@ -568,4 +569,28 @@ class Full21cmModel(LoadableModel):
                 group['offsets/offset_{:d}'.format(index)]))
         return Full21cmModel(gain_models, offset_models, foreground_model,\
             signal_model)
+    
+    @property
+    def bounds(self):
+        """
+        The bounds of the parameters, taken from the bounds of the submodels.
+        """
+        if not hasattr(self, '_bounds'):
+            bounds = {}
+            for (igain, gain_model) in enumerate(self.gain_models):
+                for parameter in gain_model.parameters:
+                    bounds['gain{0:d}_{1!s}'.format(igain, parameter)] =\
+                        gain_model.bounds[parameter]
+            for (ioffset, offset_model) in enumerate(self.offset_models):
+                for parameter in offset_model.parameters:
+                    bounds['offset{0:d}_{1!s}'.format(ioffset, parameter)] =\
+                        offset_model.bounds[parameter]
+            for parameter in self.foreground_model.parameters:
+                bounds['foreground_{!s}'.format(parameter)] =\
+                    self.foreground_model.bounds[parameter]
+            for parameter in self.signal_model.parameters:
+                bounds['signal_{!s}'.format(parameter)] =\
+                    self.signal_model.bounds[parameter]
+            self._bounds = bounds
+        return self._bounds
 
