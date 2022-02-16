@@ -1,86 +1,76 @@
 ======
 perses
 ======
-The Pre-EoR Signal Extraction Software (*perses*) package was designed to fit global 21-cm datasets, including various foregrounds, parameters of the instrument, and the cosmological signal itself.
+The Pre-EoR Signal Extraction Software (perses) package was designed to fit global 21-cm datasets, including various foregrounds, parameters of the instrument, and the cosmological signal itself.
 
 A few papers on how it works:
 
-- Original implementation: `Harker et al. (2012) <http://adsabs.harvard.edu/abs/2012MNRAS.419.1070H>`_.
-- *emcee* implementation: `Harker et al. (2015) <http://adsabs.harvard.edu/abs/2015arXiv151000271H>`_.
+- Original implementation: Harker et al. (2012) http://adsabs.harvard.edu/abs/2012MNRAS.419.1070H
+- emcee implementation: Harker et al. (2015) http://adsabs.harvard.edu/abs/2015arXiv151000271H
 
-Be warned: this code is still under active development -- use at your own
-risk! Correctness of results is not guaranteed.
+Be warned: this code is still under active development -- use at your own risk! Correctness of results is not guaranteed.
 
 Getting started
 ---------------------
-To clone a copy and install: ::
+To clone a copy and install:
 
-    hg clone https://bitbucket.org/ktausch/perses-dev perses
+    hg clone https://github.com/CU-NESS/perses.git
     cd perses
     python setup.py develop
 
-To download a few common sky maps: ::
+To download a few common sky maps:
 
     python remote.py
 
-It would be in your best interest to set an environment variable which points
-to the *perses* install directory, e.g. (in bash) ::
+It would be in your best interest to set an environment variable which points to the perses install directory, e.g. (in bash):
 
     export PERSES=/users/<yourusername>/perses
 
-*perses* will look in ``$PERSES/input`` for lookup tables of various kinds, e.g., instrumental response, beam pattern, foreground models, etc.
+perses will look in $PERSES/input for lookup tables of various kinds, e.g., instrumental response, beam pattern, foreground models, etc.
+
+To generate HTML documentation pages for the code:
+
+    cd docs
+    ./make_docs.sh
 
 Dependencies
 --------------------
 You will need:
 
-- `numpy <http://www.numpy.org/>`_
-- `scipy <http://www.scipy.org/>`_
-- `matplotlib <http://matplotlib.org/>`_
-- `ares-dev <https://bitbucket.org/mirochaj/ares-dev>`_
-- `emcee <http://dan.iel.fm/emcee/current/>`_
+- [numpy](http://www.numpy.org/)
+- [scipy](http://www.scipy.org/)
+- [matplotlib](http://matplotlib.org/)
+- [ares](https://github.com/mirochaj/ares.git)
+- [emcee](http://dan.iel.fm/emcee/current/)
 
 and probably (but optionally), 
 
-- `h5py <http://www.h5py.org/>`_
-- `healpy <https://healpy.readthedocs.org/en/latest/>`_
-- `mpi4py <http://mpi4py.scipy.org>`_
-- `astropy <http://www.astropy.org/>`_
-- `ephem <http://rhodesmill.org/pyephem/>`_
-- `python-progressbar <https://code.google.com/p/python-progressbar/>`_
-- `setuptools <https://pypi.python.org/pypi/setuptools>`_
-- `multiprocess <https://pypi.python.org/pypi/multiprocess>`_
+- [h5py](http://www.h5py.org/)
+- [healpy](https://healpy.readthedocs.org/en/latest/)
+- [mpi4py](http://mpi4py.scipy.org)
+- [astropy](http://www.astropy.org/)
+- [ephem](http://rhodesmill.org/pyephem/)
+- [python-progressbar](https://code.google.com/p/python-progressbar/)
+- [setuptools](https://pypi.python.org/pypi/setuptools)
+- [multiprocess](https://pypi.python.org/pypi/multiprocess)
 
 Quick Example
 --------------
 To make sure everything is working, read in the global sky model and plot it at 80 MHz:
 
-::
-
     import perses
-
-    mw = perses.foregrounds.Galaxy()
-    mw.PlotGSM(80.)
+    gal = perses.foregrounds.HaslamGalaxy()
+    gal.plot(80.)
+    plt.show()
 
 See the documentation for more examples.
 
 Documentation
 --------------
-To generate the documentation locally, ::
+To generate the documentation locally,
 
-    cd $PERSES/doc
-    make html
-    open _build/html/index.html
-    
-This will open the documentation in a browser. For the above to work, you'll
-need `sphinx <http://sphinx-doc.org/contents.html>`_, which can be installed
-via pip: ::
-
-    pip install sphinx
-
-This depends on `numpydoc <https://github.com/numpy/numpydoc>`_, which can also be installed via pip: ::
-
-    pip install numpydoc
+    cd $PERSES/docs
+    ./make_docs.sh
 
 Contributors
 ------------
@@ -89,6 +79,9 @@ Primary developer: Keith Tauscher
 
 Additional contributions / corrections / suggestions from:
     
-- `Geraint Harker <http://zuserver2.star.ucl.ac.uk/~harkerg/>`_     
-- `Jordan Mirocha <https://sites.google.com/site/jordanmirocha/home>`_
+- Geraint Harker http://zuserver2.star.ucl.ac.uk/~harkerg/  
+- Jordan Mirocha https://sites.google.com/site/jordanmirocha/home
 - Abhi Datta
+- Neil Bassett
+- David Rapetti
+- Joshua Hibbard
