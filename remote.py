@@ -27,6 +27,9 @@ aux_data = \
 
 if not os.path.exists('input'):
     os.mkdir('input')
+    os.mkdir('input/convolved')
+    os.mkdir('input/cryo_convolved')
+    os.mkdir('input/patchy')
 
 os.chdir('input')
 
