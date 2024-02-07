@@ -3,6 +3,7 @@ import gc
 import time
 import numpy as np
 from scipy.special import sph_harm
+from scipy.interpolate import interp1d
 from ..util import int_types, real_numerical_types, sequence_types
 
 try:
@@ -22,7 +23,79 @@ class DummyPool():
         return map(func, arr)
     def close(self):
         pass
+    
+def flip_grids_to_left_handed_coordinates(grids, num_thetas=180):
+    """
+    Function which takes grids in spherical coordinates and flips
+    them across the phi=0-180 line (North-South line in left-handed
+    coordinates).
+    
+    grids: 3D numpy arrays of shape [num_grids, num_thetas, num_phis]
+    	   where num_grids is typically the number of frequencies
+    	   of the grids. Note that only num_phis = 361 is currently
+    	   supported.
+    num_thetas: the number of thetas in each grid.
+    
+    returns: numpy arrays of same shape as grids.shape, but with the 
+             values in the Eastern and Western regions mirrored.
+    """
+    num_phis = 361
+    east_phis = list(np.arange(1,180))
+    west_phis = list(np.arange(181,360))
+    num_grids = grids.shape[0]
+    flipped_grids = np.zeros([num_grids,num_thetas,num_phis])
+    for igrid in range(num_grids):
+        for itheta in range(num_thetas):
 
+            grid_at_one_theta = grids[igrid,itheta,:]
+
+            east_grid_values = grid_at_one_theta[east_phis][-1::-1]
+            west_grid_values = grid_at_one_theta[west_phis][-1::-1]
+
+            flipped_grids[igrid,itheta,east_phis] = west_grid_values
+            flipped_grids[igrid,itheta,west_phis] = east_grid_values
+
+    return flipped_grids
+    
+def generate_beam_frame_horizon_map_from_grid(horizon_thetas,\
+    horizon_phis, nside):
+    """
+    Function which takes the horizon profile (horizon_thetas)
+    in degrees and horizon_phis in degrees and produces a 
+    healpy horizon map at the given nside in a left-handed
+    coordinate system. This means that North is at (0,0)
+    and East is at (-90,0) in the Mollview projection. Note
+    that this is the correct coordinate system for altitude/azimuth
+    frame measurements.
+    
+    horizon_thetas: the horizon profile (altitude) in degrees, given
+    				as a 1D grid (polar coordinates) of length 361.
+    horizon_phis: the horizon phis (azimuth) in degrees corresponding
+    			  to the given horizon_thetas. Should be a 1D grid
+    			  of length 361, such as that given by np.linspace(0,360,361).
+    nside: the nside parameter determining the resolution of the final
+    	   horizon healpy map.
+    	   
+    returns: a healpy map of the horizon at the resolution of nside in a left-handed
+    		 coordinate system.
+    """
+    (thetas_2048, phis_2048) =\
+        hp.pixelfunc.pix2ang(2048, \
+        ipix=np.arange(hp.pixelfunc.nside2npix(2048))) #in radians
+        
+    horizon_thetas = \
+    	flip_grids_to_left_handed_coordinates(horizon_thetas[np.newaxis,np.newaxis,:],\
+    	num_thetas=1)
+    
+    lh_horizon_interp = \
+    	interp1d(horizon_phis, horizon_thetas, kind='cubic')
+    lh_horizon_2048 = (thetas_2048*(180./np.pi) < \
+    	(90. - lh_horizon_interp(phis_2048*(180./np.pi))))
+    lh_attenuated_horizon = \
+    	hp.pixelfunc.ud_grade(lh_horizon_2048.astype(float), nside)
+    	
+    return lh_attenuated_horizon
+			
 def stokes_beams_from_Jones_matrix(JtX, JtY, JpX, JpY):
     all_X_mod_squared = mod_squared(JtX) + mod_squared(JpX)
     all_Y_mod_squared = mod_squared(JtY) + mod_squared(JpY)
@@ -683,8 +756,8 @@ def maps_from_grids(grid_data, nside, theta_axis=-2, phi_axis=-1, normed=True):
     ndim = grid_data.ndim
     (theta_axis, phi_axis) = (theta_axis % ndim, phi_axis % ndim)
     (nthetas, nphis) = grid_data.shape[theta_axis], grid_data.shape[phi_axis]
-    theta_res = int(180. // (nthetas - 1))
-    phi_res = int(360. // nphis)
+    theta_res = 180. / (nthetas - 1)
+    phi_res = 360. / nphis
     npix = hp.pixelfunc.nside2npix(nside)
     smaller_axis = min(theta_axis, phi_axis)
     larger_axis = max(theta_axis, phi_axis)

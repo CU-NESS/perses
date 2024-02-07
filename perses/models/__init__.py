@@ -20,6 +20,7 @@ from perses.models.LRCResonanceModel import LRCResonanceModel
 from perses.models.Tanh21cmModel import Tanh21cmModel
 from perses.models.FourParameterModel import FourParameterModel
 from perses.models.AresSignalModel import AresSignalModel, ares_signal
+from perses.models.AresSignalModelWithUVLF import AresSignalModelWithUVLF, ares_signal
 from perses.models.TurningPointModel import TurningPointModel
 from perses.models.DarkAgesCoolingModel import DarkAgesCoolingModel
 from perses.models.DarkAgesGasTemperatureModel import\
@@ -45,5 +46,12 @@ from perses.models.SineSquaredSpectralIndexModel import\
     SineSquaredSpectralIndexModel
 from perses.models.PerturbedSineSquaredSpectralIndexModel import\
     PerturbedSineSquaredSpectralIndexModel
+from perses.models.TunableTurningPointModel import TunableTurningPointModel
+from perses.models.PatchyForegroundModel import PatchyForegroundModel
+from perses.models.PatchyBeamModel import PatchyBeamModel
+from perses.models.ConvolvedForegroundModel import ConvolvedForegroundModel
+from perses.models.GlobalemuSignalModel import GlobalemuSignalModel
 from perses.models.Full21cmModel import Full21cmModel
+from perses.models.CryoChromConModel import CryoChromConModel
+from perses.models.CryofunkBeamModelAboveHorizon import CryofunkBeamModelAboveHorizon
 

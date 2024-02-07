@@ -19,4 +19,7 @@ from perses.foregrounds.HaslamHarmonicPowerLawGalaxy import\
 from perses.foregrounds.GuzmanHarmonicPowerLawGalaxy import\
     GuzmanHarmonicPowerLawGalaxy
 from perses.foregrounds.GSMGalaxy import GSMGalaxy
+from perses.foregrounds.ExtendedParameterSpatialPowerLawGalaxy import \
+    ExtendedParameterSpatialPowerLawGalaxy
+from perses.foregrounds.IntrinsicForeground import IntrinsicForeground
 
