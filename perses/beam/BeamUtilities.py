@@ -86,6 +86,8 @@ def generate_beam_frame_horizon_map_from_grid(horizon_thetas,\
     horizon_thetas = \
     	flip_grids_to_left_handed_coordinates(horizon_thetas[np.newaxis,np.newaxis,:],\
     	num_thetas=1)
+    	
+    horizon_thetas = horizon_thetas[0,0,:]
     
     lh_horizon_interp = \
     	interp1d(horizon_phis, horizon_thetas, kind='cubic')
