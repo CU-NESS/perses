@@ -49,8 +49,9 @@ from perses.models.PerturbedSineSquaredSpectralIndexModel import\
 from perses.models.TunableTurningPointModel import TunableTurningPointModel
 from perses.models.PatchyForegroundModel import PatchyForegroundModel
 from perses.models.ConvolvedForegroundModel import ConvolvedForegroundModel
-from perses.models.GlobalemuSignalModel import GlobalemuSignalModel
 from perses.models.Full21cmModel import Full21cmModel
 from perses.models.CryoChromConModel import CryoChromConModel
 from perses.models.CryofunkBeamModelAboveHorizon import CryofunkBeamModelAboveHorizon
+try:
+	from perses.models.GlobalemuSignalModel import GlobalemuSignalModel
 
