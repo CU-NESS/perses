@@ -19,9 +19,6 @@ aux_data = \
  #   None],
  'haslam': ['http://lambda.gsfc.nasa.gov/data/foregrounds/haslam',\
     'lambda_haslam408_dsds.fits',\
-    None],
- 'guzman': ['https://bitbucket.org/ktausch/perses-dev/downloads',\
-    'extrapolated_spectral_indices.pkl',\
     None]
 }
 
