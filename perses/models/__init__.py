@@ -53,5 +53,6 @@ from perses.models.Full21cmModel import Full21cmModel
 from perses.models.CryoChromConModel import CryoChromConModel
 from perses.models.CryofunkBeamModelAboveHorizon import CryofunkBeamModelAboveHorizon
 try:
-	from perses.models.GlobalemuSignalModel import GlobalemuSignalModel
-
+    from perses.models.GlobalemuSignalModel import GlobalemuSignalModel
+except:
+    print('Install globalemu to use the GlobalemuSignalModel!')
