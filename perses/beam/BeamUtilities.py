@@ -43,7 +43,7 @@ def flip_grids_to_left_handed_coordinates(grids, num_thetas=181):
     east_phis = list(np.arange(1,180))
     west_phis = list(np.arange(181,360))
     num_grids = grids.shape[0]
-    #flipped_grids = np.zeros([num_grids,num_thetas,num_phis])
+    flipped_grids = np.copy(grids)
     for igrid in range(num_grids):
         for itheta in range(num_thetas):
 
@@ -52,12 +52,10 @@ def flip_grids_to_left_handed_coordinates(grids, num_thetas=181):
             east_grid_values = grid_at_one_theta[east_phis][-1::-1]
             west_grid_values = grid_at_one_theta[west_phis][-1::-1]
 
-            #flipped_grids[igrid,itheta,east_phis] = west_grid_values
-            #flipped_grids[igrid,itheta,west_phis] = east_grid_values
-            grids[igrid,itheta,east_phis] = west_grid_values
-            grids[igrid,itheta,west_phis] = east_grid_values
-
-    return grids
+            flipped_grids[igrid,itheta,east_phis] = west_grid_values
+            flipped_grids[igrid,itheta,west_phis] = east_grid_values
+            
+    return flipped_grids
     
 def generate_beam_frame_horizon_map_from_grid(horizon_thetas,\
     horizon_phis, nside):
