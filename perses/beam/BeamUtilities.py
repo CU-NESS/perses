@@ -57,7 +57,7 @@ def flip_grids_to_left_handed_coordinates(grids, num_thetas=181):
             grids[igrid,itheta,east_phis] = west_grid_values
             grids[igrid,itheta,west_phis] = east_grid_values
 
-    return flipped_grids
+    return grids
     
 def generate_beam_frame_horizon_map_from_grid(horizon_thetas,\
     horizon_phis, nside):
