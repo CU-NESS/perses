@@ -132,8 +132,9 @@ class EDGESObservatory(GroundObservatory):
     def __init__(self, angle=-6.):
         """
         Initializes this GroundObservatory with EDGES quantities.
+        Values from Steven Murray (private correspondence).
         """
-        self.longitude = (116. + (39. / 60) + (32. / 3600))
-        self.latitude = (-26. - (42. / 60) - (15. /3600.))
+        self.longitude = 116.605528
+        self.latitude = -26.714778
         self.angle = angle
 

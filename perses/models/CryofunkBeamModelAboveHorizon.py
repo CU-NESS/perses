@@ -172,9 +172,14 @@ class CryofunkBeamModelAboveHorizon(Model):
 				for dielectric_key in self.hyper_parameter_array:
 					dielectric_by_frequency = []
 					for frequency in self.frequencies:
-						dielectric_by_frequency.append(\
-							kfile[str(dielectric_key)]['coefficients']['Freq_'+\
-							str(int(frequency))][()])
+						try:
+							dielectric_by_frequency.append(\
+								kfile[str(dielectric_key)]['coefficients']['Freq_'+\
+								str(int(frequency))][()])
+						except:
+							dielectric_by_frequency.append(\
+								kfile[str(dielectric_key)]['coefficients']['Freq_'+\
+								str(frequency)][()])
 					cryo_coefficients.append(dielectric_by_frequency)
 			self._cryo_coefficients = np.array(cryo_coefficients)[:,:,:self.coefficient_order]
 			print('Cryo coefficients have shape ', self._cryo_coefficients.shape)

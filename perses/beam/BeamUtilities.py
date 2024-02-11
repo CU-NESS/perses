@@ -24,7 +24,7 @@ class DummyPool():
     def close(self):
         pass
     
-def flip_grids_to_left_handed_coordinates(grids, num_thetas=180):
+def flip_grids_to_left_handed_coordinates(grids, num_thetas=181):
     """
     Function which takes grids in spherical coordinates and flips
     them across the phi=0-180 line (North-South line in left-handed
@@ -32,18 +32,18 @@ def flip_grids_to_left_handed_coordinates(grids, num_thetas=180):
     
     grids: 3D numpy arrays of shape [num_grids, num_thetas, num_phis]
     	   where num_grids is typically the number of frequencies
-    	   of the grids. Note that only num_phis = 361 is currently
+    	   of the grids. Note that only num_phis = 360 is currently
     	   supported.
     num_thetas: the number of thetas in each grid.
     
     returns: numpy arrays of same shape as grids.shape, but with the 
              values in the Eastern and Western regions mirrored.
     """
-    num_phis = 361
+    num_phis = 360
     east_phis = list(np.arange(1,180))
     west_phis = list(np.arange(181,360))
     num_grids = grids.shape[0]
-    flipped_grids = np.zeros([num_grids,num_thetas,num_phis])
+    #flipped_grids = np.zeros([num_grids,num_thetas,num_phis])
     for igrid in range(num_grids):
         for itheta in range(num_thetas):
 
@@ -52,8 +52,10 @@ def flip_grids_to_left_handed_coordinates(grids, num_thetas=180):
             east_grid_values = grid_at_one_theta[east_phis][-1::-1]
             west_grid_values = grid_at_one_theta[west_phis][-1::-1]
 
-            flipped_grids[igrid,itheta,east_phis] = west_grid_values
-            flipped_grids[igrid,itheta,west_phis] = east_grid_values
+            #flipped_grids[igrid,itheta,east_phis] = west_grid_values
+            #flipped_grids[igrid,itheta,west_phis] = east_grid_values
+            grids[igrid,itheta,east_phis] = west_grid_values
+            grids[igrid,itheta,west_phis] = east_grid_values
 
     return flipped_grids
     
