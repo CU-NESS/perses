@@ -76,7 +76,8 @@ class HaslamGalaxy(SpatialPowerLawGalaxy):
         native resolution.
         """
         if not hasattr(self, '_haslam_map_408'):
-            file_name = '{!s}/input/haslam/lambda_haslam408_dsds.fits'.format(\
+            # Had to make a minor change to the way it called the filename
+            file_name = '~/perses/input/haslam/lambda_haslam408_dsds.fits'.format(\
                 os.getenv('PERSES'))
             t1 = time.time()
             self._haslam_map_408 = hp.read_map(file_name, verbose=False)

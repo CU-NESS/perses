@@ -56,7 +56,7 @@ class GSMGalaxy(SpatialPowerLawGalaxy):
                         for gsm_frequencies above 10 GHz, otherwise low
                         resolution is used as the default.
         """
-        input_path = '{!s}/input/gsm2016/data'.format(os.environ['PERSES'])
+        input_path = '{!s}/input/gsm2016/data'.format(os.environ['USER'])
         labels = ['Synchrotron', 'CMB', 'HI', 'Dust1', 'Dust2', 'Free-Free']
         n_comp = len(labels)
         kB = 1.38065e-23

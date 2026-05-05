@@ -178,13 +178,15 @@ class PatchyForegroundModel(LoadableModel):
 		return empty_map
 		
 	@property
+	## Modified by David W. Barker on 24 February 2026 to update title to include correct region number.
 	def plot_patch_map(self):
 	
 		empty_map = np.zeros(len(self.foreground_map))
 		for key in self.foreground_mask_by_region_dictionary.keys():
 			empty_map[self.foreground_mask_by_region_dictionary[key]] = float(key)
 			
-		hp.mollview(empty_map, title=r'Spectral Index Patch Map $M_j$ for $N_r = 8$ regions')
+		hp.projview(empty_map,fontsize={"cbar_label": 20,"cbar_tick_label":20})
+		plot.title(rf'Spectral Index Patch Map $M_j$ for $N_r = {self.num_regions}$ regions',fontsize=20)
 		plot.show()
 		
 	@property

@@ -10,7 +10,7 @@ Description:
 
 """
 
-import os, imp
+import os
 import numpy as np
     
 pgroups = ['Foreground', 'Fit', 'Instrumental', 'Observation', 'Signal']

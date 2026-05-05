@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.signal import blackmanharris
+from scipy.signal.windows import blackmanharris
 import matplotlib.pyplot as pl
 from ..util import real_numerical_types
 
